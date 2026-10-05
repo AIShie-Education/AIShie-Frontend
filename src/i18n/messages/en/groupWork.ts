@@ -79,7 +79,20 @@ export default {
     keepMine: 'Keep editing mine',
     resolveFirst: 'First load the draft as it is now, or keep editing yours.',
     handedInByOther: '{name} has handed the draft in.',
-    handedInByOtherUnsaved: '{name} has handed the draft in, without the changes you had not saved.',
+    handedInByOtherUnsaved:
+      '{name} has handed the draft in, without the changes you had not saved. They are kept below, for you to copy.',
+    // The student was moved out of the group (or out of the set) while its draft was open.
+    notInGroupNow: 'You are no longer in {group}, so its draft is not yours to change or hand in any more.',
+    notInGroupNowUnnamed:
+      'You are no longer in the group whose draft this was, so it is not yours to change or hand in any more.',
+    // What the student typed into the group's draft and did not save, where the draft is no longer theirs.
+    keptTitle: 'What you had not saved',
+    keptHint:
+      'It is in no draft, and is kept only on this page until you discard it. Copy it if you want to use it again.',
+    keptCopyFailed: 'It could not be copied automatically. Select the text and copy it yourself.',
+    keptDiscard: 'Discard it',
+    keptDiscardTitle: 'Discard what you had not saved?',
+    keptDiscardBody: 'It is kept nowhere else, so it cannot be brought back.',
     changedBeforeHandIn:
       'The draft changed before it was handed in: {name} changed it {when}. Read it again, then hand it in.',
     handInTitle: 'Hand in attempt {n} for {group}?',

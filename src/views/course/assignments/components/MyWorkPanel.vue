@@ -27,6 +27,10 @@
 // nothing is handed in that they have not seen. A hand-in names whom it is
 // for, and says whom it left out (left_out); a student in no group of the
 // set is told so, and where they may sign up, in place of a draft to start.
+// Where the draft stops being theirs while it is open — another member hands
+// it in, or they are moved out of the group — they are told so, the group is
+// read again, and what they had typed and not saved stays on the page, to
+// copy, until they discard it.
 import { computed, h, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -41,6 +45,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { formatDecimal, fromNow } from '@/utils/format'
+import { copyText } from '@/utils/clipboard'
 import { zonedText } from '@/utils/parts'
 import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -59,6 +64,7 @@ import {
   keepMine,
   leftOutMembers,
   loadTheirs,
+  notInDraftsGroup,
   partOfOtherWork,
   readDraft,
   refusedAsChanged,
@@ -169,6 +175,8 @@ const handInProposed = ref(false)
 let syncedId: string | null = null
 /** The draft this page has just handed in: its reading as handed in is no news. */
 let handedInHere: string | null = null
+/** The draft Core has said is not the student's group's now: said once. */
+let notMineId: string | null = null
 watch(
   () => draftFull.data.value,
   (d) => {
@@ -181,6 +189,8 @@ watch(
       handedInElsewhere(d)
       return
     }
+    // Read as one of its group again (moved back, say): its refusal can be said again.
+    if (d.id === notMineId) notMineId = null
     const body = d.body ?? ''
     // A reload (after a file was attached, say) must not throw away what is
     // being typed; a different draft starts from its own text. A group's
@@ -207,10 +217,65 @@ const dirty = computed(() => !!current.value && text.value !== serverBody.value)
 function handedInElsewhere(d: Submission) {
   if (shared.value && syncedId === d.id && handedInHere !== d.id) {
     const name = nameIn(d.submitted_by_member_id, d.members, { start: true })
-    if (text.value !== serverBody.value) warning.value = t('groupWork.work.handedInByOtherUnsaved', { name })
-    else notice.value = t('groupWork.work.handedInByOther', { name })
+    if (keepUnsaved()) warning.value = t('groupWork.work.handedInByOtherUnsaved', { name })
+    else news.value = t('groupWork.work.handedInByOther', { name })
   }
   syncedId = null
+  void attempts.reload()
+  void grades.reload()
+}
+
+/**
+ * What the person typed into a group's draft and did not save, where the
+ * draft is no longer theirs to save it to (handed in by someone else, or
+ * their group's no more): kept on the page, to copy, until they discard it.
+ */
+const keptText = ref<string | null>(null)
+/** Keeps what is typed and not saved, if anything is; whether it did. */
+function keepUnsaved(): boolean {
+  if (text.value === serverBody.value || !text.value.trim()) return false
+  keptText.value = text.value
+  return true
+}
+const keptCopied = ref(false)
+let keptCopiedTimer: ReturnType<typeof setTimeout> | undefined
+async function copyKept() {
+  if (keptText.value === null) return
+  if (!(await copyText(keptText.value))) {
+    ElMessage({ type: 'warning', message: t('groupWork.work.keptCopyFailed'), showClose: true })
+    return
+  }
+  keptCopied.value = true
+  clearTimeout(keptCopiedTimer)
+  keptCopiedTimer = setTimeout(() => (keptCopied.value = false), 1600)
+}
+async function discardKept() {
+  try {
+    await ElMessageBox.confirm(t('groupWork.work.keptDiscardBody'), t('groupWork.work.keptDiscardTitle'), {
+      type: 'warning',
+      confirmButtonText: t('groupWork.work.keptDiscard'),
+      cancelButtonText: t('common.actions.cancel'),
+    })
+  } catch {
+    return
+  }
+  keptText.value = null
+}
+
+/**
+ * The student is not one of the draft's group now (Core refused reading or
+ * writing it so): moved to another group, or out of the set. Said, with
+ * what they had not saved kept; their group, and their work, read again.
+ * Once a draft: the 20-second read and a save may both find it.
+ */
+function draftNotMine(id: string) {
+  if (notMineId === id) return
+  notMineId = id
+  keepUnsaved()
+  const group = current.value?.id === id ? current.value.group_name : null
+  warning.value = group ? t('groupWork.work.notInGroupNow', { group }) : t('groupWork.work.notInGroupNowUnnamed')
+  news.value = null
+  emit('groupChanged')
   void attempts.reload()
   void grades.reload()
 }
@@ -222,7 +287,13 @@ usePolling(
   async () => {
     const d = draft.value
     if (!d) return
-    const fresh = await read('submission.get', { course_id: props.courseId, submission_id: d.id })
+    let fresh: Submission
+    try {
+      fresh = await read('submission.get', { course_id: props.courseId, submission_id: d.id })
+    } catch (e) {
+      if (draft.value?.id === d.id && notInDraftsGroup(e)) return draftNotMine(d.id)
+      throw e
+    }
     if (draft.value?.id === d.id && !busy.value) draftFull.data.value = fresh
   },
   { intervalMs: 20_000, immediate: false, enabled: () => shared.value && !!draft.value && canWrite.value },
@@ -260,6 +331,8 @@ const pastDue = computed(() => !!props.assignment.due_at && dayjs(props.assignme
 
 /** Something that waits for approval, said until the person moves on. */
 const notice = ref<string | null>(null)
+/** What someone else in the group did to the draft, said until the person moves on. */
+const news = ref<string | null>(null)
 /** Something to do before handing in, said until the person moves on. */
 const warning = ref<string | null>(null)
 
@@ -314,6 +387,7 @@ const typedIsProposed = computed(() => proposedBody.value !== null && text.value
 const createW = useWrite('submission.create')
 async function start() {
   notice.value = null
+  news.value = null
   warning.value = null
   const out = await createW.run(
     { course_id: props.courseId, assignment_id: props.assignment.id },
@@ -348,6 +422,22 @@ const startLabel = computed(() => {
 })
 
 // --- Saving the text ----------------------------------------------------------------
+/**
+ * A group's draft whose edit Core refused, read again: handed in by someone
+ * else meanwhile, it is shown as such (handedInElsewhere, which keeps what
+ * was typed), and true; anything else is the refusal's to say.
+ */
+async function handedInMeanwhile(id: string, err: ApiError): Promise<boolean> {
+  if (err.isNetwork || err.status >= 500) return false
+  try {
+    const fresh = await read('submission.get', { course_id: props.courseId, submission_id: id })
+    if (fresh.state === 'draft' || draft.value?.id !== id) return false
+    draftFull.data.value = fresh
+    return true
+  } catch {
+    return false
+  }
+}
 const saveW = useWrite('submission.update_draft')
 async function save(): Promise<boolean> {
   const d = draft.value
@@ -366,7 +456,9 @@ async function save(): Promise<boolean> {
       // Said by the conflict's own alert, with what to do; read what it is now.
       setDraftState(refusedAsChanged(draftState(), err.details))
       void draftFull.reload()
-    } else if (shared.value && err) {
+    } else if (shared.value && notInDraftsGroup(err)) {
+      draftNotMine(d.id)
+    } else if (shared.value && err && !(await handedInMeanwhile(d.id, err))) {
       notifyError(err, undefined, { reasons: 'groupWork.refusal' })
     }
     return false
@@ -493,8 +585,10 @@ async function freshGroupDraft(id: string): Promise<Submission | null | false> {
   let fresh: Submission
   try {
     fresh = await read('submission.get', { course_id: props.courseId, submission_id: id })
-  } catch {
-    return null
+  } catch (e) {
+    if (!notInDraftsGroup(e)) return null
+    draftNotMine(id)
+    return false
   }
   const changed = fresh.state !== 'draft' || fresh.revision !== baseRevision.value
   draftFull.data.value = fresh
@@ -529,6 +623,7 @@ async function handIn() {
   const d = draft.value
   if (!d || !current.value || handInBlocked.value) return
   notice.value = null
+  news.value = null
   warning.value = null
   leftOutNote.value = null
   if (dirty.value && !(await save())) return
@@ -580,6 +675,8 @@ async function handIn() {
   )
   if (!out) {
     const err = submitW.lastError.value
+    // Not one of its group any more: there is no draft of theirs to read again.
+    if (shared.value && notInDraftsGroup(err)) return draftNotMine(d.id)
     await draftFull.reload()
     const now = draftFull.data.value
     // Published between the check above and the hand-in.
@@ -670,6 +767,22 @@ defineExpose({ reload })
         t('assignments.list.viewMyActions')
       }}</router-link>
     </AppNote>
+
+    <AppNote v-if="news" class="my-work__alert" closable @close="news = null">{{ news }}</AppNote>
+
+    <!-- What was typed into the group's draft and not saved, where the draft is no longer theirs: to copy -->
+    <section v-if="keptText !== null" class="my-work__kept" aria-labelledby="my-work-kept-title">
+      <h3 id="my-work-kept-title" class="my-work__kept-title">{{ t('groupWork.work.keptTitle') }}</h3>
+      <p class="my-work__kept-hint">{{ t('groupWork.work.keptHint') }}</p>
+      <pre class="my-work__kept-text" tabindex="0">{{ keptText }}</pre>
+      <div class="my-work__kept-actions">
+        <el-button size="small" type="primary" @click="copyKept">
+          <el-icon><component :is="keptCopied ? 'Check' : 'DocumentCopy'" /></el-icon>
+          <span>{{ keptCopied ? t('common.actions.copied') : t('common.actions.copy') }}</span>
+        </el-button>
+        <el-button size="small" @click="discardKept">{{ t('groupWork.work.keptDiscard') }}</el-button>
+      </div>
+    </section>
 
     <AsyncState
       :loading="attempts.loading.value && !attempts.data.value"
@@ -1041,6 +1154,46 @@ defineExpose({ reload })
 }
 .my-work__conflict-body {
   margin: 4px 0;
+}
+.my-work__kept {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--el-border-color);
+  border-radius: var(--app-radius-item);
+  background: var(--el-fill-color-lighter);
+}
+.my-work__kept-title {
+  margin: 0 0 4px;
+  font-size: var(--app-text-md);
+  font-weight: var(--app-heading-weight);
+}
+.my-work__kept-hint {
+  margin: 0 0 8px;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
+  color: var(--el-text-color-secondary);
+}
+.my-work__kept-text {
+  margin: 0;
+  padding: 8px 12px;
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--app-radius-item);
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+  user-select: text;
+}
+.my-work__kept-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
 }
 .my-work__theirs {
   margin: 6px 0;

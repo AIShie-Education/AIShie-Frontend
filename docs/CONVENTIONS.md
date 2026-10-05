@@ -317,8 +317,13 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   or keep theirs, saved over the revision read; a read older than the revision held is no news. A
   hand-in reads the draft again first and hands in nothing the student has not seen; it names whom it
   is for (`members`, which Core holds it to: `members_changed`), warns a student who is part of
-  another group's work that it leaves them out, and says whom it left out (`left_out`). Its attempts
-  say their group, whom each was handed in or recorded missing for, and who handed it in. A student in
+  another group's work that it leaves them out, and says whom it left out (`left_out`). A draft that
+  stops being the student's while it is open says so: handed in by someone else (read so, or a save
+  refused and the draft read again), or not their group's now (`student_out_of_scope` on reading,
+  saving or handing it in, `notInDraftsGroup`: moved, or out of the set), when the page reads their
+  group again (`groupChanged`). Either way what they typed and had not saved stays on the page,
+  read-only with Copy, until they discard it. Its attempts say their group, whom each was handed in
+  or recorded missing for, and who handed it in. A student in
   no group of the set (`no_group`) is told so, with sign-up's deadline where it is open, and has
   nothing to start. Names are the work's own (`useWorkNames`: "you", and "someone in the course"
   where nobody may name them). A set's page is linked by its address (`groupSetRoute`), and only

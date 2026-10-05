@@ -72,7 +72,17 @@ export default {
     keepMine: '繼續編輯我的版本',
     resolveFirst: '請先載入草稿現在的內容，或選擇繼續編輯你的版本。',
     handedInByOther: '{name}已繳交草稿。',
-    handedInByOtherUnsaved: '{name}已繳交草稿，當中不包括你未儲存的修改。',
+    handedInByOtherUnsaved: '{name}已繳交草稿，當中不包括你未儲存的修改。這些修改保留在下方，可供你複製。',
+    // 草稿開啟期間，學生被調離小組（或分組）。
+    notInGroupNow: '你已不在{group}，因此不能再修改或繳交它的草稿。',
+    notInGroupNowUnnamed: '你已不在這份草稿所屬的小組，因此不能再修改或繳交它。',
+    // 學生在小組草稿中輸入但未儲存的內容，而草稿已不再屬於他們。
+    keptTitle: '你未儲存的內容',
+    keptHint: '這些內容不在任何草稿中，只會保留在這個頁面，直到你捨棄為止。如要再用，請先複製。',
+    keptCopyFailed: '無法自動複製。請自行選取文字並複製。',
+    keptDiscard: '捨棄',
+    keptDiscardTitle: '要捨棄你未儲存的內容嗎？',
+    keptDiscardBody: '這些內容沒有保存在其他地方，捨棄後無法復原。',
     changedBeforeHandIn: '繳交前草稿已有變動：{name}於{when}修改了它。請重新閱讀後再繳交。',
     handInTitle: '要為{group}繳交第{n}次提交嗎？',
     handInFor: '這份作業會為{names}繳交：繳交後就是他們的作業，之後小組有任何變動也不會改變。',

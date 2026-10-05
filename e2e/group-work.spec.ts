@@ -25,7 +25,10 @@ import {
 // Mei is refused Alpha's submission, and Yuki sees her grade, never Ken's.
 // In Traditional Chinese, and at a phone's width, too.
 // On a second group assignment, a TA listed for Mei and Fay records Gamma
-// missing, and not Beta, whose Ken they do not reach.
+// missing, and not Beta, whose Ken they do not reach. Mei, moved from Beta
+// to Alpha while writing Beta's draft, is told so, keeps what she had not
+// saved, and finds her group Alpha; then Yuki hands Alpha's draft in while
+// Mei is typing, and Mei's unsaved text stays on her page.
 //
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
@@ -100,15 +103,19 @@ test.beforeAll(async () => {
   })
 })
 
-/** The draft of Alpha's as Core holds it now. */
-async function alphaDraft(): Promise<{ id: string; revision: number; body: string }> {
+/** The draft of a group's (Alpha's, by default) as Core holds it now, read by one of its members. */
+async function alphaDraft(
+  assignment = assignmentId,
+  group = groups.alpha,
+  reader: Student = students.yuki,
+): Promise<{ id: string; revision: number; body: string }> {
   const list = await ok(
-    students.yuki.token,
+    sato().token,
     'GET',
-    `/v1/courses/${courseId}/submissions?assignment_id=${assignmentId}&group_id=${groups.alpha}`,
+    `/v1/courses/${courseId}/submissions?assignment_id=${assignment}&group_id=${group}`,
   )
   const d = (list.submissions as { id: string; state: string }[]).find((s) => s.state === 'draft')!
-  return ok(students.yuki.token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
+  return ok(reader.token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
 }
 
 test.describe.serial('group work', () => {
@@ -478,4 +485,78 @@ test.describe.serial('group work', () => {
     await expect(row('Gamma')).toContainText('Missing')
   })
 
+  test('Mei, moved from Beta to Alpha while writing Beta’s draft, is told so, keeps her unsaved text, and finds Alpha', async ({
+    page,
+  }) => {
+    await keepToasts(page)
+    await as(page, students.mei)
+    await page.goto(coursePath(`assignments/${secondId}`))
+    const work = myWork(page)
+    await expect(work.locator('.my-work__group')).toContainText('Beta')
+    await work.getByRole('button', { name: 'Start your group’s draft' }).click()
+    await expectToasted(page, 'Draft started.')
+    await work.locator('textarea').fill('Beta’s plan, by Mei.')
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expectToasted(page, 'Draft saved.')
+    await work.locator('textarea').fill('Beta’s plan, by Mei. A paragraph she has not saved.')
+
+    await ok(sato().token, 'POST', `/v1/courses/${courseId}/group-sets/${setId}/members`, {
+      placements: [{ student_member_id: students.mei.member_id, group_id: groups.alpha }],
+      affects_work: true,
+    })
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expect(work).toContainText(
+      'You are no longer in Beta, so its draft is not yours to change or hand in any more.',
+    )
+    await expect(work.locator('.my-work__kept-text')).toHaveText('Beta’s plan, by Mei. A paragraph she has not saved.')
+    // Her group is read again: Alpha, with Yuki, which has no draft yet.
+    await expect(work.locator('.my-work__group')).toContainText('Alpha')
+    await expect(work.locator('.my-work__group')).toContainText('you and Yuki Tanaka')
+    await expect(page.locator('.assignment-view__facts')).toContainText('Alpha')
+    await expect(work.locator('textarea')).toHaveCount(0)
+    await expect(work.getByRole('button', { name: 'Start your group’s draft' })).toBeVisible()
+    await photograph(page, 'group-work-moved')
+    // Beta's draft is as she saved it, and hers to read no more.
+    expect((await alphaDraft(secondId, groups.beta, students.ken)).body).toBe('Beta’s plan, by Mei.')
+
+    await work.getByRole('button', { name: 'Discard it' }).click()
+    await page
+      .getByRole('dialog', { name: 'Discard what you had not saved?' })
+      .getByRole('button', { name: 'Discard it' })
+      .click()
+    await expect(work.locator('.my-work__kept')).toHaveCount(0)
+  })
+
+  test('Yuki hands Alpha’s draft in while Mei is typing: Mei’s unsaved text stays on her page, to copy', async ({
+    page,
+  }) => {
+    test.setTimeout(90_000)
+    await keepToasts(page)
+    await as(page, students.mei)
+    await page.goto(coursePath(`assignments/${secondId}`))
+    const work = myWork(page)
+    await work.getByRole('button', { name: 'Start your group’s draft' }).click()
+    await expectToasted(page, 'Draft started.')
+    await work.locator('textarea').fill('Alpha’s plan.')
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expectToasted(page, 'Draft saved.')
+    await work.locator('textarea').fill('Alpha’s plan. Mei’s paragraph, not saved.')
+
+    const d = await alphaDraft(secondId, groups.alpha, students.yuki)
+    await ok(students.yuki.token, 'POST', `/v1/courses/${courseId}/submissions/${d.id}/submit`, {})
+    // The draft is read again every 20 seconds.
+    await expect(work).toContainText(
+      'Yuki Tanaka has handed the draft in, without the changes you had not saved. They are kept below, for you to copy.',
+      { timeout: 30_000 },
+    )
+    await expect(work.locator('.my-work__kept-text')).toHaveText('Alpha’s plan. Mei’s paragraph, not saved.')
+    await expect(work.locator('textarea')).toHaveCount(0)
+    await expect(work.getByRole('button', { name: 'Start attempt 2' })).toBeVisible()
+    await photograph(page, 'group-work-kept')
+    // It stays while she starts again.
+    await work.getByRole('button', { name: 'Start attempt 2' }).click()
+    await expectToasted(page, 'Draft started.')
+    await expect(work.locator('textarea')).toBeVisible()
+    await expect(work.locator('.my-work__kept-text')).toHaveText('Alpha’s plan. Mei’s paragraph, not saved.')
+  })
 })

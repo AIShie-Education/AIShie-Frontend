@@ -10,6 +10,7 @@
 // up) are another part of the app's: this one links to a set's page only
 // where the app has one at its address (groupSetRoute).
 import type { RouteLocationRaw, Router } from 'vue-router'
+import { ApiError } from '@/api/http'
 import type { Assignment, AssignmentSummary, ListItem, SubmissionSummary, ToolOut } from '@/api/types'
 
 /** A group set as group_set.get gives it. */
@@ -140,6 +141,16 @@ export function handedInFor(
 // person has unsaved text is a conflict, which they settle: load the draft
 // as it is now, or keep their text, which is then saved over the revision
 // read, replacing it. Nobody's text is lost without their say.
+
+/**
+ * Whether Core refused something on a group's draft because the caller is
+ * not one of its group now (moved to another group, or out of the set): a
+ * group's draft is read and written by its members now, and a student's own
+ * seat reaches only their own work. Their group is then another, or none.
+ */
+export function notInDraftsGroup(e: unknown): boolean {
+  return e instanceof ApiError && e.code === 'forbidden' && e.details?.reason === 'student_out_of_scope'
+}
 
 /** The draft as read, for the page. */
 export interface DraftRead {

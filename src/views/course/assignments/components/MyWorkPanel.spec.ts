@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import ElementPlus, { ElMessage } from 'element-plus'
+import ElementPlus, { ElMessage, ElNotification } from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
@@ -32,6 +32,8 @@ interface Draft {
   files: never[]
 }
 let draft: Draft | null
+/** Core's answer to reading the draft once the reader is not one of its group: the draft is not listed for them either. */
+let notMine: ApiError | null
 let attempts: Record<string, unknown>[]
 let writes: { tool: string; args: Record<string, unknown> }[]
 let answers: Record<string, (args: Record<string, unknown>) => unknown>
@@ -41,8 +43,11 @@ vi.mock('@/api/http', async (orig) => {
     ...real,
     read: vi.fn(async (tool: string) => {
       if (tool === 'submission.list')
-        return { submissions: draft ? [{ ...draft, body: undefined }, ...attempts] : attempts }
-      if (tool === 'submission.get') return { ...draft }
+        return { submissions: draft && !notMine ? [{ ...draft, body: undefined }, ...attempts] : attempts }
+      if (tool === 'submission.get') {
+        if (notMine) throw notMine
+        return { ...draft }
+      }
       if (tool === 'grade.list') return { grades: [] }
       if (tool === 'action.list_mine') return { actions: [] }
       throw new Error(`no answer for ${tool}`)
@@ -57,6 +62,7 @@ vi.mock('@/api/http', async (orig) => {
     }),
   }
 })
+vi.mock('@/utils/clipboard', () => ({ copyText: vi.fn(async () => true) }))
 const confirm = vi.fn(async (..._a: unknown[]) => 'confirm')
 vi.mock('element-plus', async (orig) => {
   const real = await orig<typeof import('element-plus')>()
@@ -98,6 +104,7 @@ beforeEach(() => {
   writes = []
   attempts = []
   answers = {}
+  notMine = null
   draft = {
     id: 'sub-1',
     assignment_id: 'asg-1',
@@ -115,6 +122,7 @@ beforeEach(() => {
   }
   confirm.mockClear()
   vi.mocked(ElMessage).mockClear()
+  vi.mocked(ElNotification).mockClear()
 })
 afterEach(() => {
   document.body.innerHTML = ''
@@ -127,7 +135,12 @@ async function mountPanel(assignment: Record<string, unknown> = ASSIGNMENT, grou
   course.membership = { member_id: ME, role: 'student', status: 'active' } as never
   const router = createRouter({
     history: createMemoryHistory(),
-    routes: [{ path: '/:p(.*)*', name: 'any', component: { render: () => null } }],
+    routes: [
+      // Where the attempts link to, once one is handed in.
+      { path: '/s/:courseId/:submissionId', name: 'course-submission', component: { render: () => null } },
+      { path: '/a/:courseId', name: 'course-my-actions', component: { render: () => null } },
+      { path: '/:p(.*)*', name: 'any', component: { render: () => null } },
+    ],
   })
   const wrapper = mount(MyWorkPanel, {
     props: { courseId: COURSE, assignment: assignment as never, groupSet: groupSet as never },
@@ -267,6 +280,123 @@ describe('a draft its group writes together', () => {
     expect(writes).toEqual([])
     expect((w.find('textarea.editor').element as HTMLTextAreaElement).value).toBe('Ken’s newer lines.')
     expect(w.text()).toContain('The draft changed before it was handed in: Ken Wong changed it')
+    w.unmount()
+  })
+})
+
+/** Core's refusal of the draft to someone who is not one of its group now. */
+const outOfScope = () =>
+  new ApiError({
+    status: 403,
+    code: 'forbidden',
+    message: 'not permitted',
+    details: { reason: 'student_out_of_scope' },
+    actionId: 'act-9',
+    actionStatus: 'denied',
+  })
+const editor = (w: Awaited<ReturnType<typeof mountPanel>>) => w.find('textarea.editor')
+
+describe('when the draft stops being the reader’s while it is open', () => {
+  it('moved out of the group, a save says so, keeps what was typed, and reads the group again', async () => {
+    answers['submission.update_draft'] = outOfScope
+    const w = await mountPanel()
+    await editor(w).setValue('Mine, not saved yet.')
+    // The teacher moves Yuki to Beta: Alpha's draft is not hers to read or list any more.
+    notMine = outOfScope()
+    await button(w, 'Save draft').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('You are no longer in Alpha, so its draft is not yours to change or hand in any more.')
+    expect(w.find('.my-work__kept-text').text()).toBe('Mine, not saved yet.')
+    expect(w.emitted('groupChanged')).toHaveLength(1)
+    expect(editor(w).exists()).toBe(false)
+    // Said in words, not as a refusal.
+    expect(vi.mocked(ElNotification)).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('moved out of the group, the 20-second read finds it, and Hand in is not offered over it', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const w = await mountPanel()
+      await editor(w).setValue('Mine, not saved yet.')
+      notMine = outOfScope()
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      expect(w.text()).toContain('You are no longer in Alpha')
+      expect(w.find('.my-work__kept-text').text()).toBe('Mine, not saved yet.')
+      expect(w.emitted('groupChanged')).toHaveLength(1)
+      expect(w.findAll('button').some((b) => b.text() === 'Hand in')).toBe(false)
+      expect(writes).toEqual([])
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('handed in by someone else, the 20-second read keeps what was typed to copy, until it is discarded', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const w = await mountPanel()
+      await editor(w).setValue('A paragraph Yuki has not saved.')
+      draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      expect(w.text()).toContain('Ken Wong has handed the draft in, without the changes you had not saved.')
+      expect(editor(w).exists()).toBe(false)
+      const kept = w.find('.my-work__kept')
+      expect(kept.find('.my-work__kept-text').text()).toBe('A paragraph Yuki has not saved.')
+      await button(w, 'Copy').trigger('click')
+      await flushPromises()
+      expect(button(w, 'Copied')).toBeDefined()
+      await button(w, 'Discard it').trigger('click')
+      await flushPromises()
+      expect(confirm.mock.calls[0]![1]).toBe('Discard what you had not saved?')
+      expect(w.find('.my-work__kept').exists()).toBe(false)
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('handed in by someone else, a save says who did, and keeps what was typed', async () => {
+    answers['submission.update_draft'] = () =>
+      new ApiError({ status: 409, code: 'conflict', message: 'the submission is no longer a draft' })
+    const w = await mountPanel()
+    await editor(w).setValue('Mine, not saved yet.')
+    draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+    await button(w, 'Save draft').trigger('click')
+    await flushPromises()
+    expect(w.text()).toContain('Ken Wong has handed the draft in, without the changes you had not saved.')
+    expect(w.find('.my-work__kept-text').text()).toBe('Mine, not saved yet.')
+    expect(messages().some((m) => m.includes('no longer a draft'))).toBe(false)
+    w.unmount()
+  })
+
+  it('handed in by someone else with nothing unsaved, says so and keeps nothing', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      const w = await mountPanel()
+      draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+      await vi.advanceTimersByTimeAsync(20_000)
+      await flushPromises()
+      expect(w.text()).toContain('Ken Wong has handed the draft in.')
+      expect(w.find('.my-work__kept').exists()).toBe(false)
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('a save refused for another reason says that reason, and keeps the text in the editor', async () => {
+    answers['submission.update_draft'] = () =>
+      new ApiError({ status: 400, code: 'invalid_argument', message: 'body is too long' })
+    const w = await mountPanel()
+    await editor(w).setValue('Mine, not saved yet.')
+    await button(w, 'Save draft').trigger('click')
+    await flushPromises()
+    expect(messages().some((m) => m.includes('body is too long'))).toBe(true)
+    expect((editor(w).element as HTMLTextAreaElement).value).toBe('Mine, not saved yet.')
+    expect(w.find('.my-work__kept').exists()).toBe(false)
     w.unmount()
   })
 })

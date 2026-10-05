@@ -73,7 +73,17 @@ export default {
     keepMine: '继续编辑我的版本',
     resolveFirst: '请先加载草稿现在的内容，或选择继续编辑你的版本。',
     handedInByOther: '{name}已提交草稿。',
-    handedInByOtherUnsaved: '{name}已提交草稿，其中不包括你未保存的修改。',
+    handedInByOtherUnsaved: '{name}已提交草稿，其中不包括你未保存的修改。这些修改保留在下方，可供你复制。',
+    // 草稿打开期间，学生被调离小组（或分组）。
+    notInGroupNow: '你已不在{group}，因此不能再修改或提交它的草稿。',
+    notInGroupNowUnnamed: '你已不在这份草稿所属的小组，因此不能再修改或提交它。',
+    // 学生在小组草稿中输入但未保存的内容，而草稿已不再属于他们。
+    keptTitle: '你未保存的内容',
+    keptHint: '这些内容不在任何草稿中，只会保留在这个页面，直到你丢弃为止。如要再用，请先复制。',
+    keptCopyFailed: '无法自动复制。请自行选取文字并复制。',
+    keptDiscard: '丢弃',
+    keptDiscardTitle: '要丢弃你未保存的内容吗？',
+    keptDiscardBody: '这些内容没有保存在其他地方，丢弃后无法恢复。',
     changedBeforeHandIn: '提交前草稿已有变动：{name}于{when}修改了它。请重新阅读后再提交。',
     handInTitle: '要为{group}提交第{n}次作答吗？',
     handInFor: '这份作业会为{names}提交：提交后就是他们的作业，之后小组有任何变动也不会改变。',

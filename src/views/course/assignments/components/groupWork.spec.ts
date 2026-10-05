@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
+import { ApiError } from '@/api/http'
 import {
   emptyDraft,
   groupIn,
@@ -12,6 +13,7 @@ import {
   leftOutMembers,
   loadTheirs,
   memberLabel,
+  notInDraftsGroup,
   orderedMembers,
   partOfOtherWork,
   readDraft,
@@ -208,5 +210,22 @@ describe('a draft its group writes together', () => {
     // Still unsaved: the next save names revision 4, and replaces theirs.
     expect(kept.text).not.toBe(kept.serverBody)
     expect(savedDraft(kept, 'Mine', 5)).toEqual({ text: 'Mine', serverBody: 'Mine', baseRevision: 5, conflict: null })
+  })
+})
+
+describe('a draft that is not the reader’s group’s now', () => {
+  const refusal = (code: string, reason?: string) =>
+    new ApiError({ status: 403, code, message: 'not permitted', details: reason ? { reason } : undefined })
+
+  it('is what Core’s refusal for a student outside its group says', () => {
+    expect(notInDraftsGroup(refusal('forbidden', 'student_out_of_scope'))).toBe(true)
+  })
+
+  it('is not any other refusal, nor anything else that fails', () => {
+    expect(notInDraftsGroup(refusal('forbidden', 'permission_denied'))).toBe(false)
+    expect(notInDraftsGroup(refusal('forbidden', 'membership_not_active'))).toBe(false)
+    expect(notInDraftsGroup(refusal('conflict', 'draft_changed'))).toBe(false)
+    expect(notInDraftsGroup(new Error('offline'))).toBe(false)
+    expect(notInDraftsGroup(null)).toBe(false)
   })
 })
