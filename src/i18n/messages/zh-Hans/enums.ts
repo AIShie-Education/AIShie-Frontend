@@ -299,6 +299,7 @@ export default {
     'submission.submitted': '已提交作业',
     'submission.lateness_changed': '更正迟交状态',
     'submission.missing': '标记为缺交',
+    'submission.members_changed': '更正作业成员',
     'submission.file_added': '提交中添加了文件',
     'submission.file_archived': '提交中移除了文件',
     'submission.file_updated': '提交文件改名',

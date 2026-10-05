@@ -303,6 +303,7 @@ export default {
     'submission.submitted': 'Work handed in',
     'submission.lateness_changed': 'Lateness corrected',
     'submission.missing': 'Marked missing',
+    'submission.members_changed': 'Whose work it is corrected',
     'submission.file_added': 'File added to submission',
     'submission.file_archived': 'File removed from submission',
     'submission.file_updated': 'Submission file renamed',

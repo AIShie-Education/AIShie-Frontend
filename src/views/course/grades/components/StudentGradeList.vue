@@ -6,12 +6,14 @@
 // assignments does not fit such a width; a list a student at a time does.
 // Scores are shown as the table shows them, to two decimal places at most,
 // every place for a screen reader; a draft says the posted grade it would
-// replace under it.
+// replace under it. A grade given from a group's says so beside it, and
+// whether the member's score was set apart from the group's.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { classFigure, formatScore } from './grading'
 import type { MatrixCell, MatrixColumn, MatrixRow, MatrixStudent } from './classMatrix'
 import { NO_CELL } from './classMatrix'
+import GroupGlyph from './GroupGlyph.vue'
 
 const props = defineProps<{
   courseId: string
@@ -58,6 +60,15 @@ const cellOf = (row: MatrixRow, col: MatrixColumn) => row.cells[col.key] ?? NO_C
 /** Paused or removed, said beside the name; nothing for a student who is simply in the class. */
 function statusOf(s: MatrixStudent): string | null {
   return s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : null
+}
+/** A grade given from a group's, in words: whose group, and how the member's score was set apart. */
+function groupWords(cell: MatrixCell): string | null {
+  const g = cell.group
+  if (!g) return null
+  const of = g.name ? t('groupGrading.classbook.groupOf', { name: g.name }) : t('groupGrading.mark.group')
+  if (g.adjusted === 'grader') return t('groupGrading.classbook.adjusted', { group: of })
+  if (g.adjusted === 'peer') return t('groupGrading.classbook.peer', { group: of })
+  return t('groupGrading.classbook.sentence', { group: of })
 }
 const headId = (id: string) => `sgl-head-${id}`
 const bodyId = (id: string) => `sgl-body-${id}`
@@ -151,6 +162,10 @@ const bodyId = (id: string) => `sgl-body-${id}`
                   <span v-if="cellOf(r, c).waiting" class="sgl__flag is-wait" :title="t('classbook.waiting')">{{
                     t('classbook.state.toGrade')
                   }}</span>
+                </span>
+                <span v-if="cellOf(r, c).group" class="sgl__group">
+                  <GroupGlyph />
+                  <span>{{ groupWords(cellOf(r, c)) }}</span>
                 </span>
                 <span v-if="postedOf(cellOf(r, c))" class="sgl__posted">
                   <span :aria-hidden="postedOf(cellOf(r, c))!.full ? 'true' : undefined">{{
@@ -334,6 +349,17 @@ const bodyId = (id: string) => `sgl-body-${id}`
   margin-top: 2px;
   font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
+}
+/* Given from a group's grade: in words, under the score, with the group's mark. */
+.sgl__group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--app-space-xs);
+  margin-top: 2px;
+  font-size: var(--app-text-xs);
+  color: var(--app-ink-2);
+  text-align: right;
 }
 .sgl__score.is-draft {
   font-style: italic;

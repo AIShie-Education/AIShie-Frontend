@@ -19,6 +19,7 @@ import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import ActionActor from './ActionActor.vue'
+import GroupGradeTarget from './GroupGradeTarget.vue'
 import ActionTarget from './ActionTarget.vue'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
@@ -218,13 +219,26 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
     <!-- Grades -->
     <template v-if="type === 'grade.submit' || type === 'grade.regrade'">
       <span v-if="score" class="action-target__score">{{ score }}</span>
-      <span v-if="studentId" class="action-target__part"><MemberName :id="studentId" /></span>
+      <GroupGradeTarget
+        v-if="sub?.value?.group_id || grade?.value?.group"
+        :action="action"
+        :group-name="sub?.value?.group_name ?? grade?.value?.group?.group_name"
+      />
+      <span v-else-if="studentId" class="action-target__part"><MemberName :id="studentId" /></span>
       <MaybeLink v-if="assignmentTitle || componentName" :to="targetRoute" class="action-target__part action-target__name">
         {{ assignmentTitle ?? componentName }}
       </MaybeLink>
       <span v-else-if="!studentId && (tid || str(p.submission_id))" class="action-target__part">
         {{ targetTypeLabel(tid ? tt : 'submission') }} <IdText :id="tid ?? str(p.submission_id)" />
       </span>
+    </template>
+
+    <template v-else-if="type === 'grade.adjust'">
+      <span v-if="studentId" class="action-target__part"><MemberName :id="studentId" /></span>
+      <MaybeLink v-if="assignmentTitle" :to="targetRoute" class="action-target__part action-target__name">
+        {{ assignmentTitle }}
+      </MaybeLink>
+      <GroupGradeTarget :action="action" :group-name="grade?.value?.group?.group_name" />
     </template>
 
     <template v-else-if="type === 'grade.post'">
@@ -245,6 +259,11 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       </MaybeLink>
       <span v-else-if="tid" class="action-target__part">{{ targetTypeLabel(tt) }} <IdText :id="tid" /></span>
       <StatusTag v-if="type === 'submission.set_lateness'" vocab="submissionState" :value="str(p.state)" />
+      <GroupGradeTarget
+        v-if="sub?.value?.group_id || type === 'submission.set_members'"
+        :action="action"
+        :group-name="sub?.value?.group_name"
+      />
       <span v-if="Array.isArray(p.files) && p.files.length" class="action-target__muted">
         {{ t('actions.summary.files', { n: p.files.length }, p.files.length) }}
       </span>

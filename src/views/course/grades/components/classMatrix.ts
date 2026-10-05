@@ -10,6 +10,7 @@
 // Pure functions, so that the matrix of a class of hundreds is built once
 // per answer and filtered, sorted and exported without asking Core again.
 import type { AssignmentSummary, Component, Decimal, GradeSummary, MemberSummary } from '@/api/types'
+import { isGraderAdjustment } from '@/views/course/submissions/components/groupGrading'
 import { plainDecimal } from './grading'
 
 /**
@@ -31,7 +32,28 @@ export type GradeLite = Pick<
   | 'superseded_by'
   | 'created_at'
   | 'no_total'
-> & { override?: Pick<NonNullable<GradeSummary['override']>, 'score'> | null }
+> & {
+  override?: Pick<NonNullable<GradeSummary['override']>, 'score'> | null
+  /** Given from a group's grade: the group, and how the member's score was set apart from it. */
+  fromGroup?: GroupOfGrade | null
+}
+
+/** What the matrix keeps of a grade given from a group's: its group, and who moved the member's score. */
+export interface GroupOfGrade {
+  name: string | null
+  /** grader: set apart by a grader (their own score, or plus or minus); peer: moved by peer evaluation. */
+  adjusted: 'grader' | 'peer' | null
+}
+
+/** A grade's group, as the matrix keeps it; null for a grade of a student's own work. */
+export function groupOfGrade(g: Pick<GradeSummary, 'group'>): GroupOfGrade | null {
+  if (!g.group) return null
+  const a = g.group.adjustment
+  return {
+    name: g.group.group_name ?? null,
+    adjusted: isGraderAdjustment(a) ? 'grader' : a?.kind === 'peer' ? 'peer' : null,
+  }
+}
 
 /** A grade as the matrix keeps it; null for a superseded one, which it never shows. */
 export function slimGrade(g: GradeSummary): GradeLite | null {
@@ -50,6 +72,7 @@ export function slimGrade(g: GradeSummary): GradeLite | null {
     created_at: g.created_at,
     no_total: g.no_total,
     override: g.override ? { score: g.override.score } : g.override,
+    fromGroup: groupOfGrade(g),
   }
 }
 
@@ -118,6 +141,8 @@ export interface MatrixCell {
   waiting?: boolean
   /** What sorting goes by: the score, or the percentage. */
   value: number | null
+  /** The grade shown was given from a group's grade: its group, and how the member's score was set apart. */
+  group?: GroupOfGrade | null
 }
 
 export interface MatrixRow {
@@ -443,8 +468,12 @@ export function buildMatrix(input: {
             postedScore: l.posted?.score ?? null,
             value: num(l.draft.score),
           }
+          const fromGroup = l.draft.fromGroup ?? groupOfGrade(l.draft as Pick<GradeSummary, 'group'>)
+          if (fromGroup) cell.group = fromGroup
         } else if (l?.posted) {
           cell = { state: 'posted', score: l.posted.score, gradeId: l.posted.id, value: num(l.posted.score) }
+          const fromGroup = l.posted.fromGroup ?? groupOfGrade(l.posted as Pick<GradeSummary, 'group'>)
+          if (fromGroup) cell.group = fromGroup
         } else if (s?.state === 'missing') cell = { state: 'missing', score: null, gradeId: null, value: null }
         else if (handedIn) cell = { state: 'submitted', score: null, gradeId: null, value: null }
         if (cell && l && handedIn && s!.attempt > l.gradedAttempt) cell.waiting = true
@@ -594,10 +623,18 @@ export interface CsvWords {
   overridden: (score: string) => string
   /** A grade beside which later work waits to be graded ("6 (newer work to grade)"). */
   waiting: (text: string) => string
+  /** A member's grade set apart from their group's ("70 (adjusted)"). */
+  adjusted?: (text: string) => string
   missing: string
   toGrade: string
   /** A student with no name to give (the member list cannot be read). */
   unnamed: (s: MatrixStudent) => string
+}
+
+/** A column of each student's own in the CSV, beside their name: their group in a group set, say. */
+export interface ExtraColumn {
+  heading: string
+  value: (s: MatrixStudent) => string
 }
 
 /**
@@ -620,10 +657,25 @@ export function csvText(s: string): string {
  * and so are an overridden total, work waiting beside a grade, and a paused
  * or removed student: what the page says in words, the export says too.
  */
-export function matrixCsv(columns: readonly MatrixColumn[], rows: readonly MatrixRow[], words: CsvWords): string {
+export function matrixCsv(
+  columns: readonly MatrixColumn[],
+  rows: readonly MatrixRow[],
+  words: CsvWords,
+  /** Columns of each student's own after their status: their group in each group set the assignments use. */
+  extra: readonly ExtraColumn[] = [],
+): string {
   const lines: string[] = []
   lines.push(
-    [words.student, words.loginId, words.memberId, words.status, ...columns.map(words.column)].map(csvText).join(','),
+    [
+      words.student,
+      words.loginId,
+      words.memberId,
+      words.status,
+      ...extra.map((x) => x.heading),
+      ...columns.map(words.column),
+    ]
+      .map(csvText)
+      .join(','),
   )
   for (const r of rows) {
     const cells = [
@@ -631,6 +683,7 @@ export function matrixCsv(columns: readonly MatrixColumn[], rows: readonly Matri
       csvText(r.student.loginId ?? ''),
       r.student.id,
       csvText(words.statusOf(r.student)),
+      ...extra.map((x) => csvText(x.value(r.student))),
     ]
     for (const col of columns) {
       const c = r.cells[col.key]
@@ -641,6 +694,7 @@ export function matrixCsv(columns: readonly MatrixColumn[], rows: readonly Matri
       else if (c.state === 'draft') text = words.draft(score)
       else if (c.state === 'missing') text = words.missing
       else text = words.toGrade
+      if (c?.group?.adjusted === 'grader' && words.adjusted) text = words.adjusted(text)
       if (c?.waiting) text = words.waiting(text)
       cells.push(text === score ? score : csvText(text))
     }

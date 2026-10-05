@@ -19,6 +19,8 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
+import GroupGradeField from './GroupGradeField.vue'
+import { ADJUST_PAYLOAD_SKIP, groupGradeField } from './groupGradeFields'
 import {
   decisionTag,
   exactDecimal,
@@ -117,6 +119,8 @@ const fields = computed(() => {
   const skip = new Set(['course_id', ...(props.exclude ?? [])])
   // The score is shown with what it is out of.
   if (obj.value.score !== undefined && obj.value.out_of !== undefined) skip.add('out_of')
+  // grade.adjust's points and reason are said in its kind's line.
+  if (props.action?.action_type === 'grade.adjust') for (const k of ADJUST_PAYLOAD_SKIP) skip.add(k)
   const keys = Object.keys(obj.value).filter((k) => !skip.has(k) && obj.value[k] !== null && obj.value[k] !== undefined)
   return keys.sort((a, b) => {
     const ia = ORDER.indexOf(a)
@@ -161,10 +165,13 @@ function label(k: string): string {
   // member.add_delegate's proposal carries the whole seat Core worked out, not changes.
   if (k === 'perms' && actionType.value === 'member.add_delegate') return t('actions.fields.permsSeat')
   if (k === 'role' && actionType.value === 'member.update_perms_bulk') return t('actions.fields.bulkRole')
+  // grade.adjust's kind, with its points and reason, is one adjustment.
+  if (k === 'kind' && actionType.value === 'grade.adjust') return t('actions.fields.adjustment')
   return fieldLabel(k)
 }
 
 function kindOf(k: string, v: unknown): string {
+  if (groupGradeField(k, v, actionType.value ?? props.resultOf?.action_type)) return 'groupGrade'
   if (k === 'breakdown' && Array.isArray(v)) return 'breakdown'
   if (k === 'perms' && isObject(v)) return 'perms'
   if (k === 'feedback_files' && Array.isArray(v)) return 'feedbackFiles'
@@ -275,6 +282,12 @@ function json(v: unknown) {
             {{ t('actions.fields.total') }} {{ breakdownTotal(obj[k]).points }} / {{ breakdownTotal(obj[k]).max }}
           </div>
         </template>
+        <GroupGradeField
+          v-else-if="kindOf(k, obj[k]) === 'groupGrade'"
+          :name="k"
+          :value="obj[k]"
+          :action="action ?? resultOf"
+        />
         <div v-else-if="kindOf(k, obj[k]) === 'perms'" class="fields-view__perms">
           <span v-for="[perm, level] in perms(obj[k])" :key="perm" class="fields-view__perm">
             <span>{{ t(`enums.perm.${perm}`) }}</span>

@@ -22,6 +22,11 @@
 // reads again behind what is shown the students opened meanwhile (the whole
 // term, where what is shown was read more than five minutes before). Refresh
 // reads it all again under the rows as they are.
+//
+// A grade given from a group's is marked as such in its cell, and so is a
+// member's score set apart from the group's; the CSV says the latter, and
+// has a column for each group set the assignments use, with each student's
+// group in it now (group_set.list, where the seat reads who is in which).
 import {
   computed,
   onActivated,
@@ -48,6 +53,7 @@ import GradeMatrix from './GradeMatrix.vue'
 import StudentGradeList from './StudentGradeList.vue'
 import { formatScore, useGradeLookups } from './grading'
 import {
+  type ExtraColumn,
   buildColumns,
   buildMatrix,
   filterRows,
@@ -408,6 +414,48 @@ const matrix = computed(() => {
   return buildMatrix({ students: students.value, columns: columns.value, grades: d.grades, submissions: d.submissions })
 })
 
+// ---------------------------------------------------------------------------
+// Groups: the sets the assignments shown use, and who is in which group now
+// ---------------------------------------------------------------------------
+
+/** The group sets the assignment columns use, by id. */
+const setsUsed = computed(() => {
+  const ids = new Set<string>()
+  for (const c of columns.value) {
+    const set = c.kind === 'assignment' ? course.assignments.get(c.id)?.group_set_id : null
+    if (set) ids.add(set)
+  }
+  return ids
+})
+const groupSets = useAsync(
+  async () => {
+    if (!setsUsed.value.size || !course.can('member_read')) return null
+    // Not knowing who is in which group only leaves the CSV without its group columns.
+    return read('group_set.list', { course_id: props.courseId })
+      .then((o) => o.sets ?? [])
+      .catch(() => null)
+  },
+  { watch: [() => [...setsUsed.value].join(',')] },
+)
+/** A column for each set used, of each student's group in it now, where its members could be read. */
+const groupColumns = computed<ExtraColumn[]>(() =>
+  (groupSets.data.value ?? [])
+    .filter(
+      (set) =>
+        setsUsed.value.has(set.id) && (set.groups ?? []).some((g) => g.members !== undefined && g.members !== null),
+    )
+    .map((set) => {
+      const groupOf = new Map<string, string>()
+      for (const g of set.groups ?? []) for (const m of g.members ?? []) groupOf.set(m.member_id, g.name)
+      return {
+        heading: t('groupGrading.classbook.csvGroup', { name: set.name }),
+        value: (s) => groupOf.get(s.id) ?? '',
+      }
+    }),
+)
+/** Whether any cell shown is a group's grade: the legend then says what its marks are. */
+const anyGroupGrade = computed(() => matrix.value.some((r) => Object.values(r.cells).some((c) => !!c.group)))
+
 function nameOf(s: MatrixStudent): string {
   return s.name ?? t('classbook.unnamed', { id: shortId(s.id) })
 }
@@ -562,23 +610,29 @@ const countText = computed(() =>
 // ---------------------------------------------------------------------------
 
 function exportCsv() {
-  const csv = matrixCsv(columns.value, shown.value, {
-    student: t('classbook.student'),
-    loginId: t('classbook.loginId'),
-    memberId: t('classbook.memberId'),
-    column: (c) =>
-      c.kind === 'total'
-        ? t('classbook.csv.total', { name: titleOf(c) })
-        : t('classbook.csv.column', { name: titleOf(c), n: formatScore(c.outOf) }),
-    status: t('classbook.csv.status'),
-    statusOf: (s) => (s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : ''),
-    draft: (score) => t('classbook.csv.draft', { score }),
-    overridden: (score) => t('classbook.csv.overridden', { score }),
-    waiting: (text) => t('classbook.csv.waiting', { text }),
-    missing: t('classbook.state.missing'),
-    toGrade: t('classbook.state.toGrade'),
-    unnamed: nameOf,
-  })
+  const csv = matrixCsv(
+    columns.value,
+    shown.value,
+    {
+      student: t('classbook.student'),
+      loginId: t('classbook.loginId'),
+      memberId: t('classbook.memberId'),
+      column: (c) =>
+        c.kind === 'total'
+          ? t('classbook.csv.total', { name: titleOf(c) })
+          : t('classbook.csv.column', { name: titleOf(c), n: formatScore(c.outOf) }),
+      status: t('classbook.csv.status'),
+      statusOf: (s) => (s.status === 'paused' || s.status === 'removed' ? t(`enums.memberStatus.${s.status}`) : ''),
+      draft: (score) => t('classbook.csv.draft', { score }),
+      overridden: (score) => t('classbook.csv.overridden', { score }),
+      waiting: (text) => t('classbook.csv.waiting', { text }),
+      adjusted: (text) => t('groupGrading.classbook.csvAdjusted', { text }),
+      missing: t('classbook.state.missing'),
+      toGrade: t('classbook.state.toGrade'),
+      unnamed: nameOf,
+    },
+    groupColumns.value,
+  )
   const code = [course.course?.code, course.course?.section].filter(Boolean).join('-')
   const day = new Date().toLocaleDateString('sv-SE')
   const name = `${[code, t('classbook.csv.file'), day].filter(Boolean).join('-')}.csv`.replace(/[\\/:*?"<>|\s]+/g, '_')
@@ -690,6 +744,7 @@ function exportCsv() {
         <li>{{ t('classbook.legend.draft') }}</li>
         <li>{{ t('classbook.legend.missing') }}</li>
         <li v-if="spansAssignments">{{ t('classbook.legend.totals') }}</li>
+        <li v-if="anyGroupGrade">{{ t('groupGrading.classbook.legend') }}</li>
         <li v-if="includeRemoved">{{ t('classbook.legend.removed') }}</li>
         <li>{{ t('classbook.legend.scope') }}</li>
       </ul>

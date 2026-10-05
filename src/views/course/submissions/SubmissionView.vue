@@ -2,11 +2,13 @@
 // One submission: the work as handed in (or as drafted so far), what it was
 // handed in under, the grades given for it (and those proposed for it that
 // wait for approval), and — for those who grade — a form to grade it and a
-// way to correct its lateness.
+// way to correct its lateness. A group's work says whose work it is (its
+// members, marked against the group now for those who grade, who correct
+// them), is graded once for every member, and lists each member's grade.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
-import type { ActionSummary, GradeSummary, SubmissionSummary } from '@/api/types'
+import { workOf, type ActionSummary, type GradeSummary, type SubmissionSummary } from '@/api/types'
 import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
@@ -19,6 +21,8 @@ import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal } from '@/utils/format'
 import GradePanel from './components/GradePanel.vue'
+import GroupGrades from './components/GroupGrades.vue'
+import GroupWorkMembers from './components/GroupWorkMembers.vue'
 import LatenessControl from './components/LatenessControl.vue'
 import SubmissionGrades from './components/SubmissionGrades.vue'
 import { loadPendingGradeProposals } from './components/proposals'
@@ -36,7 +40,12 @@ const sub = useAsync(() => read('submission.get', { course_id: props.courseId, s
 })
 const s = computed(() => (sub.data.value?.id === props.submissionId ? sub.data.value : undefined))
 const assignmentId = computed(() => s.value?.assignment_id)
-const own = computed(() => !!s.value && s.value.student_member_id === course.myMemberId)
+/** A group's work, graded once for every member of it. */
+const isGroup = computed(() => !!s.value?.group_id)
+/** What staff are told of a draft or of missing work: the student's, or the group's. */
+const notices = computed(() => (isGroup.value ? 'groupGrading.notice' : 'submissions.detail.notice'))
+/** The caller's own work: their own, or their group's that they are part of. */
+const own = computed(() => !!s.value && !!course.myMemberId && workOf(s.value).includes(course.myMemberId))
 const mayReadGrades = computed(() => own.value || course.can('grade_read'))
 
 const assignment = useAsync(
@@ -117,10 +126,11 @@ const attempts = useAsync(
     const out: SubmissionSummary[] = []
     let after: string | undefined
     for (;;) {
+      // A group's attempts are the group's: never every group's of the assignment.
       const page = await read('submission.list', {
         course_id: props.courseId,
         assignment_id: cur.assignment_id,
-        student_member_id: cur.student_member_id,
+        ...(cur.group_id ? { group_id: cur.group_id } : { student_member_id: cur.student_member_id }),
         limit: PAGE,
         after,
       })
@@ -169,7 +179,8 @@ function onGraded() {
           </template>
           <template #subtitle>
             <span class="submission-view__subtitle">
-              <MemberName :id="s.student_member_id" />
+              <span v-if="isGroup">{{ s.group_name ?? t('groupGrading.members.groupWork') }}</span>
+              <MemberName v-else :id="s.student_member_id" />
               <span>·</span>
               <span>{{ t('submissions.detail.attempt', { n: s.attempt }) }}</span>
             </span>
@@ -189,7 +200,7 @@ function onGraded() {
         </PageHeader>
 
         <AppNote v-if="s.state === 'draft'" class="submission-view__notice">
-          {{ own ? t('submissions.detail.notice.draftOwn') : t('submissions.detail.notice.draftStaff') }}
+          {{ own ? t('submissions.detail.notice.draftOwn') : t(`${notices}.draftStaff`) }}
         </AppNote>
         <el-alert
           v-else-if="s.state === 'missing'"
@@ -201,8 +212,8 @@ function onGraded() {
             own
               ? t('submissions.detail.notice.missingOwn')
               : gradeList.length
-                ? t('submissions.detail.notice.missingGraded')
-                : t('submissions.detail.notice.missingStaff')
+                ? t(`${notices}.missingGraded`)
+                : t(`${notices}.missingStaff`)
           "
         />
 
@@ -223,7 +234,11 @@ function onGraded() {
                 </router-link>
               </dd>
             </div>
-            <div class="facts__item">
+            <div v-if="isGroup" class="facts__item">
+              <dt>{{ t('groupGrading.members.group') }}</dt>
+              <dd>{{ s.group_name ?? t('groupGrading.members.groupWork') }}</dd>
+            </div>
+            <div v-else class="facts__item">
               <dt>{{ t('submissions.detail.facts.student') }}</dt>
               <dd>
                 <MemberName :id="s.student_member_id" />
@@ -281,6 +296,16 @@ function onGraded() {
           </dl>
         </section>
 
+        <GroupWorkMembers
+          v-if="isGroup"
+          :course-id="courseId"
+          :submission="s"
+          :assignment="a"
+          :grades="gradeList"
+          :own="own"
+          @changed="reloadAll"
+        />
+
         <section class="app-card">
           <h2 class="app-card__title">{{ t('submissions.detail.work') }}</h2>
           <div class="submission-view__body">
@@ -318,8 +343,24 @@ function onGraded() {
           </ul>
         </section>
 
+        <GroupGrades
+          v-if="s.state !== 'draft' && isGroup"
+          :course-id="courseId"
+          :submission="s"
+          :grades="gradeList"
+          :points-possible="a?.points_possible"
+          :loading="grades.loading.value"
+          :error="grades.error.value"
+          :own="own"
+          :forbidden="!mayReadGrades"
+          :proposals="proposalList"
+          :live-draft="liveDraft"
+          :live-posted="livePosted"
+          @retry="grades.reload"
+          @changed="onGraded"
+        />
         <SubmissionGrades
-          v-if="s.state !== 'draft'"
+          v-else-if="s.state !== 'draft'"
           :course-id="courseId"
           :assignment-id="s.assignment_id"
           :student-id="s.student_member_id"
@@ -345,6 +386,7 @@ function onGraded() {
           :live-posted="livePosted"
           :grades-hidden="gradesHidden"
           :proposals="proposalList"
+          :work-grades="gradeList"
           @graded="onGraded"
         />
       </template>

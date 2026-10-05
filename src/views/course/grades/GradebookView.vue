@@ -8,12 +8,14 @@
 // A total a person overrode shows the override beside the figure worked out,
 // with its comment; whoever may regrade over the whole course overrides a
 // total, takes an override off and comments on one here, and undoes final
-// grades for the student.
+// grades for the student. An assignment the student was graded on with
+// their group says so, and whether their score was set apart from the
+// group's (GroupMark), from the live posted grade it counts.
 //
 // A student sees their own; staff pick a student, whose id goes in the path.
 // Before one is picked, staff see the whole class at once (ClassGradebook),
 // kept alive while a student's own is open.
-import { computed, ref, useTemplateRef, watch } from 'vue'
+import { computed, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -37,6 +39,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import TimeText from '@/components/TimeText.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import ClassGradebook from './components/ClassGradebook.vue'
+import GroupMark from './components/GroupMark.vue'
 import TotalMenu from './components/TotalMenu.vue'
 import {
   formatPct,
@@ -166,11 +169,28 @@ const shown = computed(() => (book.data.value?.student === student.value ? book.
 /** Whether the figures shown count ungraded work as zero: the answer's, not the switch's. */
 const shownWhatIf = computed(() => !!shown.value?.whatIf)
 
+/**
+ * For each assignment the student's posted grade came from their group's,
+ * the group and the student's adjustment: read with the totals below, for
+ * the student they were read for.
+ */
+const groupGrades = shallowRef<{
+  student: string
+  byAssignment: Map<string, NonNullable<GradeSummary['group']>>
+} | null>(null)
+function groupOf(assignmentId: string) {
+  const g = groupGrades.value
+  return g && g.student === student.value ? g.byAssignment.get(assignmentId) : undefined
+}
+
 // The totals written down at posting: live posted computed grades.
 const snapshots = useAsync(
   async () => {
     const map = new Map<string, GradeSummary>()
     if (!student.value) return map
+    const asked = student.value
+    // The live posted grade with the latest posting counts on each assignment.
+    const groups = new Map<string, GradeSummary>()
     let after: string | undefined
     for (let page = 0; page < 10; page++) {
       const out = await read('grade.list', {
@@ -181,10 +201,17 @@ const snapshots = useAsync(
       })
       for (const g of out.grades ?? []) {
         if (g.origin === 'computed' && g.state === 'posted' && g.component_id) map.set(g.component_id, g)
+        if (g.origin === 'entered' && g.state === 'posted' && !g.superseded_by && g.assignment_id) {
+          const was = groups.get(g.assignment_id)
+          if (!was || (g.posted_at ?? g.created_at) > (was.posted_at ?? was.created_at)) groups.set(g.assignment_id, g)
+        }
       }
       if (!out.next) break
       after = out.next
     }
+    const byAssignment = new Map<string, NonNullable<GradeSummary['group']>>()
+    for (const [id, g] of groups) if (g.group) byAssignment.set(id, g.group)
+    if (asked === student.value) groupGrades.value = { student: asked, byAssignment }
     return map
   },
   { watch: [student] },
@@ -650,6 +677,7 @@ watch(
                       }}</template>
                     </span>
                     <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
+                    <GroupMark v-if="row.kind === 'assignment' && groupOf(row.id)" :group="groupOf(row.id)!" />
                     <template v-if="row.kind === 'component'">
                       <AppTag v-if="row.fraction === null || row.fraction === undefined">
                         {{ t('grades.gradebook.nothingYet') }}
@@ -751,6 +779,7 @@ watch(
               <template #default="{ row }">
                 <span class="gradebook__tags">
                   <AppTag v-if="row.dropped">{{ t('grades.working.dropped') }}</AppTag>
+                  <GroupMark v-if="row.kind === 'assignment' && groupOf(row.id)" :group="groupOf(row.id)!" />
                   <template v-if="row.kind === 'component'">
                     <AppTag v-if="row.fraction === null || row.fraction === undefined">
                       {{ t('grades.gradebook.nothingYet') }}
