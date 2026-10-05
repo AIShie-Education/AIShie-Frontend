@@ -4,7 +4,9 @@
 // late or missing. Someone who has not started can be recorded as having
 // handed in nothing (submission.record_missing), so that it can be graded; if
 // they hand work in later, it takes that record's place. The page loads the
-// rows; this shows them, and marks.
+// rows; this shows them, and marks. On a group assignment (groupMode) each
+// row says the student's group, a student in no group says so, and a group,
+// not a student, is recorded as missing (GroupRoster).
 import { computed, h, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -20,6 +22,8 @@ import LoadMore from '@/components/LoadMore.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import WorkStateTag from './WorkStateTag.vue'
+import { NO_GROUP, workGroupIfOther, type RosterGroup } from './rosterByGroup'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -48,6 +52,9 @@ const props = defineProps<{
   loading: boolean
   error: ApiError | null
   hasMore: boolean
+  /** A group assignment's roster: each student's group (from groups) is shown, and nobody is marked one by one. */
+  groupMode?: boolean
+  groups?: RosterGroup[] | null
 }>()
 const emit = defineEmits<{ more: []; retry: []; changed: [] }>()
 const { t, te } = useI18n()
@@ -70,7 +77,12 @@ const summary = computed(() => view.value.summary)
 const stateChips = computed(() =>
   (summary.value?.counts ?? []).map((c) => ({
     value: c.state,
-    label: te(`enums.submissionState.${c.state}`) ? t(`enums.submissionState.${c.state}`) : c.state,
+    label:
+      c.state === NO_GROUP
+        ? t('groupWork.states.no_group')
+        : te(`enums.submissionState.${c.state}`)
+          ? t(`enums.submissionState.${c.state}`)
+          : c.state,
     count: c.count,
   })),
 )
@@ -100,6 +112,7 @@ const keyOf = (row: RosterEntry, assignmentId = props.assignmentId) =>
   proposalKey(props.courseId, assignmentId, row.student_member_id)
 const isProposed = (row: RosterEntry) => row.state === 'not_started' && wasProposed(keyOf(row))
 const markable = (row: RosterEntry) =>
+  !props.groupMode &&
   mayMarkMissing(row, {
     canGrade: course.can('grade_submit'),
     writable: course.writable,
@@ -163,6 +176,14 @@ const rowClass = ({ row }: { row: RosterEntry }) => (row.submission_id ? 'roster
 
 const nameOrder = (a: RosterEntry, b: RosterEntry) => nameOf(a).localeCompare(nameOf(b))
 
+/** A student's group now, by name, on a group assignment's roster; null for none. */
+const groupNames = computed(() => new Map((props.groups ?? []).map((g) => [g.group_id, g.name])))
+const groupOf = (row: RosterEntry) => (row.group_id ? (groupNames.value.get(row.group_id) ?? null) : null)
+/** The group whose work a row is about, where it is not the student's group now (they moved since). */
+const otherWork = (row: RosterEntry) => (props.groupMode ? workGroupIfOther(row, props.groups ?? []) : null)
+const groupOrder = (a: RosterEntry, b: RosterEntry) =>
+  (groupOf(a) ?? '').localeCompare(groupOf(b) ?? '', undefined, { numeric: true })
+
 function stateOrder(a: RosterEntry, b: RosterEntry) {
   const i = (s: string) => {
     const n = (ROSTER_STATES as readonly string[]).indexOf(s)
@@ -212,9 +233,11 @@ const emptyText = computed(() =>
                 <MemberName v-else :id="row.student_member_id" />
                 <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
               </span>
-              <StatusTag vocab="submissionState" :value="row.state" />
+              <WorkStateTag :value="row.state" />
             </div>
             <div class="roster-cards__meta">
+              <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
+              <span v-if="otherWork(row)">{{ t('groupWork.roster.workOf', { group: otherWork(row)!.name }) }}</span>
               <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
               <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
               <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
@@ -227,8 +250,9 @@ const emptyText = computed(() =>
                 <MemberName v-else :id="row.student_member_id" />
                 <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
               </span>
-              <StatusTag vocab="submissionState" :value="row.state" />
+              <WorkStateTag :value="row.state" />
             </div>
+            <div v-if="groupMode && groupOf(row)" class="roster-cards__meta">{{ groupOf(row) }}</div>
             <div v-if="markable(row)" class="roster-action">
               <el-button
                 size="small"
@@ -270,9 +294,24 @@ const emptyText = computed(() =>
             />
           </template>
         </el-table-column>
+        <el-table-column
+          v-if="groupMode"
+          :label="t('groupWork.roster.group')"
+          sortable
+          :sort-method="groupOrder"
+          min-width="120"
+        >
+          <template #default="{ row }">
+            <span v-if="groupOf(row)" class="roster-table__name">{{ groupOf(row) }}</span>
+            <span v-else class="app-muted">{{ t('groupWork.roster.noGroupCell') }}</span>
+            <div v-if="otherWork(row)" class="roster-table__work-of">
+              {{ t('groupWork.roster.workOf', { group: otherWork(row)!.name }) }}
+            </div>
+          </template>
+        </el-table-column>
         <el-table-column :label="t('submissions.columns.state')" sortable :sort-method="stateOrder" min-width="120">
           <template #default="{ row }">
-            <StatusTag vocab="submissionState" :value="row.state" />
+            <WorkStateTag :value="row.state" />
           </template>
         </el-table-column>
         <el-table-column :label="t('submissions.columns.attempt')" width="90" align="center">
@@ -344,6 +383,10 @@ const emptyText = computed(() =>
 }
 .roster-table__status {
   margin-left: 6px;
+}
+.roster-table__work-of {
+  font-size: var(--app-text-xs);
+  color: var(--el-text-color-secondary);
 }
 .roster-table__chevron {
   color: var(--el-text-color-secondary);
