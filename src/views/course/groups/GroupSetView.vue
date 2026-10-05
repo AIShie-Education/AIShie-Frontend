@@ -316,9 +316,6 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
       <template v-if="set?.archived_at" #tags>
         <AppTag size="default">{{ t('groups.archived') }}</AppTag>
       </template>
-      <template v-if="set?.description" #subtitle>
-        <span class="set-view__description">{{ set.description }}</span>
-      </template>
       <template v-if="set && canForm && !studentView">
         <template v-if="!archived">
           <el-button :disabled="!course.writable" @click="editOpen = true">
@@ -406,6 +403,9 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
         />
         <template v-else>
           <section class="app-card set-view__signup" aria-labelledby="set-view-signup">
+            <!-- What the set is for opens its first card, not its header: a header of a back link, a title and a
+                 line under it starts the page's content past the 200 px a course's page keeps to. -->
+            <p v-if="set.description" class="set-view__description">{{ set.description }}</p>
             <div class="set-view__signup-head">
               <h2 id="set-view-signup" class="set-view__signup-title">{{ t('groups.signup.title') }}</h2>
               <SignupLine :signup="set.signup" staff countdown @ended="reload" />
@@ -573,6 +573,9 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
   container-type: inline-size;
 }
 .set-view__description {
+  margin: 0 0 var(--app-space-md);
+  color: var(--app-ink-2);
+  line-height: var(--app-lh-text);
   white-space: pre-line;
   overflow-wrap: anywhere;
 }

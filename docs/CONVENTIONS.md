@@ -821,6 +821,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
   waiting work and paused or removed students marked, and no text a spreadsheet would run as a
   formula (`csvText`).
+- **A course's groups** (分組: the Groups tab, `/groups`, `GroupsView`; a set, `/groups/:setId`,
+  `GroupSetView`; their parts in `src/views/course/groups/`) are read by every reader of the course
+  (`group_set.list`, `.get`, with `document_read`) and formed by whoever writes assignments
+  (`assignment_write`: `group_set.*`, `group.create`, `.update`, `.set_members`, `.split`). What the
+  server sends is what is shown: names of a group's members to those who read the member list, and to a
+  student their own group's alone, so a student's page (`StudentSet`) shows no other group's members and
+  no group's work. Students are moved by choosing them (a box each) and "Move to…" (`MoveMenu`, an
+  `el-dropdown`, which the keyboard opens and walks), a row's own "Move … to…", or by dragging one onto
+  a group, never by dragging alone; `usePlacements` sends `group.set_members`, and a refusal of
+  `group_has_work` opens `AffectsWorkDialog`, which says what becomes of each work before placing them
+  again with `affects_work`. A random split (`SplitDialog`) is previewed by the server's own deal,
+  `split.ts` (`planSplit` in `groupModel.ts` over the set as read), which must keep AIShie-Core's
+  `internal/groupsplit` golden values (`split.spec.ts`): the seed shown is sent, so the preview is what is
+  dealt. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
+  CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`.
+  The feed names sets and groups from `groupNames.ts` and says their events' facts with
+  `groupEventFacts`; an action about groups is said in words by `GroupProposal` on the approvals queue
+  and an action's page; a student's member page lists their groups (`MemberGroupsCard`).
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

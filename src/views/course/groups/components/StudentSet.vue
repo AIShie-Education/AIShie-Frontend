@@ -11,6 +11,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import { errorMessage } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
@@ -97,6 +98,7 @@ async function ask(g: Group) {
 
 <template>
   <div class="student-set app-column">
+    <AppNote v-if="set.description" plain class="student-set__about">{{ set.description }}</AppNote>
     <section class="app-card student-set__mine" aria-labelledby="student-set-mine">
       <h2 id="student-set-mine" class="app-card__title">{{ t('groups.mine.title') }}</h2>
       <template v-if="mine">
@@ -156,6 +158,10 @@ async function ask(g: Group) {
 </template>
 
 <style scoped>
+.student-set__about {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
 .student-set__group {
   margin: 0;
   font-size: var(--app-text-lg);
