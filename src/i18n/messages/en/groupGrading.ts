@@ -39,12 +39,19 @@ export default {
       'A draft grade for the {n} member of the work. Nobody sees it until it is posted. | A draft grade for each of the {n} members of the work. Nobody sees them until they are posted.',
     filesHint:
       'Optional: marked-up files, a recording, and so on. They are the group’s: every member of the work gets them with their grade.',
+    // A seat that does not reach every member of the work: Core grades it only for one that does.
+    unreached:
+      'Some members of this work are outside the students your seat reaches. A group’s grade is given to every member of its work, so it is entered by someone whose seat reaches them all.',
   },
   // Each member's line.
   editor: {
     title: 'Each member’s score',
     hint: 'Each member is given the group’s score unless you set theirs apart here, with a reason: they read it with their grade, and no other member sees it.',
+    // Where the work's grades cannot be read: each line is kept as the member's grade has it, unseen.
+    hintUnseen:
+      'The grades already given for this work cannot be shown to you, so each member’s line keeps what their grade has now: a score set apart from the group’s stays, with its reason. Set a line only to change it.',
     kind: {
+      keep: 'Kept as it is',
       none: 'The group’s score',
       replace: 'A score of their own',
       delta: 'Plus or minus',
@@ -64,6 +71,7 @@ export default {
     result: 'Comes to {score}',
     resultOutOf: 'Comes to {score} / {points}',
     resultPending: 'Comes to the group’s score',
+    resultKept: 'As their grade has it now',
     peer: 'Peer evaluation moves it again as the grade is saved, where its form counts.',
     noMembers: 'This work names nobody whose work it is.',
     problem: {
@@ -84,6 +92,10 @@ export default {
     open: 'Open {name}’s grade',
     empty: 'Not graded yet.',
     noGrade: 'No grade from this work yet',
+    // A member the caller's seat does not reach, whose grade Core does not show it.
+    unreached: 'Outside the students your seat reaches: their grade is not shown to you',
+    // One it may not reach, where that is not known.
+    notShown: 'No grade of theirs is shown to you',
     noGradeDraft:
       'A member with no grade was added to the work after it was graded: saving the group’s grade again gives them a draft.',
     noGradePosted:
@@ -133,6 +145,8 @@ export default {
     membersHint: 'Members added to the work since it was graded are given a grade too.',
     partlyPosted:
       'Some members’ grades from the group’s grade are still drafts. Post them first, then regrade the group.',
+    unreached:
+      'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
   },
   // Whose work a group's submission is.
   members: {
@@ -149,6 +163,7 @@ export default {
       outside: 'Not in the group: part of this work by a correction',
       joinedSince: 'Joined the group after this was handed in: not part of it',
       notPart: 'In the group, but not part of this work',
+      unreached: 'Outside the students your seat reaches',
     },
     standingAt: {
       left: 'Left the group {time}',
@@ -156,6 +171,8 @@ export default {
       notPart: 'In the group since {time}, but not part of this work',
     },
     groupUnknown: 'Who is in the group now could not be read, so nobody is marked.',
+    unreachedHint:
+      'Some members of this work are outside the students your seat reaches, so whether they are in the group now is not shown to you. Whose work this is, and whether it was late, are corrected by someone whose seat reaches every member.',
     correct: 'Correct members',
   },
   // submission.set_members

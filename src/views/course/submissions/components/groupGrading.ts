@@ -6,7 +6,9 @@
 //
 // What the member table shows is what is written: every member's adjustment
 // is sent, those shown with none as `none`, so that nothing Core would carry
-// from an earlier grade is written unseen.
+// from an earlier grade is written unseen. Where the work's grades cannot be
+// read, each line is kept as their grade has it (`keep`), which is not sent,
+// so that Core carries it: only a line the grader sets is written.
 import type { Decimal, GradeSummary, Submission } from '@/api/types'
 import { isDecimal } from '@/utils/format'
 import { decimalAbove, isNonNegativeDecimal, sumDecimals } from './decimal'
@@ -18,13 +20,20 @@ export type Adjustment = NonNullable<NonNullable<GradeSummary['group']>['adjustm
 export type AdjustKind = 'none' | 'replace' | 'delta'
 export const ADJUST_KINDS: readonly AdjustKind[] = ['none', 'replace', 'delta']
 
+/**
+ * A member's line: what a grader may set, or kept as their grade has it now
+ * where the work's grades cannot be read (and so cannot be shown): Core
+ * carries it from their earlier grade, if they have one.
+ */
+export type LineKind = AdjustKind | 'keep'
+
 /** Core takes a reason of 1 to 500 characters. */
 export const REASON_MAX = 500
 
 /** One member's line of the table, as typed. */
 export interface AdjustRow {
   memberId: string
-  kind: AdjustKind
+  kind: LineKind
   /** replace: their score; delta: what is added to the group's, below zero to take away. */
   points: string
   reason: string
@@ -70,8 +79,13 @@ export function liveByMember(grades: readonly GradeSummary[], submissionId: stri
   return out
 }
 
-/** The lines for every member of the work, each as their live grade has it now. */
-export function rowsFor(memberIds: readonly string[], live: ReadonlyMap<string, GradeSummary>): AdjustRow[] {
+/**
+ * The lines for every member of the work, each as their live grade has it
+ * now; or, where the work's grades are not known (they cannot be read, or
+ * could not be), each kept as it is, unseen.
+ */
+export function rowsFor(memberIds: readonly string[], live: ReadonlyMap<string, GradeSummary> | null): AdjustRow[] {
+  if (!live) return memberIds.map((memberId) => ({ memberId, kind: 'keep', points: '', reason: '', peer: null }))
   return memberIds.map((id) => rowFrom(id, live.get(id)?.group?.adjustment))
 }
 
@@ -87,6 +101,8 @@ export function workMemberIds(s: Pick<Submission, 'members'>): string[] {
 export function memberScore(groupScore: string, row: Pick<AdjustRow, 'kind' | 'points'>): string | null {
   const g = groupScore.trim()
   const p = row.points.trim()
+  // Kept as their grade has it, unseen: what it comes to is not known.
+  if (row.kind === 'keep') return null
   if (row.kind === 'replace') return isDecimal(p) ? (sumDecimals([p]) ?? p) : null
   if (!isDecimal(g)) return null
   if (row.kind === 'delta') return isDecimal(p) ? sumDecimals([g, p]) : null
@@ -107,7 +123,7 @@ export function rowProblem(
   pointsPossible: Decimal | null | undefined,
   allowExtra: boolean,
 ): RowProblem {
-  if (row.kind === 'none') return null
+  if (row.kind === 'none' || row.kind === 'keep') return null
   const p = row.points.trim()
   if (!isDecimal(p)) return 'points'
   if (row.kind === 'replace' && !isNonNegativeDecimal(p)) return 'negative'
@@ -136,13 +152,23 @@ export interface AdjustmentArg {
   reason?: string
 }
 
-/** Every member's adjustment as it will be written: none where the line has none. */
-export function adjustmentsArg(rows: readonly AdjustRow[]): AdjustmentArg[] {
-  return rows.map((r) =>
-    r.kind === 'none'
-      ? { student_member_id: r.memberId, kind: 'none' }
-      : { student_member_id: r.memberId, kind: r.kind, points: r.points.trim(), reason: r.reason.trim() },
-  )
+/**
+ * Every member's adjustment as it will be written: none where the line has
+ * none. A line kept as it is is left out, for Core to carry; with none
+ * written at all, there is nothing to send (undefined).
+ */
+export function adjustmentsArg(rows: readonly AdjustRow[]): AdjustmentArg[] | undefined {
+  const out: AdjustmentArg[] = []
+  for (const r of rows) {
+    if (r.kind === 'keep') continue
+    out.push(
+      r.kind === 'none'
+        ? { student_member_id: r.memberId, kind: 'none' }
+        : { student_member_id: r.memberId, kind: r.kind, points: r.points.trim(), reason: r.reason.trim() },
+    )
+  }
+  const allKept = rows.length > 0 && !out.length
+  return allKept ? undefined : out
 }
 
 /** Whether two sets of lines would write the same: to tell a form changed from one as it was read. */
@@ -175,6 +201,31 @@ export interface Stay {
   left_how?: string | null
 }
 
+// ---------------------------------------------------------------------------
+// Whom the caller's seat reaches
+// ---------------------------------------------------------------------------
+
+/**
+ * Whether the caller's seat reaches every member of a work: all of them;
+ * some only (it is known not to reach one); or not known (where its list of
+ * students cannot be read, say). Core shows a seat a group's work if it
+ * reaches any member, but grades it (grade.*), corrects its members and its
+ * lateness only for a seat that reaches every one; and it gives such a seat
+ * the grades, the group's members and their history only of those it
+ * reaches.
+ */
+export type WorkReach = 'all' | 'some' | 'unknown'
+
+export function workReach(memberIds: readonly string[], reaches: (id: string) => boolean | null): WorkReach {
+  let all = true
+  for (const id of memberIds) {
+    const r = reaches(id)
+    if (r === false) return 'some'
+    if (r !== true) all = false
+  }
+  return all ? 'all' : 'unknown'
+}
+
 /**
  * Where a person stands against the work, for those who grade it:
  * - work: part of it, in the group still;
@@ -184,9 +235,12 @@ export interface Stay {
  * - joinedSince: in the group now, joined after the work was handed in or
  *   recorded missing, and so not part of it;
  * - notPart: in the group now, joined before, but not part of it (part of
- *   another group's work for the assignment, or taken off it).
+ *   another group's work for the assignment, or taken off it);
+ * - unreached: part of it, a student the caller's seat does not reach, whom
+ *   Core shows nothing more of: whether they are in the group now is not
+ *   known.
  */
-export type MemberStanding = 'work' | 'left' | 'outside' | 'joinedSince' | 'notPart'
+export type MemberStanding = 'work' | 'left' | 'outside' | 'joinedSince' | 'notPart' | 'unreached'
 
 export interface MemberLine {
   memberId: string
@@ -199,7 +253,10 @@ export interface MemberLine {
  * The work's members, each marked against the group's members now, and
  * after them those in the group now who are not part of the work. Without
  * the group's members (they cannot be read), the work's members alone,
- * unmarked.
+ * unmarked. A member the caller's seat does not reach is marked so, never
+ * as out of the group (Core leaves them out of the group's members and its
+ * history); one it may not reach (not known) is left unmarked, unless the
+ * group's members name them.
  */
 export function memberLines(input: {
   workMembers: readonly string[]
@@ -209,6 +266,8 @@ export function memberLines(input: {
   /** The group's members now, by id; null where they cannot be read. */
   groupNow: readonly { member_id: string; joined_at?: string | null }[] | null
   history?: readonly Stay[] | null
+  /** Whether the caller's seat reaches a student; not given, it reaches every one. */
+  reaches?: (id: string) => boolean | null
 }): MemberLine[] {
   const now = input.groupNow ? new Map(input.groupNow.map((m) => [m.member_id, m])) : null
   const stays = (input.history ?? []).filter((h) => h.group_id === input.groupId)
@@ -222,6 +281,9 @@ export function memberLines(input: {
   const everIn = (id: string) => stays.some((h) => h.member_id === id)
   const out: MemberLine[] = input.workMembers.map((id) => {
     if (!now || now.has(id)) return { memberId: id, standing: 'work', at: null }
+    const reached = input.reaches ? input.reaches(id) : true
+    if (reached === false) return { memberId: id, standing: 'unreached', at: null }
+    if (reached !== true) return { memberId: id, standing: 'work', at: null }
     // Without the history, one not in the group now is taken to have left it.
     if (input.history && !everIn(id)) return { memberId: id, standing: 'outside', at: null }
     return { memberId: id, standing: 'left', at: lastLeft(id) }

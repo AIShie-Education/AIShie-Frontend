@@ -14,7 +14,12 @@
 // each member's line (GroupAdjustments), set apart from the group's score
 // with a reason where the grader says so. Every member's line is sent, as it
 // is shown, with the work's members, so that a proposal is refused if they
-// change. Once a grade from it is posted the group is regraded instead.
+// change. Where the work's grades cannot be read, each line is kept as the
+// member's grade has it, unseen and unsent, for Core to carry, until the
+// grader sets it. Once a grade from it is posted the group is regraded
+// instead. A seat that does not reach every member of the work is not
+// offered the form: a group's grade is every member's, and Core grades it
+// only for a seat that reaches them all.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
@@ -40,6 +45,7 @@ import {
   rowsFor,
   workMemberIds,
   type AdjustRow,
+  type WorkReach,
 } from './groupGrading'
 import RubricPanel from './RubricPanel.vue'
 import { decimalAbove, isNonNegativeDecimal } from './decimal'
@@ -55,12 +61,14 @@ const props = defineProps<{
   liveDraft?: GradeSummary
   /** The live posted grade for this work, if one is known. */
   livePosted?: GradeSummary
-  /** The caller cannot read grades, so whether any exist is not known. */
+  /** The caller cannot read grades (or they could not be read), so whether any exist is not known. */
   gradesHidden?: boolean
   /** Grades proposed for this work and waiting for approval. */
   proposals?: ActionSummary[]
   /** A group's work: every grade read for it, each member's own. */
   workGrades?: GradeSummary[]
+  /** A group's work: whether the caller's seat reaches every member of it (groupGrading.workReach). */
+  reach?: WorkReach
 }>()
 const emit = defineEmits<{ graded: [] }>()
 const { t } = useI18n()
@@ -70,9 +78,16 @@ onMounted(() => void course.ensureMembers())
 
 /** A group's work: one group grade, each member's grade given from it. */
 const isGroup = computed(() => !!props.submission.group_id)
+/** A group's work some of whose members the caller's seat does not reach: Core refuses grading it. */
+const unreached = computed(() => isGroup.value && props.reach === 'some')
 
-/** Whether the form is offered: the work is handed in (or missing) and has no posted grade. */
-const showForm = computed(() => course.writable && props.submission.state !== 'draft' && !props.livePosted)
+/**
+ * Whether the form is offered: the work is handed in (or missing), has no
+ * posted grade, and, a group's, every member of it is within reach.
+ */
+const showForm = computed(
+  () => course.writable && props.submission.state !== 'draft' && !props.livePosted && !unreached.value,
+)
 
 // The rubric is read only when there is a form to grade with beside it.
 const rubric = useAsync(
@@ -97,9 +112,12 @@ type Outcome =
 const outcome = ref<Outcome | null>(null)
 
 // Each member's line, as their grade on the work has it now: what Core
-// would carry, shown, and sent as shown.
+// would carry, shown, and sent as shown. Where the grades are not known,
+// kept as they are, unseen, and not sent.
 const members = computed(() => (isGroup.value ? workMemberIds(props.submission) : []))
-const liveGrades = computed(() => liveByMember(props.workGrades ?? [], props.submission.id))
+const liveGrades = computed(() =>
+  props.gradesHidden ? null : liveByMember(props.workGrades ?? [], props.submission.id),
+)
 const carried = computed(() => rowsFor(members.value, liveGrades.value))
 const adjustRows = ref<AdjustRow[]>([])
 /** What the lines are read from: read again (after saving), they start from it again. */
@@ -415,6 +433,9 @@ async function submit() {
     <p v-else-if="submission.state === 'draft'" class="app-muted grade-panel__note">
       {{ t('submissions.grade.notYet') }}
     </p>
+    <AppNote v-else-if="unreached">
+      {{ t('groupGrading.panel.unreached') }}
+    </AppNote>
     <AppNote v-else-if="livePosted">
       <p class="grade-panel__alert-text">
         {{ isGroup ? t('groupGrading.panel.postedExists') : t('submissions.grade.postedExists') }}
@@ -511,7 +532,9 @@ async function submit() {
 
           <el-form-item v-if="isGroup" :label="t('groupGrading.editor.title')">
             <div class="grade-panel__block">
-              <div class="app-form-hint grade-panel__members-hint">{{ t('groupGrading.editor.hint') }}</div>
+              <div class="app-form-hint grade-panel__members-hint">
+                {{ gradesHidden ? t('groupGrading.editor.hintUnseen') : t('groupGrading.editor.hint') }}
+              </div>
               <GroupAdjustments
                 v-model="adjustRows"
                 :members="submission.members ?? []"
@@ -519,6 +542,7 @@ async function submit() {
                 :points-possible="points"
                 :allow-extra="above && form.allowExtra"
                 :strict="rowsChecked"
+                :unseen="gradesHidden"
               />
             </div>
           </el-form-item>

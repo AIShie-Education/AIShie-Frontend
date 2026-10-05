@@ -5,7 +5,11 @@
 // each is marked against the group now: who has left it since, and who is in
 // it now but not part of this work (joined since, or part of another group's
 // work); and they correct whose work it is (submission.set_members), for a
-// student the group handed it in without, say.
+// student the group handed it in without, say. Core gives a seat the
+// group's members and their history only of the students it reaches: one
+// that does not reach every member of the work is told so, its members
+// outside its reach marked as that and nothing else, and offered no
+// correction, which Core makes only for a seat that reaches them all.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Upload } from '@element-plus/icons-vue'
@@ -18,7 +22,7 @@ import TimeText from '@/components/TimeText.vue'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import CorrectMembersDialog from './CorrectMembersDialog.vue'
-import { memberLines, workMemberIds, type MemberLine } from './groupGrading'
+import { memberLines, workMemberIds, type MemberLine, type WorkReach } from './groupGrading'
 
 const props = defineProps<{
   courseId: string
@@ -28,6 +32,8 @@ const props = defineProps<{
   grades: GradeSummary[]
   /** The caller is one of the work's members. */
   own?: boolean
+  /** Whether the caller's seat reaches every member of the work (groupGrading.workReach). */
+  reach?: WorkReach
 }>()
 const emit = defineEmits<{ changed: [] }>()
 const { t } = useI18n()
@@ -59,14 +65,17 @@ const lines = computed<MemberLine[]>(() =>
     // A draft is its group's members now: nothing to mark.
     groupNow: draft.value ? null : groupNow.value,
     history: set.data.value?.history,
+    reaches: staff.value ? course.reachesStudent : undefined,
   }),
 )
+/** Some members of the work are outside the caller's reach: what Core shows of the group leaves them out. */
+const someUnreached = computed(() => staff.value && !draft.value && props.reach === 'some')
 const nameOf = (id: string) =>
   props.submission.members?.find((m) => m.member_id === id)?.display_name ??
   groupNow.value?.find((m) => m.member_id === id)?.display_name ??
   null
 
-const canCorrect = computed(() => !props.own && !draft.value && course.can('grade_submit'))
+const canCorrect = computed(() => !props.own && !draft.value && course.can('grade_submit') && props.reach !== 'some')
 const correcting = ref(false)
 const candidates = computed(() =>
   lines.value.filter((l) => l.standing === 'joinedSince' || l.standing === 'notPart').map((l) => l.memberId),
@@ -121,6 +130,9 @@ function onCorrected() {
     </ul>
     <p v-if="set.error.value && staff && !draft" class="app-form-hint group-work__hint">
       {{ t('groupGrading.members.groupUnknown') }}
+    </p>
+    <p v-else-if="someUnreached" class="app-form-hint group-work__hint">
+      {{ t('groupGrading.members.unreachedHint') }}
     </p>
     <CorrectMembersDialog
       v-if="canCorrect"

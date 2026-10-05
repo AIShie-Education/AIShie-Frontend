@@ -2,7 +2,8 @@
 // its teacher, with names of this run's own so that runs never meet:
 //
 //   Projects (a group set):  Team A — Ana, Ben, Cai     Team B — Dev, Eva
-//   Fay, a student in no group; Tom, a TA; grader-g, a grading agent.
+//   Fay, a student in no group; Tom, a TA; Ivy, a TA listed for Ana and Ben
+//   alone; Kit, a TA who may not read grades; grader-g, a grading agent.
 //
 // "Group project" (100 points, in the course's one component) is a group
 // assignment of Projects, published: Ben hands Team A's report in, Dev Team
@@ -26,7 +27,10 @@ export interface GroupGradingWorld {
   groups: { a: string; b: string }
   assignment: { id: string; title: string }
   submissions: { a: string; b: string }
-  people: Record<'teacher' | 'ta' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader', WorldPerson>
+  people: Record<
+    'teacher' | 'ta' | 'ivy' | 'kit' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader',
+    WorldPerson
+  >
 }
 
 interface Tool {
@@ -130,6 +134,8 @@ export async function buildGroupGradingWorld(
   const people = {
     teacher: await person('teacher', 'Teacher Wong'),
     ta: await person('ta', 'Tom Lee'),
+    ivy: await person('ivy', 'Ivy Kwok'),
+    kit: await person('kit', 'Kit Mak'),
     ana: await person('ana', 'Ana Chan'),
     ben: await person('ben', 'Ben Ho'),
     cai: await person('cai', 'Cai Lam'),
@@ -159,6 +165,12 @@ export async function buildGroupGradingWorld(
   }
   await seat('ta', 'ta')
   for (const k of ['ana', 'ben', 'cai', 'dev', 'eva', 'fay'] as const) await seat(k, 'student')
+  // A TA whose seat reaches Ana and Ben alone, of Team A; and one who grades without reading grades.
+  await seat('ivy', 'ta', {
+    student_scope: 'listed',
+    listed_students: [people.ana.member_id, people.ben.member_id],
+  })
+  await seat('kit', 'ta', { perms: { grade_read: 'denied' } })
 
   const component = await call(T, 'component.create', {
     course_id: C,

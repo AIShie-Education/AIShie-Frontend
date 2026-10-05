@@ -5,6 +5,10 @@
 // way to correct its lateness. A group's work says whose work it is (its
 // members, marked against the group now for those who grade, who correct
 // them), is graded once for every member, and lists each member's grade.
+// Core shows a group's work to a seat that reaches any of its members, but
+// grades it, and corrects its members and lateness, only for one that
+// reaches every one: a seat that does not is told so, and offered none of
+// those.
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
@@ -26,6 +30,7 @@ import GroupWorkMembers from './components/GroupWorkMembers.vue'
 import LatenessControl from './components/LatenessControl.vue'
 import SubmissionGrades from './components/SubmissionGrades.vue'
 import { loadPendingGradeProposals } from './components/proposals'
+import { workMemberIds, workReach, type WorkReach } from './components/groupGrading'
 
 const props = defineProps<{ courseId: string; submissionId: string }>()
 const { t } = useI18n()
@@ -47,6 +52,10 @@ const notices = computed(() => (isGroup.value ? 'groupGrading.notice' : 'submiss
 /** The caller's own work: their own, or their group's that they are part of. */
 const own = computed(() => !!s.value && !!course.myMemberId && workOf(s.value).includes(course.myMemberId))
 const mayReadGrades = computed(() => own.value || course.can('grade_read'))
+/** Whether the caller's seat reaches every member of a group's work: one of its own is theirs. */
+const reach = computed<WorkReach>(() =>
+  !s.value?.group_id || own.value ? 'all' : workReach(workMemberIds(s.value), course.reachesStudent),
+)
 
 const assignment = useAsync(
   async () =>
@@ -86,8 +95,8 @@ const gradeList = computed(() => grades.data.value ?? [])
 const gradesSettled = computed(() => grades.data.value !== undefined || !!grades.error.value)
 const liveDraft = computed(() => gradeList.value.find((g) => g.state === 'draft'))
 const livePosted = computed(() => gradeList.value.find((g) => g.state === 'posted'))
-/** Whether the grades already given for this work are hidden from the caller. */
-const gradesHidden = computed(() => !mayReadGrades.value || !!grades.error.value?.isForbidden)
+/** Whether the grades already given for this work are not known to the caller: refused, or not read. */
+const gradesHidden = computed(() => !mayReadGrades.value || !!grades.error.value)
 
 // Grades proposed for this work and waiting for approval. Approving one over
 // a draft entered after it is refused, so whoever grades is told of them.
@@ -149,6 +158,8 @@ const title = computed(
 )
 const handedIn = computed(() => s.value?.state === 'submitted' || s.value?.state === 'late')
 const mayGrade = computed(() => !own.value && course.can('grade_submit'))
+/** Correcting lateness: a group's for every member of it, so only within reach of them all. */
+const mayCorrectLateness = computed(() => mayGrade.value && handedIn.value && reach.value !== 'some')
 const files = computed(() => s.value?.files ?? [])
 
 function reloadAll() {
@@ -185,7 +196,7 @@ function onGraded() {
               <span>{{ t('submissions.detail.attempt', { n: s.attempt }) }}</span>
             </span>
           </template>
-          <LatenessControl v-if="mayGrade && handedIn" :course-id="courseId" :submission="s" @changed="reloadAll" />
+          <LatenessControl v-if="mayCorrectLateness" :course-id="courseId" :submission="s" @changed="reloadAll" />
           <router-link
             v-if="own && (s.state === 'draft' || s.state === 'missing')"
             :to="{ name: 'course-assignment', params: { courseId, assignmentId: s.assignment_id } }"
@@ -303,6 +314,7 @@ function onGraded() {
           :assignment="a"
           :grades="gradeList"
           :own="own"
+          :reach="reach"
           @changed="reloadAll"
         />
 
@@ -356,6 +368,7 @@ function onGraded() {
           :proposals="proposalList"
           :live-draft="liveDraft"
           :live-posted="livePosted"
+          :reach="reach"
           @retry="grades.reload"
           @changed="onGraded"
         />
@@ -387,6 +400,7 @@ function onGraded() {
           :grades-hidden="gradesHidden"
           :proposals="proposalList"
           :work-grades="gradeList"
+          :reach="reach"
           @graded="onGraded"
         />
       </template>

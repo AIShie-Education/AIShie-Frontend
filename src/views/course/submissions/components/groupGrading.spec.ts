@@ -12,6 +12,7 @@ import {
   rowsFor,
   sameRows,
   workMemberIds,
+  workReach,
   type AdjustRow,
 } from './groupGrading'
 
@@ -108,6 +109,19 @@ describe('each member’s live grade on the work', () => {
   })
 })
 
+describe('the lines where the work’s grades are not known', () => {
+  it('keeps every member’s as their grade has it, unseen: nothing to check, no score to show', () => {
+    const rows = rowsFor(['m1', 'm2'], null)
+    expect(rows.map((r) => [r.memberId, r.kind])).toEqual([
+      ['m1', 'keep'],
+      ['m2', 'keep'],
+    ])
+    expect(memberScore('80', rows[0])).toBeNull()
+    expect(rowProblem(rows[0], '80', 100, false)).toBeNull()
+    expect(anyAbove(rows, '80', 100)).toBe(false)
+  })
+})
+
 describe('a member’s score from the group’s', () => {
   it('is the group’s, their own, or the group’s plus or minus, exactly', () => {
     expect(memberScore('80', row({}))).toBe('80')
@@ -164,6 +178,23 @@ describe('what is written', () => {
     ])
   })
 
+  it('leaves out a line kept as the member’s grade has it, unseen, for Core to carry', () => {
+    expect(
+      adjustmentsArg([
+        row({ memberId: 'm1', kind: 'keep' }),
+        row({ memberId: 'm2', kind: 'delta', points: '5', reason: 'Built the model' }),
+        row({ memberId: 'm3', kind: 'none' }),
+      ]),
+    ).toEqual([
+      { student_member_id: 'm2', kind: 'delta', points: '5', reason: 'Built the model' },
+      { student_member_id: 'm3', kind: 'none' },
+    ])
+    // Every line kept: nothing is sent, and Core carries each member's.
+    expect(adjustmentsArg([row({ memberId: 'm1', kind: 'keep' }), row({ memberId: 'm2', kind: 'keep' })])).toBe(
+      undefined,
+    )
+  })
+
   it('is the same for lines that write the same', () => {
     expect(sameRows([row({ points: '5' })], [row({})])).toBe(true)
     expect(sameRows([row({ kind: 'delta', points: '5', reason: 'r' })], [row({})])).toBe(false)
@@ -212,8 +243,45 @@ describe('whose work it is, against the group now', () => {
     ])
   })
 
+  it('marks a member the seat does not reach as such, never as out of the group, and one it may not reach not at all', () => {
+    // Core leaves Cai out of the group's members and its history: the seat is listed for Ana and Ben.
+    const reaches = (id: string) => (id === 'cai' ? false : id === 'dev' ? null : true)
+    const lines = memberLines({
+      workMembers: ['ana', 'ben', 'cai', 'dev'],
+      groupId: 'gA',
+      frozenAt: handedIn,
+      groupNow: [{ member_id: 'ana', joined_at: '2026-10-01T00:00:00Z' }],
+      history: [
+        { member_id: 'ana', group_id: 'gA', joined_at: '2026-10-01T00:00:00Z' },
+        {
+          member_id: 'ben',
+          group_id: 'gA',
+          joined_at: '2026-10-01T00:00:00Z',
+          left_at: '2026-10-07T00:00:00Z',
+          left_how: 'moved',
+        },
+      ],
+      reaches,
+    })
+    expect(lines).toEqual([
+      { memberId: 'ana', standing: 'work', at: null },
+      { memberId: 'ben', standing: 'left', at: '2026-10-07T00:00:00Z' },
+      { memberId: 'cai', standing: 'unreached', at: null },
+      { memberId: 'dev', standing: 'work', at: null },
+    ])
+  })
+
   it('takes one not in the group to have left it where there is no history', () => {
     const lines = memberLines({ workMembers: ['ben'], groupId: 'gA', frozenAt: handedIn, groupNow: [] })
     expect(lines).toEqual([{ memberId: 'ben', standing: 'left', at: null }])
+  })
+})
+
+describe('whether the seat reaches every member of the work', () => {
+  it('is all, some (one known not reached), or not known', () => {
+    const by = (m: Record<string, boolean | null>) => (id: string) => m[id] ?? null
+    expect(workReach(['ana', 'ben'], by({ ana: true, ben: true }))).toBe('all')
+    expect(workReach(['ana', 'ben', 'cai'], by({ ana: true, ben: null, cai: false }))).toBe('some')
+    expect(workReach(['ana', 'ben'], by({ ana: true, ben: null }))).toBe('unknown')
   })
 })

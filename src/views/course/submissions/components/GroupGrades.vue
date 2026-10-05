@@ -4,6 +4,9 @@
 // their own, plus or minus, or moved by peer evaluation), why and by whom.
 // Those who grade adjust one member here (grade.adjust); a member of the
 // work with no grade from it yet (one added since it was graded) is said so.
+// Core gives a seat the grades only of the students it reaches: a member
+// outside its reach is said to be, never to have no grade, and one it may
+// not reach (where that is not known) is said to have none shown.
 // A member of the group reads only their own grade, as Core gives it: never
 // another member's score or adjustment.
 import { computed, ref } from 'vue'
@@ -21,7 +24,7 @@ import AdjustGradeDialog from '@/views/course/grades/components/AdjustGradeDialo
 import ScoreText from '@/views/course/grades/components/ScoreText.vue'
 import AdjustmentText from './AdjustmentText.vue'
 import PendingGradeProposals from './PendingGradeProposals.vue'
-import { isGraderAdjustment, liveByMember, workMemberIds } from './groupGrading'
+import { isGraderAdjustment, liveByMember, workMemberIds, type WorkReach } from './groupGrading'
 
 const props = defineProps<{
   courseId: string
@@ -37,6 +40,8 @@ const props = defineProps<{
   proposals?: ActionSummary[]
   liveDraft?: GradeSummary
   livePosted?: GradeSummary
+  /** Whether the caller's seat reaches every member of the work (groupGrading.workReach). */
+  reach?: WorkReach
 }>()
 const emit = defineEmits<{ retry: []; changed: [] }>()
 const { t } = useI18n()
@@ -50,14 +55,25 @@ interface Line {
   memberId: string
   name: string | null
   grade: GradeSummary | null
+  /** Whether the caller's seat reaches them: their grade is read only if it does. */
+  reached: boolean | null
 }
+/** A member's own grade is theirs to read; anyone else's, a seat reaching them all reads every one. */
+const reached = (id: string): boolean | null => (props.own || props.reach === 'all' ? true : course.reachesStudent(id))
 /** Every member of the work, with their live grade; then anyone graded on it who is no longer of it. */
 const lines = computed<Line[]>(() => {
   const ids = workMemberIds(props.submission)
   // A member reads their own grade alone: the others' lines would say nothing true.
   const shown = props.own ? ids.filter((id) => live.value.has(id)) : ids
-  const out: Line[] = shown.map((id) => ({ memberId: id, name: nameOf(id), grade: live.value.get(id) ?? null }))
-  for (const [id, g] of live.value) if (!ids.includes(id)) out.push({ memberId: id, name: nameOf(id), grade: g })
+  const out: Line[] = shown.map((id) => ({
+    memberId: id,
+    name: nameOf(id),
+    grade: live.value.get(id) ?? null,
+    reached: reached(id),
+  }))
+  for (const [id, g] of live.value) {
+    if (!ids.includes(id)) out.push({ memberId: id, name: nameOf(id), grade: g, reached: true })
+  }
   return out
 })
 /** The group's grade the newest live grade was given from: its score, as the members' grades say. */
@@ -67,7 +83,8 @@ const groupNow = computed(() => {
   return gs[0]?.group ?? null
 })
 const anyDraft = computed(() => [...live.value.values()].some((g) => g.state === 'draft'))
-const ungraded = computed(() => lines.value.some((l) => !l.grade))
+/** A member of the work within reach with no grade from it: one added since it was graded. */
+const ungraded = computed(() => lines.value.some((l) => !l.grade && l.reached === true))
 const earlier = computed(() =>
   props.grades
     .filter((g) => g.state === 'superseded' || !!g.superseded_by)
@@ -176,7 +193,15 @@ function onAdjusted(out: WriteOutcome<ToolOut<'grade.adjust'>>) {
                 </el-button>
               </div>
             </template>
-            <p v-else class="app-muted group-grades__ungraded">{{ t('groupGrading.grades.noGrade') }}</p>
+            <p v-else class="app-muted group-grades__ungraded">
+              {{
+                l.reached === true
+                  ? t('groupGrading.grades.noGrade')
+                  : l.reached === false
+                    ? t('groupGrading.grades.unreached')
+                    : t('groupGrading.grades.notShown')
+              }}
+            </p>
           </li>
         </ul>
         <p v-if="ungraded && !own" class="app-form-hint group-grades__hint">

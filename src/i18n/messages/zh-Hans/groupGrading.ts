@@ -30,11 +30,16 @@ export default {
     replaceConfirm: '这会取代小组的草稿成绩，以及每位组员由它而来的草稿。要继续吗？',
     savedBody: '已为作业的{n}位组员各保存一份草稿成绩。成绩发布之前，谁都看不到。',
     filesHint: '选填：批改过的文件、录音等。这些属于整个小组，作业的每位组员都会随成绩收到。',
+    unreached:
+      '这份作业有些组员不在你的席位涵盖的学生之内。小组成绩会给作业的每位组员，所以须由席位涵盖所有组员的人评分。',
   },
   editor: {
     title: '各组员的分数',
     hint: '每位组员都会得到小组分数，除非你在这里另行设置并注明原因：组员会连同成绩看到原因，其他组员看不到。',
+    hintUnseen:
+      '你无法查看这份作业已有的成绩，所以每位组员都会保留其成绩现有的设置：已另行调整的分数及原因都会保留。只在要更改时才设置。',
     kind: {
+      keep: '保持原样',
       none: '小组分数',
       replace: '个人分数',
       delta: '加减分',
@@ -54,6 +59,7 @@ export default {
     result: '结果为{score}分',
     resultOutOf: '结果为{score} / {points}',
     resultPending: '结果与小组分数相同',
+    resultKept: '按其成绩现有的设置',
     peer: '保存成绩时，如同伴互评计入成绩，会再按互评结果调整。',
     noMembers: '这份作业没有列出任何组员。',
     problem: {
@@ -72,6 +78,8 @@ export default {
     open: '打开{name}的成绩',
     empty: '尚未评分。',
     noGrade: '尚未从这份作业得到成绩',
+    unreached: '不在你的席位涵盖的学生之内：你看不到其成绩',
+    notShown: '你看不到其成绩',
     noGradeDraft: '没有成绩的组员是在评分之后才加入作业的：再次保存小组成绩，便会给其一份草稿。',
     noGradePosted: '没有成绩的组员是在评分之后才加入作业的：重新为小组评分，便会给其一份成绩。',
     adjust: '调整',
@@ -114,6 +122,7 @@ export default {
     score: '新的小组分数',
     membersHint: '评分之后才加入作业的组员也会得到成绩。',
     partlyPosted: '有些组员由小组成绩而来的成绩仍是草稿。请先发布，再重新为小组评分。',
+    unreached: '这份作业有些组员不在你的席位涵盖的学生之内。须由席位涵盖所有组员的人重新为小组评分。',
   },
   members: {
     title: '这份作业属于',
@@ -129,6 +138,7 @@ export default {
       outside: '不在小组内：经更正加入这份作业',
       joinedSince: '在提交之后才加入小组：不属于这份作业',
       notPart: '在小组内，但不属于这份作业',
+      unreached: '不在你的席位涵盖的学生之内',
     },
     standingAt: {
       left: '于{time}离开小组',
@@ -136,6 +146,8 @@ export default {
       notPart: '自{time}起在小组内，但不属于这份作业',
     },
     groupUnknown: '无法读取小组现在的成员，因此没有标示任何人。',
+    unreachedHint:
+      '这份作业有些组员不在你的席位涵盖的学生之内，所以你看不到这些组员现在是否仍在小组内。作业属于谁及是否迟交，须由席位涵盖所有组员的人更正。',
     correct: '更正成员',
   },
   correct: {

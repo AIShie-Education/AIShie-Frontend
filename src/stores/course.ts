@@ -184,6 +184,27 @@ export const useCourseStore = defineStore('course', () => {
   )
 
   /**
+   * Whether the caller's seat reaches a student: its student scope, all or
+   * the students listed on it. True or false where the seat says; null where
+   * that cannot be known here: a seat listed to some students that could not
+   * be read (no member_read), and a delegate, which reaches only what its
+   * principal reaches too, unless its own scope already leaves the student
+   * out. Core decides; this is for saying what a page cannot show, and not
+   * offering what Core is sure to refuse.
+   */
+  function reachesStudent(id: string): boolean | null {
+    const s = seat.value ?? membership.value
+    if (!s) return null
+    let own: boolean | null = null
+    if (s.student_scope === 'all') own = true
+    else if (s.student_scope === 'listed' && Array.isArray(seat.value?.listed_students)) {
+      own = seat.value.listed_students.includes(id)
+    }
+    if (own === false) return false
+    return isDelegate.value ? null : own
+  }
+
+  /**
    * Whether to offer something gated by p. Unknown counts as yes: Core will
    * say no if it is no, and the view shows that.
    */
@@ -464,6 +485,7 @@ export const useCourseStore = defineStore('course', () => {
     refused,
     ownsAgentHere,
     seesAllGrades,
+    reachesStudent,
     levelOfAll,
     canAll,
     needsApprovalAll,

@@ -3,6 +3,8 @@
 // score, a score of their own, or plus or minus, each of the last two with a
 // reason the member reads with their grade. Every line shows the score it
 // comes to as the group's score is typed, and says what is wrong with it.
+// Where the work's grades cannot be read (unseen), each line starts kept as
+// the member's grade has it, which is not shown, and may be left so.
 // v-model is the lines, numbers kept as the text typed.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -18,8 +20,8 @@ import {
   magnitude,
   memberScore,
   rowProblem,
-  type AdjustKind,
   type AdjustRow,
+  type LineKind,
 } from './groupGrading'
 
 export interface WorkMember {
@@ -38,15 +40,21 @@ const props = defineProps<{
   /** Mark what is missing as well as what is wrong: after a save was tried. */
   strict?: boolean
   disabled?: boolean
+  /** The work's grades cannot be read: a line may be kept as the member's grade has it, unseen. */
+  unseen?: boolean
 }>()
 const { t } = useI18n()
+
+const kinds = computed<readonly LineKind[]>(() => (props.unseen ? ['keep', ...ADJUST_KINDS] : ADJUST_KINDS))
+/** A line set apart from the group's score here: a score of their own, or plus or minus. */
+const setApart = (row: AdjustRow) => row.kind === 'replace' || row.kind === 'delta'
 
 const nameOf = (id: string) => props.members.find((m) => m.member_id === id)?.display_name ?? null
 
 function update(id: string, patch: Partial<AdjustRow>) {
   rows.value = rows.value.map((r) => (r.memberId === id ? { ...r, ...patch } : r))
 }
-function setKind(id: string, kind: AdjustKind) {
+function setKind(id: string, kind: LineKind) {
   update(id, { kind })
 }
 
@@ -59,6 +67,7 @@ interface Line {
   problem: string | null
 }
 function pendingWords(row: AdjustRow): string | null {
+  if (row.kind === 'keep') return t('groupGrading.editor.resultKept')
   if (row.kind === 'none') return t('groupGrading.editor.resultPending')
   const p = row.points.trim()
   if (row.kind !== 'delta' || !isDecimal(p)) return null
@@ -97,7 +106,7 @@ const outOf = computed(() =>
         v-for="l in lines"
         :key="l.row.memberId"
         class="group-adjust__item"
-        :class="{ 'is-adjusted': l.row.kind !== 'none', 'is-bad': !!l.problem }"
+        :class="{ 'is-adjusted': setApart(l.row), 'is-bad': !!l.problem }"
       >
         <div class="group-adjust__head">
           <span class="group-adjust__name">
@@ -118,11 +127,11 @@ const outOf = computed(() =>
           class="group-adjust__kind"
           :disabled="disabled"
           :aria-label="t('groupGrading.editor.kindLabel', { name: l.name ?? t('groupGrading.editor.thisMember') })"
-          @update:model-value="(v: AdjustKind) => setKind(l.row.memberId, v)"
+          @update:model-value="(v: LineKind) => setKind(l.row.memberId, v)"
         >
-          <el-option v-for="k in ADJUST_KINDS" :key="k" :value="k" :label="t(`groupGrading.editor.kind.${k}`)" />
+          <el-option v-for="k in kinds" :key="k" :value="k" :label="t(`groupGrading.editor.kind.${k}`)" />
         </el-select>
-        <div v-if="l.row.kind !== 'none'" class="group-adjust__fields">
+        <div v-if="setApart(l.row)" class="group-adjust__fields">
           <el-input
             :model-value="l.row.points"
             inputmode="decimal"

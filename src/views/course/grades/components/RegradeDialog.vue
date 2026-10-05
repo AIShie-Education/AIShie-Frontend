@@ -11,7 +11,10 @@
 // since), each member's adjustment as their line here says, carried unless
 // changed. It is refused while a grade from the old one is still a draft.
 // The members it writes and the grades it replaces are sent as read, so that
-// a proposal is refused on approval if they have changed.
+// a proposal is refused on approval if they have changed. Core regrades a
+// group only for a seat that reaches every member of its work, and shows a
+// seat the grades only of those it reaches: one that does not reach them all
+// is told so, and offered nothing to save.
 import { computed, reactive, ref, watch } from 'vue'
 import { read } from '@/api/http'
 import { useI18n } from 'vue-i18n'
@@ -37,6 +40,7 @@ import {
   rowProblem,
   rowsFor,
   workMemberIds,
+  workReach,
   type AdjustRow,
 } from '@/views/course/submissions/components/groupGrading'
 import AsyncState from '@/components/AsyncState.vue'
@@ -109,6 +113,8 @@ const groupWork = useAsync(
       if (!writes.includes(id) && x.state === 'posted' && x.group?.group_grade_id === old) writes.push(id)
     return {
       members: sub.members ?? [],
+      /** Some member of the work is outside the caller's reach: their grades were not read, and Core refuses it. */
+      unreached: workReach(workMemberIds(sub), course.reachesStudent) === 'some',
       writes,
       rows: rowsFor(writes, live),
       replaces: writes
@@ -127,7 +133,12 @@ watch(
 )
 const rowsChecked = ref(false)
 const groupBlocked = computed(
-  () => isGroup.value && (!groupWork.data.value || groupWork.data.value.partlyPosted || groupWork.loading.value),
+  () =>
+    isGroup.value &&
+    (!groupWork.data.value ||
+      groupWork.data.value.partlyPosted ||
+      groupWork.data.value.unreached ||
+      groupWork.loading.value),
 )
 
 const aboveMax = computed(
@@ -254,7 +265,15 @@ async function submit() {
       {{ isGroup ? t('groupGrading.regrade.intro') : t('grades.regrade.intro') }}
     </p>
     <el-alert
-      v-if="isGroup && groupWork.data.value?.partlyPosted"
+      v-if="isGroup && groupWork.data.value?.unreached"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="regrade__partly"
+      :title="t('groupGrading.regrade.unreached')"
+    />
+    <el-alert
+      v-else-if="isGroup && groupWork.data.value?.partlyPosted"
       type="warning"
       :closable="false"
       show-icon

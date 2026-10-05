@@ -3,13 +3,16 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus, { ElMessageBox } from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
+import { read } from '@/api/http'
 import { i18n, setLocale } from '@/i18n'
-import type { Assignment, GradeSummary, Submission } from '@/api/types'
+import type { Assignment, Grade, GradeSummary, Submission } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import AdjustGradeDialog from '@/views/course/grades/components/AdjustGradeDialog.vue'
+import RegradeDialog from '@/views/course/grades/components/RegradeDialog.vue'
 import CorrectMembersDialog from './CorrectMembersDialog.vue'
 import GradePanel from './GradePanel.vue'
 import GroupGrades from './GroupGrades.vue'
+import GroupWorkMembers from './GroupWorkMembers.vue'
 
 // Grading a group's work, as the pages do it: what each write sends, and
 // what a member of the group is shown of the grades.
@@ -80,13 +83,15 @@ function grade(over: Partial<GradeSummary>): GradeSummary {
   } as GradeSummary
 }
 
-function setUp(perms: Record<string, string>, me = 't') {
+function setUp(perms: Record<string, string>, me = 't', listed?: string[]) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const course = useCourseStore()
   course.permsSource = 'exact'
   course.perms = perms as never
-  course.membership = { member_id: me } as never
+  course.membership = { member_id: me, student_scope: listed ? 'listed' : 'all' } as never
+  // A TA listed for some students, as their seat (member.get) says.
+  if (listed) course.seat = { id: me, student_scope: 'listed', listed_students: listed } as never
   return { pinia }
 }
 
@@ -101,6 +106,9 @@ beforeEach(() => {
   writes = []
   answers = {}
   vi.mocked(ElMessageBox.confirm).mockClear()
+  vi.mocked(read).mockImplementation(async (tool: string) => {
+    throw new Error(`no answer for ${tool}`)
+  })
 })
 afterEach(() => {
   document.body.innerHTML = ''
@@ -202,6 +210,193 @@ describe('grading a group’s work', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('The group’s grade is posted.')
     expect(wrapper.find('form').exists()).toBe(false)
+  })
+})
+
+describe('a grader whose seat does not reach every member of the work', () => {
+  // Team A is Ana, Ben and Cai; the TA is listed for Ana and Ben. Core shows the TA the work, the grades of Ana and
+  // Ben alone, and the group's members and history of Ana and Ben alone; it grades the work, and corrects its members
+  // and lateness, only for a seat that reaches all three.
+  const PERMS = {
+    grade_submit: 'autonomous',
+    grade_read: 'autonomous',
+    member_read: 'autonomous',
+    rubric_read: 'autonomous',
+  }
+  const mounting = { attachTo: document.body }
+
+  it('is offered no grading form, and told why', async () => {
+    const { pinia } = setUp(PERMS, 't', ['ana', 'ben'])
+    const wrapper = mount(GradePanel, {
+      props: {
+        courseId: COURSE,
+        submission: SUB,
+        assignment: ASSIGNMENT,
+        liveDraft: grade({ id: 'd-ana' }),
+        workGrades: [grade({ id: 'd-ana' }), grade({ id: 'd-ben', student_member_id: 'ben' })],
+        reach: 'some',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    expect(wrapper.find('form').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Some members of this work are outside the students your seat reaches.')
+    expect(writes).toEqual([])
+  })
+
+  it('is told a member outside its reach is, never that they have no grade', async () => {
+    const { pinia } = setUp(PERMS, 't', ['ana', 'ben'])
+    const wrapper = mount(GroupGrades, {
+      props: {
+        courseId: COURSE,
+        submission: SUB,
+        grades: [grade({ id: 'd-ana' }), grade({ id: 'd-ben', student_member_id: 'ben' })],
+        pointsPossible: 100,
+        reach: 'some',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    const cai = wrapper.findAll('.group-grades__item')[2]
+    expect(cai.text()).toContain('Cai Lam')
+    expect(cai.text()).toContain('Outside the students your seat reaches: their grade is not shown to you')
+    expect(wrapper.text()).not.toContain('No grade from this work yet')
+    expect(wrapper.text()).not.toContain('A member with no grade was added')
+    // Adjusting one member within reach is Core's to allow (grade.adjust reaches that member alone).
+    expect(wrapper.findAll('.group-grades__item')[0].text()).toContain('Adjust')
+  })
+
+  it('is told only that no grade is shown where whom it reaches is not known', async () => {
+    const { pinia } = setUp(PERMS)
+    useCourseStore().membership = { member_id: 't', student_scope: 'listed' } as never
+    const wrapper = mount(GroupGrades, {
+      props: { courseId: COURSE, submission: SUB, grades: [grade({ id: 'd-ana' })], pointsPossible: 100 },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    expect(wrapper.findAll('.group-grades__item')[2].text()).toContain('No grade of theirs is shown to you')
+    expect(wrapper.text()).not.toContain('No grade from this work yet')
+  })
+
+  it('sees whose work it is with those outside its reach marked so, and is offered no correction', async () => {
+    const { pinia } = setUp(PERMS, 't', ['ana', 'ben'])
+    vi.mocked(read).mockImplementation(async (tool: string) => {
+      if (tool !== 'group_set.get') throw new Error(`no answer for ${tool}`)
+      // Cai is in Team A still; Core leaves him out, as it does his stays.
+      return {
+        id: 'set1',
+        groups: [
+          {
+            id: 'gA',
+            name: 'Team A',
+            members: [
+              { member_id: 'ana', display_name: 'Ana Chan', joined_at: '2026-10-01T00:00:00Z' },
+              { member_id: 'ben', display_name: 'Ben Ho', joined_at: '2026-10-01T00:00:00Z' },
+            ],
+          },
+        ],
+        history: [
+          { member_id: 'ana', group_id: 'gA', joined_at: '2026-10-01T00:00:00Z' },
+          { member_id: 'ben', group_id: 'gA', joined_at: '2026-10-01T00:00:00Z' },
+        ],
+      } as never
+    })
+    const wrapper = mount(GroupWorkMembers, {
+      props: {
+        courseId: COURSE,
+        submission: SUB,
+        assignment: { ...ASSIGNMENT, group_set_id: 'set1' } as Assignment,
+        grades: [grade({ id: 'd-ana' }), grade({ id: 'd-ben', student_member_id: 'ben' })],
+        reach: 'some',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    const cai = wrapper.findAll('.group-work__item')[2]
+    expect(cai.text()).toContain('Cai Lam')
+    expect(cai.text()).toContain('Outside the students your seat reaches')
+    expect(wrapper.text()).not.toContain('Not in the group')
+    expect(wrapper.text()).toContain('whether they are in the group now is not shown to you')
+    expect(wrapper.findAll('button').some((b) => b.text().includes('Correct members'))).toBe(false)
+  })
+
+  it('is told the group is regraded by someone who reaches them all, and has nothing to save', async () => {
+    const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben'])
+    vi.mocked(read).mockImplementation(async (tool: string) => {
+      if (tool === 'submission.get') return SUB as never
+      if (tool === 'grade.list') {
+        return {
+          grades: [
+            grade({ id: 'p-ana', state: 'posted' }),
+            grade({ id: 'p-ben', student_member_id: 'ben', state: 'posted' }),
+          ],
+        } as never
+      }
+      throw new Error(`no answer for ${tool}`)
+    })
+    const wrapper = mount(RegradeDialog, {
+      props: {
+        courseId: COURSE,
+        modelValue: false,
+        grade: grade({ id: 'p-ana', state: 'posted' }) as unknown as Grade,
+        outOf: 100,
+        what: 'Group project',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    // Opened from the grade's page.
+    await wrapper.setProps({ modelValue: true })
+    await flushPromises()
+    const dialog = document.body.querySelector('.el-dialog')!
+    expect(dialog.textContent).toContain(
+      'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
+    )
+    const save = Array.from(dialog.querySelectorAll('.el-dialog__footer button')).at(-1) as HTMLButtonElement
+    expect(save.disabled).toBe(true)
+  })
+})
+
+describe('grading a group’s work whose grades cannot be read', () => {
+  it('keeps each member’s line as their grade has it, sending only a line the grader sets', async () => {
+    const { pinia } = setUp({ grade_submit: 'autonomous', grade_read: 'denied', rubric_read: 'autonomous' })
+    answers['grade.submit'] = { group_grade_id: 'gg2', member_grades: [] }
+    const wrapper = mount(GradePanel, {
+      props: { courseId: COURSE, submission: SUB, assignment: ASSIGNMENT, gradesHidden: true, workGrades: [] },
+      attachTo: document.body,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    const lines = wrapper.findAll('.group-adjust__item')
+    expect(lines).toHaveLength(3)
+    for (const l of lines) expect(l.text()).toContain('As their grade has it now')
+    expect(wrapper.text()).toContain('each member’s line keeps what their grade has now')
+    expect(wrapper.text()).not.toContain('Comes to the group’s score')
+    await wrapper.find('input[placeholder="e.g. 8.5"]').setValue('85')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(writes).toHaveLength(1)
+    expect(writes[0].args).toMatchObject({ score: '85', members: ['ana', 'ben', 'cai'] })
+    // Nothing is said of any member's adjustment: Core carries each, Cai's -10 among them.
+    expect(writes[0].args.adjustments).toBeUndefined()
+
+    // A line the grader sets is sent, and it alone.
+    const ben = wrapper.findAll('.group-adjust__item')[1]
+    ben.findComponent({ name: 'ElSelect' }).vm.$emit('update:modelValue', 'replace')
+    await flushPromises()
+    await ben.find('input[aria-label="Their score"]').setValue('90')
+    await ben.find('input[aria-label="Reason (the member reads it)"]').setValue('Ran the load tests')
+    await wrapper.find('input[placeholder="e.g. 8.5"]').setValue('85')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(writes).toHaveLength(2)
+    expect(writes[1].args.adjustments).toEqual([
+      { student_member_id: 'ben', kind: 'replace', points: '90', reason: 'Ran the load tests' },
+    ])
   })
 })
 

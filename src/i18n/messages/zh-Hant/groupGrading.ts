@@ -30,11 +30,16 @@ export default {
     replaceConfirm: '這會取代小組的草稿成績，以及每位組員由它而來的草稿。要繼續嗎？',
     savedBody: '已為作業的{n}位組員各儲存一份草稿成績。成績發佈之前，誰都看不到。',
     filesHint: '選填：批改過的檔案、錄音等。這些屬於整個小組，作業的每位組員都會隨成績收到。',
+    unreached:
+      '這份作業有些組員不在你的席位涵蓋的學生之內。小組成績會給作業的每位組員，所以須由席位涵蓋所有組員的人評分。',
   },
   editor: {
     title: '各組員的分數',
     hint: '每位組員都會得到小組分數，除非你在這裡另行設定並註明原因：組員會連同成績看到原因，其他組員看不到。',
+    hintUnseen:
+      '你無法查看這份作業已有的成績，所以每位組員都會保留其成績現有的設定：已另行調整的分數及原因都會保留。只在要更改時才設定。',
     kind: {
+      keep: '維持原樣',
       none: '小組分數',
       replace: '個人分數',
       delta: '加減分',
@@ -54,6 +59,7 @@ export default {
     result: '結果為{score}分',
     resultOutOf: '結果為{score} / {points}',
     resultPending: '結果與小組分數相同',
+    resultKept: '按其成績現有的設定',
     peer: '儲存成績時，如同儕互評計入成績，會再按互評結果調整。',
     noMembers: '這份作業沒有列出任何組員。',
     problem: {
@@ -72,6 +78,8 @@ export default {
     open: '開啟{name}的成績',
     empty: '尚未評分。',
     noGrade: '尚未從這份作業得到成績',
+    unreached: '不在你的席位涵蓋的學生之內：你看不到他的成績',
+    notShown: '你看不到他的成績',
     noGradeDraft: '沒有成績的組員是在評分之後才加入作業的：再次儲存小組成績，便會給他一份草稿。',
     noGradePosted: '沒有成績的組員是在評分之後才加入作業的：重新為小組評分，便會給他一份成績。',
     adjust: '調整',
@@ -114,6 +122,7 @@ export default {
     score: '新的小組分數',
     membersHint: '評分之後才加入作業的組員也會得到成績。',
     partlyPosted: '有些組員由小組成績而來的成績仍是草稿。請先發佈，再重新為小組評分。',
+    unreached: '這份作業有些組員不在你的席位涵蓋的學生之內。須由席位涵蓋所有組員的人重新為小組評分。',
   },
   members: {
     title: '這份作業屬於',
@@ -129,6 +138,7 @@ export default {
       outside: '不在小組內：經更正加入這份作業',
       joinedSince: '在繳交之後才加入小組：不屬於這份作業',
       notPart: '在小組內，但不屬於這份作業',
+      unreached: '不在你的席位涵蓋的學生之內',
     },
     standingAt: {
       left: '於{time}離開小組',
@@ -136,6 +146,8 @@ export default {
       notPart: '自{time}起在小組內，但不屬於這份作業',
     },
     groupUnknown: '無法讀取小組現在的成員，因此沒有標示任何人。',
+    unreachedHint:
+      '這份作業有些組員不在你的席位涵蓋的學生之內，所以你看不到這些組員現在是否仍在小組內。作業屬於誰及是否遲交，須由席位涵蓋所有組員的人更正。',
     correct: '更正成員',
   },
   correct: {

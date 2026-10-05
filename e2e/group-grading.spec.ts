@@ -118,6 +118,40 @@ test.describe.serial('grading group work', () => {
     await expect(memberLine(page, 'Ben Ho')).not.toContainText('82')
   })
 
+  test('a TA whose seat reaches Ana and Ben alone is told Cai is outside it, and offered nothing Core refuses', async ({
+    page,
+  }) => {
+    // Core shows Ivy Team A's work (she reaches one of its members), but the grades, the group's members and their
+    // history of Ana and Ben alone; it grades the work, and corrects its members and lateness, only for a seat that
+    // reaches all three.
+    await as(page, w.people.ivy)
+    await page.goto(path(`submissions/${w.submissions.a}`))
+    const members = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'Whose work this is' }) })
+    const caiThere = members.locator('.group-work__item').filter({ hasText: 'Cai Lam' })
+    await expect(caiThere).toContainText('Outside the students your seat reaches')
+    await expect(members).not.toContainText('Not in the group')
+    await expect(members).toContainText('whether they are in the group now is not shown to you')
+    await expect(page.getByRole('button', { name: 'Correct members' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Mark as late' })).toHaveCount(0)
+
+    // Cai's grade is not shown to her: said so, never that he has none.
+    await expect(memberLine(page, 'Ana Chan')).toContainText('80')
+    await expect(memberLine(page, 'Cai Lam')).toContainText(
+      'Outside the students your seat reaches: their grade is not shown to you',
+    )
+    await expect(grades(page)).not.toContainText('No grade from this work yet')
+    await expect(grades(page)).not.toContainText('A member with no grade')
+    // Adjusting Ana alone is within her reach.
+    await expect(memberLine(page, 'Ana Chan').getByRole('button', { name: 'Adjust' })).toBeVisible()
+
+    // No form to grade the group with: a group's grade is every member's.
+    const panel = page.locator('.grade-panel')
+    await expect(panel).toContainText('Some members of this work are outside the students your seat reaches.')
+    await expect(panel.getByRole('button', { name: 'Save draft grade' })).toHaveCount(0)
+    await members.scrollIntoViewIfNeeded()
+    await photograph(page, 'group-grading-partial-reach')
+  })
+
   test('the teacher posts, adjusts Ana’s posted grade, corrects the members and regrades the group', async ({
     page,
   }) => {
@@ -359,5 +393,38 @@ test.describe.serial('grading group work', () => {
     await page.goto(path(`submissions/${w.submissions.a}`))
     await expect(page.locator('.group-grades__item')).toHaveCount(4)
     await expect(page.locator('.group-grades').getByRole('button', { name: '調整' })).toHaveCount(0)
+  })
+
+  test('a TA who may not read grades grades Team B again, and Eva’s adjustment is kept, unseen', async ({ page }) => {
+    await keepToasts(page)
+    await as(page, w.people.kit)
+    await page.goto(path(`submissions/${w.submissions.b}`))
+    await expect(grades(page)).toContainText('You cannot read grades in this course.')
+    const panel = page.locator('.grade-panel')
+    const lines = panel.locator('.group-adjust__item')
+    await expect(lines).toHaveCount(2)
+    // Each line as the member's grade has it, which is not shown to Kit: never "the group's score".
+    for (const name of ['Dev Patel', 'Eva Ng']) {
+      const line = lines.filter({ hasText: name })
+      await expect(line).toContainText('As their grade has it now')
+      await expect(line.locator('.el-select')).toContainText('Kept as it is')
+    }
+    await expect(panel).toContainText('each member’s line keeps what their grade has now')
+    await panel.getByPlaceholder('e.g. 8.5').fill('72')
+    await panel.getByRole('button', { name: 'Save draft grade' }).click()
+    await expectToasted(page, 'Draft grade saved')
+
+    // Eva's new draft carries the TA's adjustment, with its reason.
+    const call = await toolCaller(w.core)
+    const listed = await call(w.people.teacher.token, 'grade.list', {
+      course_id: w.course.id,
+      assignment_id: w.assignment.id,
+      student_member_id: w.people.eva.member_id,
+    })
+    const draft = listed.result.grades.find((g: { state: string }) => g.state === 'draft')
+    expect(Number(draft.score)).toBe(80)
+    expect(Number(draft.group.score)).toBe(72)
+    expect(draft.group.adjustment).toMatchObject({ kind: 'delta', reason: 'Built the model' })
+    expect(Number(draft.group.adjustment.points)).toBe(8)
   })
 })
