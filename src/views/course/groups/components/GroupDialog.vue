@@ -10,7 +10,8 @@ import StatusTag from '@/components/StatusTag.vue'
 import { errorMessage } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
-import { GROUP_REFUSALS, type Group } from './groupModel'
+import { groupRefusalScopes } from './groupEvents'
+import type { Group } from './groupModel'
 
 const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ courseId: string; group: Group | null }>()
@@ -52,7 +53,7 @@ async function save() {
   }
   const out = await w.run(args, { notify: false })
   if (!out) {
-    failure.value = errorMessage(w.lastError.value, { reasons: GROUP_REFUSALS })
+    failure.value = errorMessage(w.lastError.value, { reasons: groupRefusalScopes('group.update') })
     return
   }
   announce(out, { success: t('groups.edit.done', { name }) })

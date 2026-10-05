@@ -123,7 +123,11 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountAs(role: 'instructor' | 'student', view: unknown) {
+async function mountAs(
+  role: 'instructor' | 'student' | 'ta',
+  view: unknown,
+  seatOver: { perms?: Record<string, string>; student_scope?: string } = {},
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   useSessionStore().$patch({
@@ -133,16 +137,22 @@ async function mountAs(role: 'instructor' | 'student', view: unknown) {
   course.$patch({
     courseId: COURSE,
     course: { id: COURSE, code: 'CS101', section: 'A', title: 'Programming', status: 'active' } as never,
-    membership: { member_id: role === 'student' ? seat(1) : 'm-teacher', role } as never,
+    membership: {
+      member_id: role === 'student' ? seat(1) : 'm-teacher',
+      role,
+      student_scope: seatOver.student_scope ?? 'all',
+      assignment_scope: 'all',
+    } as never,
     perms:
-      role === 'student'
+      seatOver.perms ??
+      (role === 'student'
         ? { document_read: 'autonomous', submission_write: 'autonomous' }
         : {
             document_read: 'autonomous',
             assignment_write: 'autonomous',
             member_read: 'autonomous',
             submission_read: 'autonomous',
-          },
+          }),
     permsSource: 'exact',
     membersState: 'loaded',
   } as never)
@@ -284,6 +294,121 @@ describe('a set’s page, for those who form groups', () => {
       expect.anything(),
     )
     expect(text()).toContain(`Split at random, with the seed ${seed}`)
+  })
+})
+
+describe('where the focus goes once students are moved', () => {
+  it('to the moved student’s own menu in the group they are in now, after their row’s menu', async () => {
+    const w = await mountAs('instructor', staffSet())
+    write.mockResolvedValue(executed({ moved: [{ student_member_id: seat(3), group_id: g2 }], over_capacity: [] }))
+    const moved = staffSet()
+    moved.groups[1].members!.push({ member_id: seat(3), display_name: 'Cy Wu', joined_how: 'assigned' })
+    moved.groups[1].size = 2
+    moved.unassigned = []
+    moved.unassigned_count = 0
+    read.mockImplementation(async () => structuredClone(moved))
+    const cy = w.findAllComponents(MoveMenu).find((m) => m.props('label') === 'Move Cy Wu to…')!
+    cy.vm.$emit('move', g2)
+    await flushPromises()
+    const focused = document.activeElement as HTMLElement
+    expect(focused.tagName).toBe('BUTTON')
+    expect(focused.getAttribute('aria-label')).toBe('Move Cy Wu to…')
+    expect(focused.closest('[data-group]')?.getAttribute('data-group')).toBe(g2)
+  })
+
+  it('to the group the students chosen went to, after “Move to…”, which is off with nobody chosen', async () => {
+    const w = await mountAs('instructor', staffSet())
+    await w.find('.set-view__none .student-item__check input').setValue(true)
+    write.mockResolvedValue(executed({ moved: [{ student_member_id: seat(3), group_id: g1 }], over_capacity: [] }))
+    const toolbarMenu = w.findAllComponents(MoveMenu).find((m) => m.props('label') === 'Move to…')!
+    toolbarMenu.vm.$emit('move', g1)
+    await flushPromises()
+    expect(document.activeElement?.id).toBe(`group-${g1}`)
+    expect(document.activeElement?.textContent).toBe('Group 1')
+    // Out of every group: to those in no group.
+    await w.findAll('.group-card .student-item__check input')[0].setValue(true)
+    write.mockResolvedValue(executed({ moved: [{ student_member_id: seat(1) }], over_capacity: [] }))
+    toolbarMenu.vm.$emit('move', null)
+    await flushPromises()
+    expect(document.activeElement?.id).toBe('set-view-none')
+  })
+
+  it('to the request, where the move waits for approval', async () => {
+    const w = await mountAs('instructor', staffSet())
+    await w.find('.set-view__none .student-item__check input').setValue(true)
+    write.mockResolvedValue({ status: 'proposed', actionId: 'act-9' })
+    const toolbarMenu = w.findAllComponents(MoveMenu).find((m) => m.props('label') === 'Move to…')!
+    toolbarMenu.vm.$emit('move', g1)
+    await flushPromises()
+    expect(document.activeElement?.textContent?.trim()).toBe('View the request')
+  })
+})
+
+describe('a set’s page, for staff who neither form groups nor read the member list', () => {
+  it('shows the groups read only, and never offers sign-up', async () => {
+    // A teaching assistant whose member list was taken away: the server names nobody to them, and shows no work.
+    const view = staffSet({ unassigned: null, unassigned_count: null })
+    for (const g of view.groups) {
+      delete (g as { members?: unknown }).members
+      delete (g as { work?: unknown }).work
+    }
+    const w = await mountAs('ta', view, { perms: { document_read: 'autonomous', grade_submit: 'autonomous' } })
+    expect(w.find('.student-set__mine').exists()).toBe(false)
+    expect(text()).not.toContain('You are in no group')
+    expect(text()).not.toContain('Join')
+    const cards = w.findAll('.group-card')
+    expect(cards.map((c) => c.find('.group-card__size').text())).toEqual(['2 of 3', '1 student'])
+    expect(text()).not.toContain('you do not reach')
+    expect(text()).toContain('Who is in each group is shown to those who may read the member list.')
+    expect(w.find('.student-item__check').exists()).toBe(false)
+    expect(w.find('.group-card__more').exists()).toBe(false)
+  })
+})
+
+describe('archiving a group', () => {
+  it('asks no more than that, of a reader shown every group’s work', async () => {
+    const view = staffSet()
+    view.groups.push({ id: seat(905), name: 'Group 5', size: 0, full: false, created_at: T0, members: [] } as never)
+    const w = await mountAs('instructor', view)
+    const card = w.findAll('.group-card').find((c) => c.find('.group-card__name').text() === 'Group 5')!
+    card.findComponent({ name: 'ElDropdown' }).vm.$emit('command', 'archive')
+    await flushPromises()
+    const box = document.body.querySelector('.el-message-box')!
+    expect(box.textContent).toContain('Group 5 is hidden from this set and from sign-up.')
+    expect(box.textContent).not.toContain('you are not shown')
+  })
+
+  it('says, to a reader not shown every group’s work, that one with work they are not shown stays, and words the refusal for them', async () => {
+    const view = staffSet()
+    view.groups.push({ id: seat(905), name: 'Group 5', size: 0, full: false, created_at: T0, members: [] } as never)
+    const w = await mountAs('instructor', view, {
+      student_scope: 'listed',
+      perms: { document_read: 'autonomous', assignment_write: 'autonomous', member_read: 'autonomous' },
+    })
+    const card = w.findAll('.group-card').find((c) => c.find('.group-card__name').text() === 'Group 5')!
+    card.findComponent({ name: 'ElDropdown' }).vm.$emit('command', 'archive')
+    await flushPromises()
+    const box = document.body.querySelector('.el-message-box')!
+    expect(box.textContent).toContain('Group 5 is hidden from this set and from sign-up.')
+    expect(box.textContent).toContain('If it has work for an assignment of this set that you are not shown')
+    write.mockRejectedValueOnce(
+      new ApiError({
+        status: 422,
+        code: 'failed_precondition',
+        message: 'the group has work for an assignment of its set, and is kept as it is',
+        details: { reason: 'group_has_work', work: [{ group_id: seat(905), assignment_id: 'a1', state: 'draft' }] },
+      }),
+    )
+    buttonNamed('Archive group').click()
+    await flushPromises()
+    expect(write).toHaveBeenCalledWith(
+      'group.update',
+      { course_id: COURSE, group_id: seat(905), archived: true },
+      expect.anything(),
+    )
+    expect(text()).toContain('That group has work for an assignment of this set, if only a draft')
+    expect(text()).not.toContain('handed work in')
+    expect(text()).not.toContain('your teacher')
   })
 })
 

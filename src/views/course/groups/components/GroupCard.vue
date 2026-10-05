@@ -22,6 +22,8 @@ const props = defineProps<{
   selected: Set<string>
   /** Members' links to their work: the reader reads submissions. */
   readsWork: boolean
+  /** The reader may read the member list: a group's members are named to them, those their scope reaches. */
+  readsMembers: boolean
   locale: string
 }>()
 const emit = defineEmits<{
@@ -41,8 +43,8 @@ const ids = computed(() => members.value.map((m) => m.member_id))
 const chosen = computed(() => ids.value.filter((id) => props.selected.has(id)).length)
 const archived = computed(() => !!props.group.archived_at)
 const over = computed(() => (props.group.capacity ? props.group.size - props.group.capacity : 0))
-/** Members the reader's scope does not reach: counted in its size, not listed. */
-const hidden = computed(() => Math.max(0, props.group.size - members.value.length))
+/** Members the reader's scope does not reach: counted in its size, not listed. Nobody is named to one who may not read the member list. */
+const hidden = computed(() => (props.readsMembers ? Math.max(0, props.group.size - members.value.length) : 0))
 const titleId = computed(() => `group-${props.group.id}`)
 
 const archiveWhy = computed(() =>
@@ -92,7 +94,8 @@ function onCommand(c: string) {
         :aria-label="t('groups.card.chooseAll', { name: group.name })"
         @update:model-value="(on: unknown) => emit('toggleAll', ids, !!on)"
       />
-      <h3 :id="titleId" class="group-card__name">{{ group.name }}</h3>
+      <!-- Where the focus goes once students are moved into it (GroupSetView). -->
+      <h3 :id="titleId" class="group-card__name" tabindex="-1">{{ group.name }}</h3>
       <el-dropdown v-if="movable" trigger="click" placement="bottom-end" @command="onCommand">
         <el-button size="small" class="group-card__more" :aria-label="t('groups.card.more', { name: group.name })">
           <el-icon aria-hidden="true"><MoreFilled /></el-icon>
@@ -156,7 +159,7 @@ function onCommand(c: string) {
         @dragstart="(e) => emit('dragstart', m.member_id, e)"
       />
     </ul>
-    <p v-else-if="!hidden" class="group-card__empty">{{ t('groups.card.empty') }}</p>
+    <p v-else-if="!group.size" class="group-card__empty">{{ t('groups.card.empty') }}</p>
     <p v-if="hidden" class="group-card__hidden">{{ t('groups.card.hidden', { n: hidden }, hidden) }}</p>
   </article>
 </template>
@@ -187,6 +190,7 @@ function onCommand(c: string) {
 }
 .group-card__name {
   flex: 1 1 auto;
+  outline-offset: 2px;
   min-width: 0;
   margin: 0;
   font-size: var(--app-text-lg);

@@ -15,7 +15,15 @@
 //
 // A student sees their own group and its members, and sign-up while it is
 // open (StudentSet): never another group's members, nor any group's work.
-import { computed, onMounted, ref, watch } from 'vue'
+// So does a student's own agent, for its student. Staff who neither read the
+// member list nor form groups see the groups, read only: their names and
+// sizes, and nobody named.
+//
+// Once students are moved, from the keyboard as well, the focus goes where
+// they went: a student's own "Move … to…" in the row they are in now, or
+// the group (or those in no group) that students chosen were moved to, or,
+// where the move waits for approval, the way to the request.
+import { computed, h, nextTick, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import { read, type ToolOut, type WriteOutcome } from '@/api/http'
@@ -43,7 +51,9 @@ import SignupLine from './components/SignupLine.vue'
 import SplitDialog from './components/SplitDialog.vue'
 import StudentItem from './components/StudentItem.vue'
 import StudentSet from './components/StudentSet.vue'
-import { usePlacements } from './components/usePlacements'
+import { groupRefusalScopes } from './components/groupEvents'
+import { forgetGroupNames } from './components/groupNames'
+import { usePlacements, type Placement } from './components/usePlacements'
 import {
   archivedGroups,
   byName,
@@ -54,6 +64,7 @@ import {
   listParts,
   liveGroups,
   nameOf,
+  reachesEveryStudent,
   saveText,
   studentsOf,
   type Group,
@@ -74,7 +85,26 @@ const reload = () => state.reload()
 /** Forming groups is part of setting group work: those who write assignments do it. */
 const canForm = computed(() => course.can('assignment_write'))
 const readsMembers = computed(() => course.can('member_read'))
-const studentView = computed(() => course.role === 'student' || !(canForm.value || readsMembers.value))
+/**
+ * A student's page: a student's, or a delegate's that neither forms groups
+ * nor reads the member list (a student's own agent, for its student). Staff
+ * without either see the groups read only, never a sign-up page.
+ */
+const studentView = computed(
+  () => course.role === 'student' || (course.isDelegate && !(canForm.value || readsMembers.value)),
+)
+/**
+ * Every group's work is shown to the reader: their seat reaches every
+ * student (the work of a group is shown to one who reaches a member of it, so
+ * an empty group's to one who reaches all) and every assignment.
+ */
+const seesAllWork = computed(() => {
+  const seat = course.seat ?? course.membership
+  return (
+    reachesEveryStudent({ student_scope: seat?.student_scope, delegate: course.isDelegate }) &&
+    seat?.assignment_scope === 'all'
+  )
+})
 const archived = computed(() => !!set.value?.archived_at)
 /** Students can be placed, and groups changed, here and now. */
 const movable = computed(() => canForm.value && course.writable && !archived.value && !studentView.value)
@@ -134,18 +164,47 @@ const chosenPlaced = computed(() => {
 })
 
 const proposed = ref<string | null>(null)
-function onWritten(out: WriteOutcome<unknown>) {
+/** After a change here, or its request: the set read again, and the names the feed and actions give its groups. */
+function onWritten(out: WriteOutcome<unknown>): Promise<void> {
   if (out.status === 'proposed') proposed.value = out.actionId
-  void reload()
+  else forgetGroupNames(props.courseId)
+  return reload()
 }
 
+const view = ref<HTMLElement | null>(null)
+/**
+ * Where the focus goes once students are moved (or the move is asked for):
+ * the moved row's own menu where one student was moved by it; else the
+ * group they went to, or those in no group; and where it waits for
+ * approval, the link to the request. Not where it was: the row is drawn
+ * again in another group, and "Move to…" is off with nobody chosen.
+ */
+async function focusAfterMove(placed: Placement[], out: WriteOutcome<unknown>, from: 'row' | 'chosen') {
+  await nextTick()
+  const root = view.value
+  if (!root) return
+  const pick = (selector: string) => root.querySelector<HTMLElement>(selector)
+  let el: HTMLElement | null = null
+  if (from === 'row' && placed.length === 1)
+    el = pick(`.student-item[data-member="${placed[0].student_member_id}"] .student-item__move button`)
+  if (!el && out.status === 'proposed') el = pick('.set-view__proposed a')
+  if (!el) {
+    const to = placed[0]?.group_id
+    el = to ? pick(`[data-group="${to}"] .group-card__name`) : pick('#set-view-none')
+  }
+  el?.focus()
+}
+
+/** Where the last move began: a row's own menu (or a row dragged), or the students chosen. */
+let movedFrom: 'row' | 'chosen' = 'row'
 const placements = usePlacements({
   courseId: () => props.courseId,
   set: () => set.value,
   nameOf: nameFor,
-  done: (out) => {
+  done: (out, placed) => {
     selected.value = new Set()
-    onWritten(out)
+    const from = movedFrom
+    void onWritten(out).then(() => focusAfterMove(placed, out, from))
   },
 })
 const affectsOpen = computed({
@@ -155,13 +214,14 @@ const affectsOpen = computed({
   },
 })
 
-function move(ids: string[], groupId: string | null) {
+function move(ids: string[], groupId: string | null, from: 'row' | 'chosen' = 'row') {
+  movedFrom = from
   void placements.place(
     ids.map((id) => (groupId ? { student_member_id: id, group_id: groupId } : { student_member_id: id })),
   )
 }
 function moveChosen(groupId: string | null) {
-  move([...selected.value], groupId)
+  move([...selected.value], groupId, 'chosen')
 }
 
 // Dragging a student (or, from among those chosen, all of them) onto a group, or onto those in none.
@@ -236,13 +296,23 @@ async function archiveSet(on: boolean) {
 const groupUpdate = useWrite('group.update')
 async function archiveGroup(g: Group, on: boolean) {
   if (on) {
+    // A group's work is shown to a reader who reaches one of its members: of an empty group, to one who reaches every student.
+    const lines = [t('groups.card.archiveConfirm', { name: g.name })]
+    if (!seesAllWork.value) lines.push(t('groups.card.archiveUnseenWork'))
     try {
-      await ElMessageBox.confirm(t('groups.card.archiveConfirm', { name: g.name }), t('groups.card.archiveTitle'), {
-        type: 'warning',
-        confirmButtonText: t('groups.card.archive'),
-        cancelButtonText: t('common.actions.cancel'),
-        confirmButtonClass: 'el-button--danger',
-      })
+      await ElMessageBox.confirm(
+        h(
+          'div',
+          lines.map((l) => h('p', l)),
+        ),
+        t('groups.card.archiveTitle'),
+        {
+          type: 'warning',
+          confirmButtonText: t('groups.card.archive'),
+          cancelButtonText: t('common.actions.cancel'),
+          confirmButtonClass: 'el-button--danger',
+        },
+      )
     } catch {
       return
     }
@@ -251,7 +321,7 @@ async function archiveGroup(g: Group, on: boolean) {
     { course_id: props.courseId, group_id: g.id, archived: on },
     {
       success: on ? t('groups.card.archived', { name: g.name }) : t('groups.card.restored', { name: g.name }),
-      reasons: GROUP_REFUSALS,
+      reasons: groupRefusalScopes('group.update'),
     },
   )
   if (out) onWritten(out)
@@ -311,7 +381,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
 </script>
 
 <template>
-  <div class="set-view">
+  <div ref="view" class="set-view">
     <PageHeader :title="set?.name ?? t('groups.set.title')" :back="{ name: 'course-groups', params: { courseId } }">
       <template v-if="set?.archived_at" #tags>
         <AppTag size="default">{{ t('groups.archived') }}</AppTag>
@@ -359,7 +429,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
     <AppNote
       v-if="proposed"
       :title="t('groups.proposed.title')"
-      class="set-view__note"
+      class="set-view__note set-view__proposed"
       closable
       @close="proposed = null"
     >
@@ -497,7 +567,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                   :aria-label="t('groups.set.chooseNone')"
                   @update:model-value="(on: unknown) => toggleAll(unassignedIds, !!on)"
                 />
-                <h3 id="set-view-none" class="set-view__none-title">
+                <h3 id="set-view-none" class="set-view__none-title" tabindex="-1">
                   {{
                     set.unassigned_count
                       ? t('groups.set.none', { n: set.unassigned_count }, set.unassigned_count)
@@ -531,6 +601,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                 :movable="movable"
                 :selected="selected"
                 :reads-work="course.can('submission_read')"
+                :reads-members="readsMembers"
                 :locale="ui.locale"
                 @toggle="toggle"
                 @toggle-all="toggleAll"
@@ -543,6 +614,9 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
               />
             </div>
             <AppEmpty v-else :text="movable ? t('groups.set.noGroupsForm') : t('groups.set.noGroups')" />
+            <p v-if="!readsMembers && shownGroups.length" class="app-form-hint set-view__names-hidden">
+              {{ t('groups.set.namesHidden') }}
+            </p>
             <p v-if="movable && shownGroups.length" class="app-form-hint set-view__drag-hint">
               {{ t('groups.set.dragHint') }}
             </p>

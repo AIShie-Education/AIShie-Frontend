@@ -18,16 +18,8 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useUiStore } from '@/stores/ui'
 import SignupLine from './SignupLine.vue'
-import {
-  byName,
-  GROUP_REFUSALS,
-  liveGroups,
-  nameOf,
-  signupBlocked,
-  signupMove,
-  type Group,
-  type GroupSet,
-} from './groupModel'
+import { groupRefusalScopes } from './groupEvents'
+import { byName, liveGroups, nameOf, signupBlocked, signupMove, type Group, type GroupSet } from './groupModel'
 
 const props = defineProps<{ courseId: string; set: GroupSet }>()
 const emit = defineEmits<{ changed: [proposedActionId: string | null] }>()
@@ -77,7 +69,7 @@ async function ask(g: Group) {
       { notify: false },
     )
     if (!out) {
-      refusal.value = errorMessage(w.lastError.value, { reasons: GROUP_REFUSALS })
+      refusal.value = errorMessage(w.lastError.value, { reasons: groupRefusalScopes('group.sign_up') })
       emit('changed', null)
       return
     }

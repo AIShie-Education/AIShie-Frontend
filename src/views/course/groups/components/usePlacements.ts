@@ -12,7 +12,8 @@ import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { i18n } from '@/i18n'
 import { formatList } from '@/utils/format'
-import { GROUP_REFUSALS, type GroupSet } from './groupModel'
+import { groupRefusalScopes } from './groupEvents'
+import type { GroupSet } from './groupModel'
 
 const t = (key: string, args?: Record<string, unknown>, n?: number) =>
   n === undefined ? i18n.global.t(key, args ?? {}) : i18n.global.t(key, args ?? {}, n)
@@ -52,8 +53,8 @@ export function usePlacements(opts: {
   set: () => GroupSet | undefined
   /** A name for a student, for what is said once they are moved. */
   nameOf: (memberId: string) => string
-  /** Once it is done, or proposed: the page reads the set again. */
-  done: (out: WriteOutcome<ToolOut<'group.set_members'>>) => void
+  /** Once it is done, or proposed, with the placements it was: the page reads the set again. */
+  done: (out: WriteOutcome<ToolOut<'group.set_members'>>, placements: Placement[]) => void
 }) {
   const w = useWrite('group.set_members')
   /** A placement waiting for the person to agree to what it does to work (affects_work). */
@@ -94,7 +95,7 @@ export function usePlacements(opts: {
         pending.value = { placements, work: asWork(e.details.work) }
         return false
       }
-      notifyError(e, undefined, { reasons: GROUP_REFUSALS })
+      notifyError(e, undefined, { reasons: groupRefusalScopes('group.set_members') })
       return false
     }
     pending.value = null
@@ -114,7 +115,7 @@ export function usePlacements(opts: {
         })
       }
     }
-    opts.done(out)
+    opts.done(out, placements)
     return true
   }
 

@@ -5,17 +5,38 @@
 // that they are in none, each set a link to its page; and, opened set by
 // set, who placed them where and when (group_set.get's history, the
 // student's own stays alone). Nothing is shown in a course with no sets.
+//
+// The server shows a student's groups and history only to a reader whose
+// student scope reaches them (a teaching assistant listed for some students
+// may open any student's page): to one it does not, the card says so, and
+// never that the student is in no group. Where the page cannot tell (a
+// delegate, whose principal's reach caps its own), a set where the student is
+// not found says no group is shown, not that there is none.
 import { computed, reactive } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
+import { useCourseStore } from '@/stores/course'
 import AsyncState from '@/components/AsyncState.vue'
 import MemberName from '@/components/MemberName.vue'
 import TimeText from '@/components/TimeText.vue'
-import type { Stay } from './groupModel'
+import { scopeReaches, type Stay } from './groupModel'
 
 const props = defineProps<{ courseId: string; memberId: string }>()
 const { t, te } = useI18n()
+const course = useCourseStore()
+
+/** Whether the reader's student scope reaches this student: true, false, or null where it cannot be told. */
+const reach = computed(() =>
+  scopeReaches(
+    {
+      student_scope: (course.seat ?? course.membership)?.student_scope,
+      listed_students: course.seat?.listed_students ?? null,
+      delegate: course.isDelegate,
+    },
+    props.memberId,
+  ),
+)
 
 const list = useAsync(() => read('group_set.list', { course_id: props.courseId }).then((o) => o.sets ?? []), {
   watch: [() => props.memberId],
@@ -56,7 +77,8 @@ const how = (kind: 'joined' | 'left', v: string | null | undefined) =>
 <template>
   <section v-if="list.error.value || rows.length" class="app-card member-groups" aria-labelledby="member-groups-title">
     <h2 id="member-groups-title" class="app-card__title">{{ t('groups.member.title') }}</h2>
-    <AsyncState :loading="list.loading.value" :error="list.error.value" @retry="list.reload">
+    <p v-if="reach === false" class="member-groups__note member-groups__out">{{ t('groups.member.outOfScope') }}</p>
+    <AsyncState v-else :loading="list.loading.value" :error="list.error.value" @retry="list.reload">
       <ul class="member-groups__list">
         <li v-for="r in rows" :key="r.set.id" class="member-groups__row">
           <div class="member-groups__line">
@@ -67,7 +89,7 @@ const how = (kind: 'joined' | 'left', v: string | null | undefined) =>
               {{ r.set.name }}
             </router-link>
             <span :class="r.group ? 'member-groups__group' : 'member-groups__none'">
-              {{ r.group ? r.group.name : t('groups.member.none') }}
+              {{ r.group ? r.group.name : reach ? t('groups.member.none') : t('groups.member.notShown') }}
             </span>
             <el-button
               link
@@ -85,7 +107,7 @@ const how = (kind: 'joined' | 'left', v: string | null | undefined) =>
               {{ t('groups.member.historyFailed') }}
             </p>
             <p v-else-if="!history.get(r.set.id)!.stays?.length" class="member-groups__note">
-              {{ t('groups.member.noHistory') }}
+              {{ reach ? t('groups.member.noHistory') : t('groups.member.noHistoryShown') }}
             </p>
             <ol v-else class="member-groups__stays">
               <li v-for="s in history.get(r.set.id)!.stays!" :key="s.id">
@@ -139,6 +161,7 @@ const how = (kind: 'joined' | 'left', v: string | null | undefined) =>
 }
 .member-groups__note {
   margin: var(--app-space-xs) 0 0;
+  line-height: var(--app-lh-text);
   font-size: var(--app-text-sm);
   color: var(--app-ink-2);
 }

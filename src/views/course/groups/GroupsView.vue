@@ -6,7 +6,8 @@
 // when, and the assignments using it; those who write assignments make a
 // new one. A student sees their own group in each set and whether they may
 // sign up to one: never another group's members, which the server does not
-// show them.
+// show them; so does a student's own agent, for its student. Staff who neither
+// read the member list nor form groups see the staff's page, read only.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -24,6 +25,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import SetFormDialog from './components/SetFormDialog.vue'
 import SignupLine from './components/SignupLine.vue'
+import { forgetGroupNames } from './components/groupNames'
 import { byName, listParts, liveGroups, type GroupSetSummary } from './components/groupModel'
 
 const props = defineProps<{ courseId: string }>()
@@ -34,8 +36,14 @@ const ui = useUiStore()
 
 /** Forming groups is part of setting group work: those who write assignments do it. */
 const canForm = computed(() => course.can('assignment_write'))
-/** A student's page: their own group in each set, and sign-up. */
-const studentView = computed(() => course.role === 'student' || !(canForm.value || course.can('member_read')))
+/**
+ * A student's page: their own group in each set, and sign-up. A student's,
+ * or a delegate's that neither forms groups nor reads the member list (a
+ * student's own agent); staff without either see the staff's, read only.
+ */
+const studentView = computed(
+  () => course.role === 'student' || (course.isDelegate && !(canForm.value || course.can('member_read'))),
+)
 
 const showArchived = ref(false)
 const list = useAsync(
@@ -74,6 +82,7 @@ function onSaved(out: WriteOutcome<unknown>, id: string | null) {
     proposed.value = out.actionId
     return
   }
+  forgetGroupNames(props.courseId)
   if (id) void router.push({ name: 'course-group-set', params: { courseId: props.courseId, setId: id } })
   else void list.reload()
 }
