@@ -18,6 +18,8 @@ import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import AnswerSources from './AnswerSources.vue'
 import DecidePanel from './DecidePanel.vue'
+import GroupProposal from '@/views/course/groups/components/GroupProposal.vue'
+import { isGroupAction } from '@/views/course/groups/components/groupEvents'
 import RevisesLine from './RevisesLine.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
@@ -123,6 +125,7 @@ const excerpt = computed(() => {
       </div>
     </dl>
 
+    <GroupProposal v-if="isGroupAction(action.action_type)" :action="action" :course-id="courseId" compact />
     <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
     <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
     <AnswerSources v-if="message && action.action_type === 'conversation.answer'" :payload="p" />

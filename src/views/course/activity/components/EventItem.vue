@@ -25,6 +25,8 @@ import { seatPurpose } from '@/utils/agents'
 import { CORE_ROOT_NAME } from '@/views/course/scheme/components/schemeModel'
 import { ensureEventWho, eventWho } from './actors'
 import { componentName, documentTitle, ensureComponentNames, ensureDocumentTitles } from './names'
+import { groupEventFacts } from '@/views/course/groups/components/groupEvents'
+import { ensureGroupNames, groupName, groupSetName } from '@/views/course/groups/components/groupNames'
 import {
   CATEGORY_ICON,
   categoryOf,
@@ -122,6 +124,7 @@ const subjectAgent = computed(() => {
 
 onMounted(() => {
   if (kind.value === 'material') void ensureDocumentTitles(props.courseId)
+  if (kind.value === 'group' || kind.value === 'groupSet') void ensureGroupNames(props.courseId)
   if (componentId.value) void ensureComponentNames(props.courseId)
   if (!props.compact) ensureEventWho(props.courseId, props.event, whoReach.value)
   if (ownAgentActor.value) void myAgents.ensure()
@@ -178,6 +181,13 @@ const subjectText = computed(() => {
     }
     case 'conversation':
       return t('activity.subject.conversation')
+    case 'groupSet':
+      return groupSetName(e.subject_id) ?? t('groups.event.aSet')
+    case 'group': {
+      const g = groupName(e.subject_id)
+      if (!g) return t('groups.event.aGroup')
+      return g.set ? t('groups.event.groupOf', { group: g.name, set: g.set }) : g.name
+    }
     case 'course':
       return ''
   }
@@ -328,6 +338,8 @@ const facts = computed<Fact[]>(() => {
       if (f === 'title' || f === 'description') out.push({ kind: 'text', text: t(`activity.fact.courseFields.${f}`) })
     }
   }
+  // A course's groups: how a student came to a group or left it, and what changed of a set or a group.
+  for (const text of groupEventFacts(e, groupName)) out.push({ kind: 'text', text })
   // A document, or a file of a submission or a grade, renamed or moved in its list.
   if (RENAMED.test(type)) {
     if (payloadBool(e, 'title_changed')) out.push({ kind: 'text', text: t('activity.fact.renamed') })

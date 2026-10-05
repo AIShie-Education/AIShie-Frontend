@@ -270,6 +270,10 @@ export function categoryOf(type: string): Category {
       return 'actions'
     case 'course':
       return 'course'
+    // A course's groups (views/course/groups): who joins and leaves which is news of the members.
+    case 'group':
+    case 'group_set':
+      return 'members'
   }
   return 'other'
 }
@@ -324,6 +328,8 @@ export type SubjectKind =
   | 'component'
   | 'course'
   | 'conversation'
+  | 'groupSet'
+  | 'group'
   | 'other'
 
 export function subjectKind(e: CourseEvent): SubjectKind {
@@ -347,6 +353,10 @@ export function subjectKind(e: CourseEvent): SubjectKind {
     // A chat's news, which Core tells its two participants alone.
     case 'conversation':
       return 'conversation'
+    case 'group_set':
+      return 'groupSet'
+    case 'group':
+      return 'group'
     case 'document': {
       const kind = payloadString(e, 'kind')
       if (kind === 'submission' || e.type.startsWith('submission.')) return 'submissionFile'
@@ -435,6 +445,13 @@ export function subjectRoute(e: CourseEvent, courseId: string, reach: Reach): Ro
       // Opens the chat on it, beside the page (router: course-conversations). Its news is its
       // participants' alone, so whoever reads it here may read it there.
       return id ? { name: 'course-conversations', params: { courseId, conversationId: id } } : null
+    case 'groupSet':
+      return id ? { name: 'course-group-set', params: { courseId, setId: id } } : null
+    case 'group': {
+      // A group is shown on its set's page, which its events name.
+      const set = payloadString(e, 'set_id')
+      return set ? { name: 'course-group-set', params: { courseId, setId: set } } : null
+    }
   }
   return null
 }

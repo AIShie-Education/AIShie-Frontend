@@ -34,6 +34,8 @@ import AnswerProposal from './components/AnswerProposal.vue'
 import DecidePanel from './components/DecidePanel.vue'
 import DelegateGrant from './components/DelegateGrant.vue'
 import DeletionProposal from './components/DeletionProposal.vue'
+import GroupProposal from '@/views/course/groups/components/GroupProposal.vue'
+import { isGroupAction } from '@/views/course/groups/components/groupEvents'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -439,6 +441,11 @@ const errorTitle = computed(() => {
             <section v-if="action.action_type === 'assignment.delete' && !action.redacted" class="app-card">
               <h2 class="app-card__title">{{ t('actions.deletion.title') }}</h2>
               <DeletionProposal :action="action" :course-id="courseId" />
+            </section>
+
+            <section v-if="isGroupAction(action.action_type)" class="app-card">
+              <h2 class="app-card__title">{{ t('groups.proposal.title') }}</h2>
+              <GroupProposal :action="action" :course-id="courseId" />
             </section>
 
             <section class="app-card">

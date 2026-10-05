@@ -166,6 +166,9 @@ export function routeFor(courseId: string, kind: string, id: string | null | und
     case 'conversation_id':
       // The address of the page conversations once had: it opens the chat panel on it, and the page stays.
       return { name: 'course-conversations', params: { courseId, conversationId: id } }
+    case 'group_set':
+    case 'set_id':
+      return { name: 'course-group-set', params: { courseId, setId: id } }
   }
   return null
 }
