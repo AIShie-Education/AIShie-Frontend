@@ -17,41 +17,90 @@
 //
 // Files are dropped on the draft's drop zone, or anywhere on the page while
 // a draft is open, chosen or pasted; each is attached as soon as it is up.
-import { computed, ref, watch } from 'vue'
+//
+// On group work (groupWork.ts) the work is the student's group's: one draft
+// its members write together, each edit naming the revision it was written
+// over (base_revision). The draft is read again every 20 seconds while it is
+// open, so that what the others wrote shows, with who changed it last; a
+// change made while the student has unsaved text is a conflict they settle
+// (load the draft as it is now, or keep theirs and save it over it), and
+// nothing is handed in that they have not seen. A hand-in names whom it is
+// for, and says whom it left out (left_out); a student in no group of the
+// set is told so, and where they may sign up, in place of a draft to start.
+import { computed, h, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { read, type ApiError, type UploadedFile } from '@/api/http'
 import type { Assignment, GradeSummary, Submission, SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
-import { notifyError } from '@/composables/useErrors'
-import { useWrite } from '@/composables/useWrite'
+import { errorMessage, notifyError } from '@/composables/useErrors'
+import { usePolling } from '@/composables/usePolling'
+import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
-import { formatDecimal } from '@/utils/format'
+import { formatDecimal, fromNow } from '@/utils/format'
+import { zonedText } from '@/utils/parts'
 import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
 import FileDropZone from '@/components/FileDropZone.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import MarkdownView from '@/components/MarkdownView.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import {
+  emptyDraft,
+  groupIn,
+  groupSetRoute,
+  handedInFor,
+  isGroupAssignment,
+  keepMine,
+  leftOutMembers,
+  loadTheirs,
+  partOfOtherWork,
+  readDraft,
+  refusedAsChanged,
+  savedDraft,
+  type GroupSet,
+  type SharedDraft,
+} from './groupWork'
 import { allGrades, allSubmissions, myActionsSince } from './useAssignmentData'
+import { useWorkNames } from './useWorkNames'
 
 const props = defineProps<{
   courseId: string
   assignment: Assignment
   /** The version of the instructions students read now, when there are instructions and it is known. */
   instructionsVersionId?: string | null
+  /** On group work, its group set as read (its name, sign-up, and the student's own group's members). */
+  groupSet?: GroupSet | null
 }>()
 const emit = defineEmits<{
   /** Other instructions are in force than the ones on the page: read them again. */
   instructionsChanged: []
+  /** The student's group is not what the page thought: read the assignment (my_group) and its set again. */
+  groupChanged: []
 }>()
 const { t } = useI18n()
 const course = useCourseStore()
+const router = useRouter()
+const { nameIn, namesOf } = useWorkNames()
 
 const me = computed(() => course.myMemberId)
+
+// --- Group work ---------------------------------------------------------------------
+/** The work is a group's: one draft its members write together. */
+const shared = computed(() => isGroupAssignment(props.assignment))
+const myGroup = computed(() => (shared.value ? (props.assignment.my_group ?? null) : null))
+/** Group work, and the student is in no group of its set: nothing to start. */
+const noGroup = computed(() => shared.value && !myGroup.value)
+const signup = computed(() => props.groupSet?.signup ?? null)
+/** The set's page, where its sign-up is. */
+const setPage = computed(() =>
+  props.assignment.group_set_id ? groupSetRoute(router, props.courseId, props.assignment.group_set_id) : null,
+)
 const canWrite = computed(
   () => course.writable && course.membership?.status !== 'paused' && course.can('submission_write'),
 )
@@ -99,31 +148,112 @@ const current = computed(() => {
 })
 const files = computed(() => current.value?.files ?? [])
 
-/** What the person is writing, and what Core holds. */
+/** What the person is writing, and what Core holds (as far as their writing goes: see SharedDraft). */
 const text = ref('')
 const serverBody = ref('')
+/** The revision of serverBody, which an edit of a group's draft names; and a change by someone else to settle. */
+const baseRevision = ref<number | null>(null)
+const conflict = ref<SharedDraft['conflict']>(null)
+function draftState(): SharedDraft {
+  return { text: text.value, serverBody: serverBody.value, baseRevision: baseRevision.value, conflict: conflict.value }
+}
+function setDraftState(s: SharedDraft) {
+  text.value = s.text
+  serverBody.value = s.serverBody
+  baseRevision.value = s.baseRevision
+  conflict.value = s.conflict
+}
 /** The text of the newest change to the draft that waits for approval, and whether a hand-in of it does. */
 const proposedBody = ref<string | null>(null)
 const handInProposed = ref(false)
 let syncedId: string | null = null
+/** The draft this page has just handed in: its reading as handed in is no news. */
+let handedInHere: string | null = null
 watch(
   () => draftFull.data.value,
   (d) => {
     if (!d) {
       syncedId = null
+      setDraftState(emptyDraft())
+      return
+    }
+    if (d.state !== 'draft') {
+      handedInElsewhere(d)
       return
     }
     const body = d.body ?? ''
     // A reload (after a file was attached, say) must not throw away what is
-    // being typed; a different draft starts from its own text.
-    if (d.id !== syncedId || text.value === serverBody.value) text.value = body
-    serverBody.value = body
+    // being typed; a different draft starts from its own text. A group's
+    // draft changed by someone else under unsaved text is a conflict.
+    setDraftState(
+      readDraft(
+        draftState(),
+        { revision: d.revision, body, revisedAt: d.revised_at, revisedBy: d.revised_by_member_id },
+        { fresh: d.id !== syncedId, shared: shared.value },
+      ),
+    )
     syncedId = d.id
     // The change that waited for approval is in: it was approved.
     if (proposedBody.value !== null && body === proposedBody.value) proposedBody.value = null
   },
 )
 const dirty = computed(() => !!current.value && text.value !== serverBody.value)
+
+/**
+ * Someone in the group handed the draft in (read again, it is not a draft):
+ * say who, and whether the person's unsaved text went without them, and
+ * show the attempts as they are now.
+ */
+function handedInElsewhere(d: Submission) {
+  if (shared.value && syncedId === d.id && handedInHere !== d.id) {
+    const name = nameIn(d.submitted_by_member_id, d.members, { start: true })
+    if (text.value !== serverBody.value) warning.value = t('groupWork.work.handedInByOtherUnsaved', { name })
+    else notice.value = t('groupWork.work.handedInByOther', { name })
+  }
+  syncedId = null
+  void attempts.reload()
+  void grades.reload()
+}
+
+// A group's draft, read again now and then while it is open, so that what the
+// others wrote shows. Read beside the page's own reading, so that a read that
+// fails leaves the draft on the page as it was.
+usePolling(
+  async () => {
+    const d = draft.value
+    if (!d) return
+    const fresh = await read('submission.get', { course_id: props.courseId, submission_id: d.id })
+    if (draft.value?.id === d.id && !busy.value) draftFull.data.value = fresh
+  },
+  { intervalMs: 20_000, immediate: false, enabled: () => shared.value && !!draft.value && canWrite.value },
+)
+
+/** Who changed the group's draft last, and when. */
+const revisedBy = computed(() =>
+  current.value?.revised_at ? nameIn(current.value.revised_by_member_id, current.value.members) : null,
+)
+const conflictBy = computed(() =>
+  conflict.value ? nameIn(conflict.value.revisedBy, current.value?.members, { start: true }) : '',
+)
+const showTheirs = ref(false)
+watch(conflict, (c) => {
+  if (!c) showTheirs.value = false
+})
+function onLoadTheirs() {
+  setDraftState(loadTheirs(draftState()))
+}
+function onKeepMine() {
+  setDraftState(keepMine(draftState()))
+}
+
+/** The members of the student's group now: the draft's while one is open, else the set's. */
+const groupMembers = computed(() => {
+  if (!shared.value) return []
+  if (current.value?.members?.length) return current.value.members
+  return groupIn(props.groupSet, myGroup.value?.group_id)?.members ?? []
+})
+/** The student is part of another group's work for the assignment: their group's hand-in leaves them out. */
+const otherWork = computed(() => partOfOtherWork(list.value, myGroup.value?.group_id, me.value))
 const nothingToHandIn = computed(() => !text.value.trim() && !files.value.length)
 
 const pastDue = computed(() => !!props.assignment.due_at && dayjs(props.assignment.due_at).isBefore(dayjs()))
@@ -187,16 +317,32 @@ async function start() {
   warning.value = null
   const out = await createW.run(
     { course_id: props.courseId, assignment_id: props.assignment.id },
-    { success: t('assignments.work.started') },
+    { success: t('assignments.work.started'), notify: false },
   )
+  if (out) announce(out, { success: t('assignments.work.started') })
   if (out?.status === 'proposed') notice.value = t('assignments.work.startProposed')
+  const err = createW.lastError.value
+  if (!out && err) {
+    if (shared.value && err.code === 'conflict' && typeof err.details?.submission_id === 'string') {
+      // Someone in the group started it meanwhile: there is one to show.
+      ElMessage({ type: 'info', message: t('groupWork.work.alreadyStarted') })
+    } else {
+      notifyError(err, undefined, { reasons: 'groupWork.refusal' })
+      // In no group after all, or in another: the page reads the group again.
+      if (err.details?.reason === 'no_group') emit('groupChanged')
+    }
+  }
   // Reloaded whatever came of it: a refusal because a draft is already open
   // means there is one to show.
   await attempts.reload()
 }
+/** Group work whose latest attempt the student is part of is another group's: their group's next is not numbered from it. */
+const latestElsewhere = computed(
+  () => shared.value && !!latest.value?.group_id && latest.value.group_id !== myGroup.value?.group_id,
+)
 const startLabel = computed(() => {
   const l = latest.value
-  if (!l) return t('assignments.work.start')
+  if (!l || latestElsewhere.value) return shared.value ? t('groupWork.work.start') : t('assignments.work.start')
   if (l.state === 'missing') return t('assignments.work.startLate')
   return t('assignments.work.startNext', { n: l.attempt + 1 })
 })
@@ -205,13 +351,27 @@ const startLabel = computed(() => {
 const saveW = useWrite('submission.update_draft')
 async function save(): Promise<boolean> {
   const d = draft.value
-  if (!d || typedIsProposed.value) return false
+  if (!d || typedIsProposed.value || conflict.value) return false
   const body = text.value
+  // A group's draft: the revision this text was written over, which Core
+  // holds it to (draft_changed).
+  const base = shared.value && baseRevision.value !== null ? baseRevision.value : undefined
   const out = await saveW.run(
-    { course_id: props.courseId, submission_id: d.id, body },
-    { success: t('assignments.work.saved') },
+    { course_id: props.courseId, submission_id: d.id, body, base_revision: base },
+    { success: t('assignments.work.saved'), notify: !shared.value },
   )
-  if (!out) return false
+  if (!out) {
+    const err = saveW.lastError.value
+    if (shared.value && err?.details?.reason === 'draft_changed') {
+      // Said by the conflict's own alert, with what to do; read what it is now.
+      setDraftState(refusedAsChanged(draftState(), err.details))
+      void draftFull.reload()
+    } else if (shared.value && err) {
+      notifyError(err, undefined, { reasons: 'groupWork.refusal' })
+    }
+    return false
+  }
+  if (shared.value) announce(out, { success: t('assignments.work.saved') })
   if (out.status === 'proposed') {
     // Said by the waiting alert from now on; asking again would only file
     // the same proposal twice.
@@ -219,7 +379,7 @@ async function save(): Promise<boolean> {
     void waiting.reload()
     return false
   }
-  serverBody.value = body
+  setDraftState(savedDraft(draftState(), body, out.result.revision ?? null))
   void draftFull.reload()
   return true
 }
@@ -292,6 +452,7 @@ const busy = computed(
 )
 /** Why Hand in cannot be pressed now, or null. */
 const handInBlocked = computed<string | null>(() => {
+  if (conflict.value) return t('groupWork.work.resolveFirst')
   if (handInProposed.value) return t('assignments.work.handInWaiting')
   if (proposedBody.value !== null) return t('assignments.work.changeWaiting')
   if (filesPending.value) return t('assignments.work.waitForFiles')
@@ -322,21 +483,79 @@ function isStaleInstructions(e: ApiError | null): boolean {
   return !!e && e.code === 'failed_precondition' && e.message.includes('instructions')
 }
 
+/**
+ * A group's draft, read again just before it is handed in: what the person
+ * hands in must be what they have seen, and for whom it is handed in is the
+ * group's members now. Null where it cannot be read (Core checks anyway);
+ * false where it has changed, which the page now shows.
+ */
+async function freshGroupDraft(id: string): Promise<Submission | null | false> {
+  let fresh: Submission
+  try {
+    fresh = await read('submission.get', { course_id: props.courseId, submission_id: id })
+  } catch {
+    return null
+  }
+  const changed = fresh.state !== 'draft' || fresh.revision !== baseRevision.value
+  draftFull.data.value = fresh
+  if (changed && fresh.state === 'draft') changedBeforeHandIn(fresh)
+  return changed ? false : fresh
+}
+function changedBeforeHandIn(d: Pick<Submission, 'revised_by_member_id' | 'revised_at' | 'members'>) {
+  warning.value = t('groupWork.work.changedBeforeHandIn', {
+    name: nameIn(d.revised_by_member_id, d.members),
+    when: fromNow(d.revised_at),
+  })
+}
+
+/** The words of the hand-in's confirmation, a paragraph each. */
+function handInLines(members: Submission['members']): string[] {
+  if (!shared.value) {
+    const lines = [t('assignments.work.handInConfirm')]
+    if (pastDue.value) lines.push(t('assignments.work.handInLate'))
+    if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
+    return [lines.join(' ')]
+  }
+  const lines = [t('groupWork.work.handInFor', { names: namesOf(members) })]
+  const other = otherWork.value
+  if (other) lines.push(t('groupWork.work.handInLeftOutMe', { group: other.group_name ?? '' }))
+  lines.push(t('groupWork.work.handInFixed'))
+  if (pastDue.value) lines.push(t('assignments.work.handInLate'))
+  if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
+  return lines
+}
+
 async function handIn() {
   const d = draft.value
   if (!d || !current.value || handInBlocked.value) return
   notice.value = null
   warning.value = null
+  leftOutNote.value = null
   if (dirty.value && !(await save())) return
   if (!(await instructionsStillCurrent())) {
     instructionsChanged()
     return
   }
-  const lines = [t('assignments.work.handInConfirm')]
-  if (pastDue.value) lines.push(t('assignments.work.handInLate'))
-  if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
+  let members = current.value.members ?? []
+  if (shared.value) {
+    const fresh = await freshGroupDraft(d.id)
+    if (fresh === false) return
+    if (fresh) members = fresh.members ?? []
+  }
+  const lines = handInLines(members)
+  const title = shared.value
+    ? t('groupWork.work.handInTitle', { n: d.attempt, group: current.value.group_name ?? myGroup.value?.name ?? '' })
+    : t('assignments.work.handInConfirmTitle', { n: d.attempt })
   try {
-    await ElMessageBox.confirm(lines.join(' '), t('assignments.work.handInConfirmTitle', { n: d.attempt }), {
+    // One paragraph a sentence: joined with spaces, Chinese would get a stray one after each 。.
+    const message =
+      lines.length > 1
+        ? h(
+            'div',
+            lines.map((l) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, l)),
+          )
+        : lines[0]!
+    await ElMessageBox.confirm(message, title, {
       type: pastDue.value ? 'warning' : 'info',
       confirmButtonText: t('assignments.work.handIn'),
       cancelButtonText: t('common.actions.cancel'),
@@ -344,6 +563,7 @@ async function handIn() {
   } catch {
     return
   }
+  const revisionBefore = baseRevision.value
   const out = await submitW.run(
     {
       course_id: props.courseId,
@@ -353,24 +573,39 @@ async function handIn() {
       body: serverBody.value,
       files: files.value.map((f) => f.document_id),
       instructions_version_id: props.instructionsVersionId ?? undefined,
+      // And for whom: Core refuses if the group's members are others by then.
+      members: shared.value ? members.map((m) => m.member_id) : undefined,
     },
     { success: false, notify: false },
   )
   if (!out) {
     const err = submitW.lastError.value
+    await draftFull.reload()
+    const now = draftFull.data.value
     // Published between the check above and the hand-in.
     if (isStaleInstructions(err)) instructionsChanged()
-    else notifyError(err)
-    void draftFull.reload()
+    else if (shared.value && err?.details?.reason === 'members_changed')
+      warning.value = errorMessage(err, { reasons: 'groupWork.refusal' })
+    // Someone in the group changed the draft in the meantime.
+    else if (shared.value && now?.state === 'draft' && now.revision !== revisionBefore) changedBeforeHandIn(now)
+    else if (!(shared.value && now && now.state !== 'draft'))
+      notifyError(err, undefined, { reasons: 'groupWork.refusal' })
     return
   }
   if (out.status === 'executed') {
+    handedInHere = d.id
     const late = out.result.state === 'late'
-    const msg = late ? t('assignments.work.handedInLate') : t('assignments.work.handedIn')
+    const names = shared.value ? namesOf(handedInFor(out.result, members)) : ''
+    const msg = shared.value
+      ? t(late ? 'groupWork.work.handedInForLate' : 'groupWork.work.handedInFor', { names })
+      : late
+        ? t('assignments.work.handedInLate')
+        : t('assignments.work.handedIn')
     ElMessage({
       type: late ? 'warning' : 'success',
       message: out.reviewState === 'pending' ? `${msg} ${t('common.outcome.pendingReview')}` : msg,
     })
+    if (shared.value) noteLeftOut(out.result, members)
   } else {
     // Said by the waiting alert from now on.
     handInProposed.value = true
@@ -378,6 +613,17 @@ async function handIn() {
   }
   await attempts.reload()
   void grades.reload()
+}
+
+/** Whom a group's hand-in left out, said until the person moves on: themselves apart, as "you". */
+const leftOutNote = ref<string[] | null>(null)
+function noteLeftOut(result: Parameters<typeof leftOutMembers>[0], members: Submission['members']) {
+  const out = leftOutMembers(result, members)
+  const lines: string[] = []
+  if (out.some((m) => m.member_id === me.value)) lines.push(t('groupWork.work.leftOutMe'))
+  const others = out.filter((m) => m.member_id !== me.value)
+  if (others.length) lines.push(t('groupWork.work.leftOut', { names: namesOf(others) }, others.length))
+  leftOutNote.value = lines.length ? lines : null
 }
 
 function reload() {
@@ -396,7 +642,28 @@ defineExpose({ reload })
       <StatusTag v-if="needsApproval" vocab="level" value="confirm_required" size="small" />
     </h2>
 
+    <!-- Group work: whose work it is -->
+    <dl v-if="shared && myGroup" class="my-work__group">
+      <div>
+        <dt>{{ t('groupWork.work.group') }}</dt>
+        <dd>{{ myGroup.name }}</dd>
+      </div>
+      <div v-if="groupMembers.length">
+        <dt>{{ t('groupWork.work.members') }}</dt>
+        <dd>{{ namesOf(groupMembers) }}</dd>
+      </div>
+    </dl>
+
     <el-alert v-if="warning" type="warning" show-icon class="my-work__alert" :title="warning" @close="warning = null" />
+    <el-alert
+      v-if="leftOutNote"
+      type="warning"
+      show-icon
+      class="my-work__alert my-work__left-out"
+      @close="leftOutNote = null"
+    >
+      <p v-for="line in leftOutNote" :key="line">{{ line }}</p>
+    </el-alert>
     <AppNote v-if="notice" class="my-work__alert" @close="notice = null" closable>
       {{ notice }}
       <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
@@ -433,7 +700,48 @@ defineExpose({ reload })
           :error="draftFull.error.value"
           @retry="draftFull.reload"
         >
-          <div class="my-work__label">{{ t('assignments.work.text') }}</div>
+          <!-- A change to the group's draft by someone else, under unsaved text: theirs, or keep mine. -->
+          <el-alert v-if="conflict" type="warning" :closable="false" show-icon class="my-work__alert my-work__conflict">
+            <template #title>
+              <i18n-t keypath="groupWork.work.conflictTitle" tag="span" scope="global">
+                <template #name>{{ conflictBy }}</template>
+                <template #when><TimeText :value="conflict.revisedAt" relative /></template>
+              </i18n-t>
+            </template>
+            <p class="my-work__conflict-body">{{ t('groupWork.work.conflictBody') }}</p>
+            <template v-if="conflict.body !== null">
+              <el-button link type="primary" :aria-expanded="showTheirs" @click="showTheirs = !showTheirs">
+                <el-icon><component :is="showTheirs ? 'ArrowDown' : 'ArrowRight'" /></el-icon>
+                <span>{{ t('groupWork.work.showTheirs') }}</span>
+              </el-button>
+              <div v-if="showTheirs" class="my-work__theirs">
+                <MarkdownView :source="conflict.body" :empty="t('submissions.detail.draftBody')" />
+              </div>
+            </template>
+            <p v-else class="my-work__conflict-body">{{ t('groupWork.work.conflictLoading') }}</p>
+            <div class="my-work__conflict-actions">
+              <el-button size="small" :disabled="conflict.body === null" @click="onLoadTheirs">
+                {{ t('groupWork.work.loadTheirs') }}
+              </el-button>
+              <el-button size="small" type="primary" :disabled="conflict.body === null" @click="onKeepMine">
+                {{ t('groupWork.work.keepMine') }}
+              </el-button>
+            </div>
+          </el-alert>
+
+          <div class="my-work__label my-work__label--text">
+            <span>{{ shared ? t('groupWork.work.text') : t('assignments.work.text') }}</span>
+            <i18n-t
+              v-if="shared && revisedBy && current?.revised_at"
+              keypath="groupWork.work.revised"
+              tag="span"
+              scope="global"
+              class="app-muted my-work__revised"
+            >
+              <template #name>{{ revisedBy }}</template>
+              <template #when><TimeText :value="current.revised_at" relative /></template>
+            </i18n-t>
+          </div>
           <MarkdownEditor
             v-model="text"
             :rows="10"
@@ -488,7 +796,7 @@ defineExpose({ reload })
             </span>
             <span class="app-toolbar__spacer" />
             <el-button
-              :disabled="!canWrite || !dirty || typedIsProposed || busy"
+              :disabled="!canWrite || !dirty || typedIsProposed || busy || !!conflict"
               :loading="saveW.pending.value"
               @click="save"
             >
@@ -511,9 +819,36 @@ defineExpose({ reload })
         </AsyncState>
       </div>
 
+      <!-- Group work, and in no group of its set: nothing to start; where to join one -->
+      <AppNote v-else-if="noGroup" :title="t('groupWork.work.noGroupTitle')" class="my-work__no-group">
+        <p>
+          {{
+            groupSet ? t('groupWork.work.noGroupBody', { set: groupSet.name }) : t('groupWork.work.noGroupBodyNoSet')
+          }}
+        </p>
+        <template v-if="signup?.joinable">
+          <p>
+            {{
+              signup.closes_at
+                ? t('groupWork.work.signupUntil', { closes: zonedText(signup.closes_at) })
+                : t('groupWork.work.signupOpen')
+            }}
+            <template v-if="!setPage">{{ t('groupWork.work.signupWhere') }}</template>
+          </p>
+          <router-link v-if="setPage" :to="setPage" class="my-work__join">
+            <el-button type="primary">{{ t('groupWork.work.chooseGroup') }}</el-button>
+          </router-link>
+        </template>
+        <p v-else-if="groupSet">{{ t('groupWork.work.askTeacher') }}</p>
+        <p v-if="list.some((s) => s.state !== 'draft')">{{ t('groupWork.work.noGroupNow') }}</p>
+      </AppNote>
+
       <!-- Nothing open: start (again) -->
       <div v-else class="my-work__start">
-        <p class="my-work__start-text">
+        <AppNote v-if="otherWork" class="my-work__alert">
+          {{ t('groupWork.work.notPartNow', { group: otherWork.group_name ?? '' }) }}
+        </AppNote>
+        <p v-if="!latestElsewhere" class="my-work__start-text">
           <template v-if="!latest">{{ t('assignments.work.none') }}</template>
           <template v-else-if="latest.state === 'missing'">{{ t('assignments.work.missingHint') }}</template>
           <template v-else>{{ t('assignments.work.startNextHint') }}</template>
@@ -537,7 +872,9 @@ defineExpose({ reload })
             <el-icon><EditPen /></el-icon>
             <span>{{ startLabel }}</span>
           </el-button>
-          <span v-if="!latest" class="app-form-hint">{{ t('assignments.work.startHint') }}</span>
+          <span v-if="!latest" class="app-form-hint">{{
+            shared ? t('groupWork.work.startHint') : t('assignments.work.startHint')
+          }}</span>
         </div>
       </div>
 
@@ -571,6 +908,18 @@ defineExpose({ reload })
               >
                 {{ t('assignments.work.viewSubmission') }}
               </router-link>
+            </div>
+            <!-- A group's attempt: its group, whom it is for (as handed in), and who handed it in. -->
+            <div v-if="s.group_id" class="my-work__attempt-who">
+              <span v-if="s.group_name">{{ s.group_name }}</span>
+              <span v-if="s.state !== 'draft' && s.members?.length">{{
+                t(s.state === 'missing' ? 'groupWork.work.recordedFor' : 'groupWork.work.forMembers', {
+                  names: namesOf(s.members),
+                })
+              }}</span>
+              <span v-if="s.submitted_by_member_id">{{
+                t('groupWork.work.handedInBy', { name: nameIn(s.submitted_by_member_id, s.members) })
+              }}</span>
             </div>
           </li>
         </ul>
@@ -662,6 +1011,71 @@ defineExpose({ reload })
 }
 .my-work__start-actions .app-form-hint {
   margin-top: 0;
+}
+.my-work__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  margin: 0 0 12px;
+  font-size: var(--app-text-sm);
+}
+.my-work__group dt {
+  color: var(--el-text-color-secondary);
+  font-size: var(--app-text-xs);
+}
+.my-work__group dd {
+  margin: 0;
+  font-weight: var(--app-weight-strong);
+  overflow-wrap: anywhere;
+}
+.my-work__left-out p,
+.my-work__no-group p {
+  margin: 0 0 6px;
+}
+.my-work__no-group p:last-child {
+  margin-bottom: 0;
+}
+.my-work__join {
+  display: inline-block;
+  margin-top: 4px;
+}
+.my-work__conflict-body {
+  margin: 4px 0;
+}
+.my-work__theirs {
+  margin: 6px 0;
+  padding: 8px 12px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: var(--app-radius-item);
+  background: var(--el-bg-color);
+  color: var(--el-text-color-primary);
+}
+.my-work__conflict-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+.my-work__label--text {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+.my-work__revised {
+  font-size: var(--app-text-xs);
+  font-weight: 400;
+}
+.my-work__attempt-who {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  color: var(--el-text-color-secondary);
+  font-size: var(--app-text-xs);
 }
 .my-work__subtitle {
   margin: 20px 0 8px;
