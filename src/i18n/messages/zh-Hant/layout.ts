@@ -71,6 +71,7 @@ export default {
     gradebook: '成績冊',
     scheme: '評分結構',
     members: '成員',
+    groups: '分組',
     approvals: '審批',
     agentProposals: '你的代理的提案',
     myActions: '我的操作',

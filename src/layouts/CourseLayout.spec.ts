@@ -123,6 +123,7 @@ const TEACHER_TABS = [
   'Grades',
   'Approvals',
   'Members',
+  'Groups',
   'Agents',
   'Activity',
   'My actions',
@@ -167,6 +168,8 @@ async function mountCourse(to: RouteLocationRaw, role: 'instructor' | 'student' 
           { path: 'scheme', name: 'course-scheme', component: page('Grading scheme') },
           { path: 'approvals', name: 'course-approvals', component: page('Approvals') },
           { path: 'members', name: 'course-members', component: page('Members') },
+          { path: 'groups', name: 'course-groups', component: page('Groups') },
+          { path: 'groups/:setId', name: 'course-group-set', component: page('Project groups', true) },
           { path: 'agents', name: 'course-agents', component: page('Agents') },
           { path: 'activity', name: 'course-activity', component: page('Activity') },
           { path: 'my-actions', name: 'course-my-actions', component: page('My actions') },
@@ -224,7 +227,7 @@ describe('CourseLayout, on a course’s pages', () => {
     expect(w.findAll('h1').map((h1) => h1.text())).toEqual(['Materials'])
   })
 
-  it('offers a teacher every one of their ten tabs where they fit, with no More', async () => {
+  it('offers a teacher every one of their eleven tabs where they fit, with no More', async () => {
     const w = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } })
     expect(stripTabs(w)).toEqual(TEACHER_TABS)
     expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(false)
@@ -315,7 +318,7 @@ describe('CourseLayout, on a course’s pages', () => {
     expect(w.find('.course-tabs .course-tabs__more').exists()).toBe(true)
   })
 
-  it('offers a student every one of their seven tabs, with no More', async () => {
+  it('offers a student every one of their eight tabs, with no More', async () => {
     const w = await mountCourse({ name: 'course-overview', params: { courseId: COURSE } }, 'student')
     expect(stripTabs(w)).toEqual([
       'Overview',
@@ -323,6 +326,7 @@ describe('CourseLayout, on a course’s pages', () => {
       'Assignments',
       'Submissions',
       'Grades',
+      'Groups',
       'Activity',
       'My actions',
     ])
@@ -343,6 +347,12 @@ describe('CourseLayout, on a course’s pages', () => {
     expect(header.classes()).not.toContain('is-quiet')
     expect(header.find('h1').text()).toBe('Week 1')
     expect(w.find('.course-tabs a.is-active').text()).toBe('Materials')
+  })
+
+  it('shows a group set under the Groups tab, by its own name', async () => {
+    const w = await mountCourse({ name: 'course-group-set', params: { courseId: COURSE, setId: 'S1' } })
+    expect(w.find('.page-header h1').text()).toBe('Project groups')
+    expect(w.find('.course-tabs a.is-active').text()).toBe('Groups')
   })
 
   it('shows the grades’ own tabs in their pages’ header, with the student a page is about', async () => {

@@ -64,7 +64,7 @@ test.describe('language', () => {
 
     // Every tab in the strip where they all fit, as they do in Chinese beside the side bar.
     const zhTabs = page.getByRole('navigation', { name: '課程分頁' })
-    for (const name of ['概覽', '教材', '作業', '提交', '成績', '審批', '成員', '代理', '動態', '我的操作']) {
+    for (const name of ['概覽', '教材', '作業', '提交', '成績', '審批', '成員', '分組', '代理', '動態', '我的操作']) {
       await expect(zhTabs.getByRole('link', { name, exact: true })).toBeVisible()
     }
     await expect(zhTabs.getByRole('button', { name: /^更多/ })).toHaveCount(0)
@@ -176,6 +176,7 @@ test.describe('at phone width', () => {
       ['scheme', 'the grading scheme'],
       ['members', 'members'],
       [`members/${d.actors.ken.member_id}`, 'a member'],
+      ['groups', 'groups'],
       ['approvals', 'approvals'],
       ['my-actions', 'my actions'],
     ] as const) {

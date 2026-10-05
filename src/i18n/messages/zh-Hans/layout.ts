@@ -71,6 +71,7 @@ export default {
     gradebook: '成绩册',
     scheme: '评分结构',
     members: '成员',
+    groups: '分组',
     approvals: '审批',
     agentProposals: '你的智能体的提议',
     myActions: '我的操作',
