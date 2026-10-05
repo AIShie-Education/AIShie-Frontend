@@ -821,6 +821,23 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
   waiting work and paused or removed students marked, and no text a spreadsheet would run as a
   formula (`csvText`).
+- **Grading a group's work** (AIShie-Core #74): a group's submission (`group_id`, its `members`) is
+  graded once, in `GradePanel`'s group mode: the group's score, breakdown, feedback, rubric and
+  files, and a line for each member of the work (`GroupAdjustments`): the group's score, a score of
+  their own (`replace`) or plus or minus (`delta`), set apart with a reason of 1 to 500 characters
+  the member reads, each showing the score it comes to. Every line starts as the member's grade
+  has it now and is sent as shown, `none` where it has none, with the work's `members`, so that
+  nothing Core carries is written unseen (the pure rules are `groupGrading.ts` in
+  `views/course/submissions/components`). Once a grade from it is posted the group is regraded
+  (`RegradeDialog`, sending the members it writes and the grades it replaces), and one member is
+  adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a draft as entering a grade is gated, a
+  posted grade as a regrade). Whose work it is (`GroupWorkMembers`) is marked against the group now
+  for those who grade, who correct it (`submission.set_members`). A member's grade says how it came
+  from the group's (`AdjustmentText`): its reason to the member too, who set it to those who grade
+  alone; a member reads their own grade, never another's. Lists and gradebooks mark a grade from a
+  group's and a member set apart from it (`GroupMark`; in the class's gradebook the group's two
+  figures before the score and ± after it, in words to a screen reader and the tooltip). Words are
+  in `groupGrading`, refusals under `groupGrading.refusal`.
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,
