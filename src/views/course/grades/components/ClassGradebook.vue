@@ -36,7 +36,7 @@ import {
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter, type LocationQuery } from 'vue-router'
 import { ApiError, read } from '@/api/http'
-import type { Component } from '@/api/types'
+import { workOf, type Component } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
@@ -157,20 +157,27 @@ async function readTerm(student?: string): Promise<TermRead> {
               items: o.submissions,
               next: o.next,
             })),
-          (s): SubmissionLite => ({
-            id: s.id,
-            assignment_id: s.assignment_id,
-            student_member_id: s.student_member_id,
-            attempt: s.attempt,
-            state: s.state,
-          }),
+          // A group's work stands for each member it is the work of; read
+          // for one student, for that student alone.
+          (s): SubmissionLite[] =>
+            workOf(s)
+              .filter((id) => !student || id === student)
+              .map((id) => ({
+                id: s.id,
+                assignment_id: s.assignment_id,
+                student_member_id: id,
+                attempt: s.attempt,
+                state: s.state,
+              })),
           (n) => {
             if (!student) progress.submissions = n
           },
-        ).catch((e: unknown) => {
-          if (e instanceof ApiError && e.isForbidden) return null
-          throw e
-        })
+        )
+          .then((each) => each.flat())
+          .catch((e: unknown) => {
+            if (e instanceof ApiError && e.isForbidden) return null
+            throw e
+          })
       : Promise.resolve(null),
   ])
   return { grades, submissions }

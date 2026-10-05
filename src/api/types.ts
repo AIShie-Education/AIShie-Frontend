@@ -173,6 +173,15 @@ export const TEXT_STATUSES: readonly TextStatus[] = ['pending', 'working', 'done
 export type TextSource = 'ai' | 'staff'
 export type Submission = ToolOut<'submission.get'>
 export type SubmissionSummary = ListItem<'submission.list', 'submissions'>
+/**
+ * The students whose work a submission is: the student's own, or, on a
+ * group assignment, the group's members it is the work of (its members now
+ * while it is a draft, those it was handed in or recorded missing for after).
+ */
+export function workOf(s: Pick<SubmissionSummary, 'student_member_id' | 'members'>): string[] {
+  if (s.student_member_id) return [s.student_member_id]
+  return (s.members ?? []).map((m) => m.member_id)
+}
 export type Grade = ToolOut<'grade.get'>
 export type GradeSummary = ListItem<'grade.list', 'grades'>
 export type Gradebook = ToolOut<'gradebook.get'>

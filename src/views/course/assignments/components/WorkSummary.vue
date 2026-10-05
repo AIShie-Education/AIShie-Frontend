@@ -2,8 +2,9 @@
 // Where the work on one assignment stands (submission.list, within the
 // caller's scope): each student counted once, by where their work stands —
 // handed in (late or on time) if any attempt was, else a draft being written,
-// else missing. After the due date Core records a "missing" row for every
-// student with nothing, so a row is not yet work.
+// else missing. A group's work counts for each member it is the work of.
+// After the due date Core records a "missing" row for every student with
+// nothing, so a row is not yet work.
 //
 // It also tells the page how many rows it found, and how many of them are
 // attempts (not records of missing work): any row at all (a draft, a
@@ -11,7 +12,7 @@
 // unpublished, and the page says which it was.
 import { computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { SubmissionState, SubmissionSummary } from '@/api/types'
+import { workOf, type SubmissionState, type SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import AsyncState from '@/components/AsyncState.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -47,7 +48,9 @@ function standing(subs: SubmissionSummary[]): SubmissionState {
 const summary = computed(() => {
   const rows = state.data.value ?? []
   const byStudent = new Map<string, SubmissionSummary[]>()
-  for (const s of rows) byStudent.set(s.student_member_id, [...(byStudent.get(s.student_member_id) ?? []), s])
+  for (const s of rows) {
+    for (const id of workOf(s)) byStudent.set(id, [...(byStudent.get(id) ?? []), s])
+  }
   const counts: Record<string, number> = Object.fromEntries(STATES.map((s) => [s, 0]))
   for (const subs of byStudent.values()) {
     const st = standing(subs)
