@@ -670,7 +670,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
       </el-form-item>
 
       <el-form-item :label="t('groupWork.form.label')" prop="groupSetId" class="assignment-form__group">
-        <el-checkbox v-model="form.group" :disabled="groupLocked || setsError">
+        <el-checkbox v-model="form.group" class="assignment-form__toggle" :disabled="groupLocked || setsError">
           {{ t('groupWork.form.toggle') }}
         </el-checkbox>
         <el-select
@@ -780,6 +780,25 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 }
 .assignment-form__set {
   width: 100%;
+}
+/* Element Plus keeps a checkbox's label on one line: this one is a sentence, and wraps on a phone. */
+.assignment-form__toggle {
+  height: auto;
+  min-height: 32px;
+  max-width: 100%;
+  margin-right: 0;
+  align-items: flex-start;
+  white-space: normal;
+}
+.assignment-form__toggle :deep(.el-checkbox__input) {
+  margin-top: 8px;
+}
+.assignment-form__toggle :deep(.el-checkbox__label) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  white-space: normal;
+  line-height: var(--app-lh-text);
+  overflow-wrap: anywhere;
 }
 .assignment-form__footer {
   display: flex;

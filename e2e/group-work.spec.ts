@@ -23,7 +23,7 @@ import {
 // Eve in no group, Alpha's work late once it is counted so), and finds the
 // form's group set fixed. Nobody reads another group's work or grades:
 // Mei is refused Alpha's submission, and Yuki sees her grade, never Ken's.
-// In Traditional Chinese, and at a phone's width, too.
+// In Traditional Chinese, and at a phone's width, too, the form's included.
 // On a second group assignment, a TA listed for Mei and Fay records Gamma
 // missing, and not Beta, whose Ken they do not reach. Mei, moved from Beta
 // to Alpha while writing Beta's draft, is told so, keeps what she had not
@@ -116,6 +116,22 @@ async function alphaDraft(
   )
   const d = (list.submissions as { id: string; state: string }[]).find((s) => s.state === 'draft')!
   return ok(reader.token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
+}
+
+/** How far the open dialog runs past the page's width: its overlay, its body, and the group work tick's label. */
+async function dialogOverflow(page: Page) {
+  return page.evaluate(() => {
+    const overlay = [...document.querySelectorAll<HTMLElement>('.el-overlay-dialog')].find(
+      (e) => e.getClientRects().length > 0,
+    )!
+    const body = overlay.querySelector<HTMLElement>('.el-dialog__body')!
+    const label = overlay.querySelector<HTMLElement>('.assignment-form__toggle .el-checkbox__label')!
+    return {
+      overlay: overlay.scrollWidth - overlay.clientWidth,
+      body: body.scrollWidth - body.clientWidth,
+      label: label.getBoundingClientRect().right - body.getBoundingClientRect().right,
+    }
+  })
 }
 
 test.describe.serial('group work', () => {
@@ -416,6 +432,8 @@ test.describe.serial('group work', () => {
     await page.goto(coursePath(`submissions?assignment=${assignmentId}`))
     await expect(page.getByRole('radio', { name: '按小組' })).toBeChecked()
     await expect(page.locator('.group-roster__no-group')).toContainText('未分組：1位學生')
+    // They cannot hand anything in: not excused from it.
+    await expect(page.locator('.group-roster__no-group')).toContainText('他們無法繳交這份作業')
     await expect(page.locator('.group-roster__table')).toContainText('缺交')
     await photograph(page, 'group-work-zh-roster')
   })
@@ -442,6 +460,36 @@ test.describe.serial('group work', () => {
     expect(await sideways()).toBeLessThanOrEqual(0)
     await photograph(page, 'group-work-phone-roster')
   })
+  test('at a phone’s width, the form’s group work wraps, new and locked, with no sideways scroll', async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await as(page, sato())
+    await page.goto(coursePath('assignments'))
+    await header(page).getByRole('button', { name: 'New assignment' }).click()
+    const made = page.getByRole('dialog', { name: 'New assignment' })
+    await made.locator('.assignment-form__toggle').click()
+    await expect(made).toContainText('a student in no group of it hands nothing in')
+    const fresh = await dialogOverflow(page)
+    expect(fresh.overlay).toBeLessThanOrEqual(0)
+    expect(fresh.body).toBeLessThanOrEqual(0)
+    expect(fresh.label).toBeLessThanOrEqual(0.5)
+    // The label is read whole, over more than one line.
+    const label = made.locator('.assignment-form__toggle .el-checkbox__label')
+    await expect(label).toHaveText('Each group hands in one piece of work, for all its members')
+    expect((await label.boundingBox())!.height).toBeGreaterThan(30)
+    await photograph(page, 'group-work-phone-form')
+    await made.getByRole('button', { name: 'Cancel' }).click()
+
+    await page.goto(coursePath(`assignments/${assignmentId}`))
+    await header(page).getByRole('button', { name: 'Edit' }).click()
+    const edit = page.getByRole('dialog', { name: 'Edit assignment' })
+    await expect(edit).toContainText('Someone has started on it, so whether it is group work')
+    const locked = await dialogOverflow(page)
+    expect(locked.overlay).toBeLessThanOrEqual(0)
+    expect(locked.body).toBeLessThanOrEqual(0)
+    expect(locked.label).toBeLessThanOrEqual(0.5)
+    await photograph(page, 'group-work-phone-form-locked')
+  })
+
   test('a TA listed for Mei and Fay records Gamma missing, and not Beta, whose Ken they do not reach', async ({
     page,
   }) => {
