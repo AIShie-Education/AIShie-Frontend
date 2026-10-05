@@ -30,7 +30,8 @@
 // Where the draft stops being theirs while it is open — another member hands
 // it in, or they are moved out of the group — they are told so, the group is
 // read again, and what they had typed and not saved stays on the page, to
-// copy, until they discard it.
+// copy, until they discard it: however the page finds it, by the 20-second
+// read, a save, a hand-in, or a refresh that reads their attempts first.
 import { computed, h, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -144,8 +145,21 @@ function gradeFor(submissionId: string): GradeSummary | undefined {
 
 // --- The open draft ---------------------------------------------------------------
 const draftFull = useAsync<Submission | null>(
-  async () =>
-    draft.value ? read('submission.get', { course_id: props.courseId, submission_id: draft.value.id }) : null,
+  async (): Promise<Submission | null> => {
+    const d = draft.value
+    if (!d) return null
+    try {
+      return await read('submission.get', { course_id: props.courseId, submission_id: d.id })
+    } catch (e) {
+      // Not one of its group now (a refresh found it so): said, and the
+      // draft left on the page as it was until its attempts are read again.
+      if (shared.value && draft.value?.id === d.id && notInDraftsGroup(e)) {
+        draftNotMine(d.id)
+        return draftFull.data.value ?? null
+      }
+      throw e
+    }
+  },
   { watch: [() => draft.value?.id], keepData: true },
 )
 const current = computed(() => {
@@ -179,9 +193,14 @@ let handedInHere: string | null = null
 let notMineId: string | null = null
 watch(
   () => draftFull.data.value,
-  (d) => {
+  (d, before) => {
     if (!d) {
+      // The group's draft, open here, is gone from the student's attempts
+      // (a refresh read them before the draft itself): what they had not
+      // saved is kept before the editor empties, and why it went is read.
+      const gone = syncedId
       syncedId = null
+      if (shared.value && gone && gone !== handedInHere) draftGone(gone, before?.id === gone ? before.group_name : null)
       setDraftState(emptyDraft())
       return
     }
@@ -215,14 +234,35 @@ const dirty = computed(() => !!current.value && text.value !== serverBody.value)
  * show the attempts as they are now.
  */
 function handedInElsewhere(d: Submission) {
-  if (shared.value && syncedId === d.id && handedInHere !== d.id) {
-    const name = nameIn(d.submitted_by_member_id, d.members, { start: true })
-    if (keepUnsaved()) warning.value = t('groupWork.work.handedInByOtherUnsaved', { name })
-    else news.value = t('groupWork.work.handedInByOther', { name })
-  }
+  if (shared.value && syncedId === d.id && handedInHere !== d.id) sayHandedIn(d, keepUnsaved())
   syncedId = null
   void attempts.reload()
   void grades.reload()
+}
+/** Who handed the group's draft in, and whether what the person had not saved was kept. */
+function sayHandedIn(d: Submission, kept: boolean) {
+  const name = nameIn(d.submitted_by_member_id, d.members, { start: true })
+  if (kept) warning.value = t('groupWork.work.handedInByOtherUnsaved', { name })
+  else news.value = t('groupWork.work.handedInByOther', { name })
+}
+
+/**
+ * The group's draft went from the student's attempts while it was open
+ * here, before the page read it otherwise: what they had not saved is kept
+ * at once, and the draft read again to say why — handed in by someone else,
+ * or not their group's now. (Read so first, it was said then.)
+ */
+async function draftGone(id: string, group: string | null | undefined) {
+  const kept = keepUnsaved()
+  if (notMineId === id) return
+  let fresh: Submission
+  try {
+    fresh = await read('submission.get', { course_id: props.courseId, submission_id: id })
+  } catch (e) {
+    if (notInDraftsGroup(e)) draftNotMine(id, group)
+    return
+  }
+  if (fresh.state !== 'draft') sayHandedIn(fresh, kept)
 }
 
 /**
@@ -266,13 +306,14 @@ async function discardKept() {
  * The student is not one of the draft's group now (Core refused reading or
  * writing it so): moved to another group, or out of the set. Said, with
  * what they had not saved kept; their group, and their work, read again.
- * Once a draft: the 20-second read and a save may both find it.
+ * Once a draft: the 20-second read and a save may both find it. Its group
+ * is the draft's on the page, or as last read there (groupName) once gone.
  */
-function draftNotMine(id: string) {
+function draftNotMine(id: string, groupName?: string | null) {
   if (notMineId === id) return
   notMineId = id
   keepUnsaved()
-  const group = current.value?.id === id ? current.value.group_name : null
+  const group = current.value?.id === id ? current.value.group_name : groupName
   warning.value = group ? t('groupWork.work.notInGroupNow', { group }) : t('groupWork.work.notInGroupNowUnnamed')
   news.value = null
   emit('groupChanged')

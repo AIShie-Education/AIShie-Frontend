@@ -35,6 +35,9 @@ let draft: Draft | null
 /** Core's answer to reading the draft once the reader is not one of its group: the draft is not listed for them either. */
 let notMine: ApiError | null
 let attempts: Record<string, unknown>[]
+/** Reads of the attempts, and of the draft, wait for these where set: which of a refresh's reads answers first. */
+let listGate: Promise<void> | null
+let getGate: Promise<void> | null
 let writes: { tool: string; args: Record<string, unknown> }[]
 let answers: Record<string, (args: Record<string, unknown>) => unknown>
 vi.mock('@/api/http', async (orig) => {
@@ -42,9 +45,12 @@ vi.mock('@/api/http', async (orig) => {
   return {
     ...real,
     read: vi.fn(async (tool: string) => {
-      if (tool === 'submission.list')
+      if (tool === 'submission.list') {
+        if (listGate) await listGate
         return { submissions: draft && !notMine ? [{ ...draft, body: undefined }, ...attempts] : attempts }
+      }
       if (tool === 'submission.get') {
+        if (getGate) await getGate
         if (notMine) throw notMine
         return { ...draft }
       }
@@ -105,6 +111,8 @@ beforeEach(() => {
   attempts = []
   answers = {}
   notMine = null
+  listGate = null
+  getGate = null
   draft = {
     id: 'sub-1',
     assignment_id: 'asg-1',
@@ -396,6 +404,123 @@ describe('when the draft stops being the reader’s while it is open', () => {
     await flushPromises()
     expect(messages().some((m) => m.includes('body is too long'))).toBe(true)
     expect((editor(w).element as HTMLTextAreaElement).value).toBe('Mine, not saved yet.')
+    expect(w.find('.my-work__kept').exists()).toBe(false)
+    w.unmount()
+  })
+})
+
+/** A read held back until released: which of a refresh's reads answers first. */
+function gate(): { gate: Promise<void>; release: () => void } {
+  let release!: () => void
+  const held = new Promise<void>((r) => (release = r))
+  return { gate: held, release }
+}
+/** The page's Refresh, which reads the attempts and the draft again side by side. */
+const refresh = (w: Awaited<ReturnType<typeof mountPanel>>) => (w.vm as unknown as { reload: () => void }).reload()
+const kept = (w: Awaited<ReturnType<typeof mountPanel>>) => w.find('.my-work__kept-text')
+
+describe('when a refresh finds the draft is not the reader’s any more', () => {
+  it('moved out of the group, and the attempts read first: keeps what was typed, then says so', async () => {
+    const w = await mountPanel()
+    await editor(w).setValue('Mine, not saved yet.')
+    // The teacher moves Yuki to Beta: Alpha's draft is not hers to read or list any more.
+    notMine = outOfScope()
+    const held = gate()
+    getGate = held.gate
+    refresh(w)
+    await flushPromises()
+    // Her attempts have no draft now: the editor goes, what she typed stays.
+    expect(editor(w).exists()).toBe(false)
+    expect(kept(w).text()).toBe('Mine, not saved yet.')
+    held.release()
+    await flushPromises()
+    expect(w.text()).toContain('You are no longer in Alpha, so its draft is not yours to change or hand in any more.')
+    expect(kept(w).text()).toBe('Mine, not saved yet.')
+    expect(w.emitted('groupChanged')).toHaveLength(1)
+    expect(vi.mocked(ElNotification)).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('moved out of the group, and the draft read first: says so at once, and keeps what was typed', async () => {
+    const w = await mountPanel()
+    await editor(w).setValue('Mine, not saved yet.')
+    notMine = outOfScope()
+    const held = gate()
+    listGate = held.gate
+    refresh(w)
+    await flushPromises()
+    // Its reading refused: said, not shown as a refusal, the editor as it was until the attempts are read.
+    expect(w.text()).toContain('You are no longer in Alpha')
+    expect(w.text()).not.toContain('not permitted')
+    expect(kept(w).text()).toBe('Mine, not saved yet.')
+    expect((editor(w).element as HTMLTextAreaElement).value).toBe('Mine, not saved yet.')
+    await editor(w).setValue('Mine, not saved yet, and a little more.')
+    held.release()
+    await flushPromises()
+    expect(editor(w).exists()).toBe(false)
+    expect(kept(w).text()).toBe('Mine, not saved yet, and a little more.')
+    expect(w.emitted('groupChanged')).toHaveLength(1)
+    expect(vi.mocked(ElNotification)).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('handed in by someone else, and the attempts read first: keeps what was typed, and says who did', async () => {
+    const w = await mountPanel()
+    await editor(w).setValue('A paragraph Yuki has not saved.')
+    draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+    const held = gate()
+    getGate = held.gate
+    refresh(w)
+    await flushPromises()
+    expect(editor(w).exists()).toBe(false)
+    expect(kept(w).text()).toBe('A paragraph Yuki has not saved.')
+    held.release()
+    await flushPromises()
+    expect(w.text()).toContain('Ken Wong has handed the draft in, without the changes you had not saved.')
+    expect(kept(w).text()).toBe('A paragraph Yuki has not saved.')
+    expect(button(w, 'Start attempt 2')).toBeDefined()
+    w.unmount()
+  })
+
+  it('handed in by someone else, and the draft read first: the same', async () => {
+    const w = await mountPanel()
+    await editor(w).setValue('A paragraph Yuki has not saved.')
+    draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+    const held = gate()
+    listGate = held.gate
+    refresh(w)
+    await flushPromises()
+    held.release()
+    await flushPromises()
+    expect(w.text()).toContain('Ken Wong has handed the draft in, without the changes you had not saved.')
+    expect(kept(w).text()).toBe('A paragraph Yuki has not saved.')
+    w.unmount()
+  })
+
+  it('handed in by someone else with nothing unsaved: says who did, and keeps nothing', async () => {
+    const w = await mountPanel()
+    draft = { ...draft!, state: 'submitted', submitted_by_member_id: 'm-ken' } as Draft
+    const held = gate()
+    getGate = held.gate
+    refresh(w)
+    await flushPromises()
+    held.release()
+    await flushPromises()
+    expect(w.text()).toContain('Ken Wong has handed the draft in.')
+    expect(w.find('.my-work__kept').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('handed in by the reader here: no news of it, and nothing kept', async () => {
+    answers['submission.submit'] = () => {
+      draft = { ...draft!, state: 'submitted', submitted_by_member_id: ME } as Draft
+      return { state: 'submitted', submitted_at: '2026-10-05T12:10:00Z', members: ['m-ken', ME] }
+    }
+    const w = await mountPanel()
+    await button(w, 'Hand in').trigger('click')
+    await flushPromises()
+    expect(editor(w).exists()).toBe(false)
+    expect(w.text()).not.toContain('has handed the draft in')
     expect(w.find('.my-work__kept').exists()).toBe(false)
     w.unmount()
   })

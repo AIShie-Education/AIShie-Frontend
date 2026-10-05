@@ -321,7 +321,9 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   stops being the student's while it is open says so: handed in by someone else (read so, or a save
   refused and the draft read again), or not their group's now (`student_out_of_scope` on reading,
   saving or handing it in, `notInDraftsGroup`: moved, or out of the set), when the page reads their
-  group again (`groupChanged`). Either way what they typed and had not saved stays on the page,
+  group again (`groupChanged`). A refresh that finds it gone from their attempts before the draft's
+  own reading answers keeps what they typed before the editor goes, and reads the draft again to say
+  which (`draftGone`). Either way what they typed and had not saved stays on the page,
   read-only with Copy, until they discard it. Its attempts say their group, whom each was handed in
   or recorded missing for, and who handed it in. A student in
   no group of the set (`no_group`) is told so, with sign-up's deadline where it is open, and has

@@ -28,7 +28,10 @@ import {
 // missing, and not Beta, whose Ken they do not reach. Mei, moved from Beta
 // to Alpha while writing Beta's draft, is told so, keeps what she had not
 // saved, and finds her group Alpha; then Yuki hands Alpha's draft in while
-// Mei is typing, and Mei's unsaved text stays on her page.
+// Mei is typing, and Mei's unsaved text stays on her page. It stays, too,
+// where Mei finds out by pressing Refresh, and her attempts are read before
+// the draft: when Yuki hands the next draft in, and when Mei is moved to
+// Gamma.
 //
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
@@ -606,5 +609,53 @@ test.describe.serial('group work', () => {
     await expectToasted(page, 'Draft started.')
     await expect(work.locator('textarea')).toBeVisible()
     await expect(work.locator('.my-work__kept-text')).toHaveText('Alpha’s plan. Mei’s paragraph, not saved.')
+  })
+
+  test('Refresh keeps what Mei had not saved, too: when Yuki hands Alpha’s draft in, and when Mei is moved out of Alpha', async ({
+    page,
+  }) => {
+    await keepToasts(page)
+    await as(page, students.mei)
+    await page.goto(coursePath(`assignments/${secondId}`))
+    const work = myWork(page)
+    const refresh = page.getByRole('button', { name: 'Refresh' })
+    await work.locator('textarea').fill('Attempt two.')
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expectToasted(page, 'Draft saved.')
+    await work.locator('textarea').fill('Attempt two. A line Mei has not saved.')
+
+    // Refresh reads her attempts and the draft side by side. The draft's
+    // reading answers last from here on, as it may: her attempts have no
+    // draft by then, and the editor goes before the page knows why.
+    await page.route(/\/v1\/courses\/[^/]+\/submissions\/[^/?]+(\?.*)?$/, async (route) => {
+      if (route.request().method() === 'GET') await new Promise((r) => setTimeout(r, 1500))
+      await route.continue()
+    })
+    const two = await alphaDraft(secondId, groups.alpha, students.yuki)
+    await ok(students.yuki.token, 'POST', `/v1/courses/${courseId}/submissions/${two.id}/submit`, {})
+    await refresh.click()
+    await expect(work).toContainText(
+      'Yuki Tanaka has handed the draft in, without the changes you had not saved. They are kept below, for you to copy.',
+    )
+    await expect(work.locator('.my-work__kept-text')).toHaveText('Attempt two. A line Mei has not saved.')
+    await expect(work.locator('textarea')).toHaveCount(0)
+
+    await work.getByRole('button', { name: 'Start attempt 3' }).click()
+    await expectToasted(page, 'Draft started.')
+    await work.locator('textarea').fill('Attempt three.')
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expectToasted(page, 'Draft saved.')
+    await work.locator('textarea').fill('Attempt three. Another line Mei has not saved.')
+    await ok(sato().token, 'POST', `/v1/courses/${courseId}/group-sets/${setId}/members`, {
+      placements: [{ student_member_id: students.mei.member_id, group_id: groups.gamma }],
+      affects_work: true,
+    })
+    await refresh.click()
+    await expect(work).toContainText(
+      'You are no longer in Alpha, so its draft is not yours to change or hand in any more.',
+    )
+    await expect(work.locator('.my-work__kept-text')).toHaveText('Attempt three. Another line Mei has not saved.')
+    await expect(work.locator('textarea')).toHaveCount(0)
+    await expect(work.locator('.my-work__group')).toContainText('Gamma')
   })
 })
