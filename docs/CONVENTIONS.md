@@ -835,10 +835,25 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `split.ts` (`planSplit` in `groupModel.ts` over the set as read), which must keep AIShie-Core's
   `internal/groupsplit` golden values (`split.spec.ts`): the seed shown is sent, so the preview is what is
   dealt. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
-  CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`.
-  The feed names sets and groups from `groupNames.ts` and says their events' facts with
-  `groupEventFacts`; an action about groups is said in words by `GroupProposal` on the approvals queue
-  and an action's page; a student's member page lists their groups (`MemberGroupsCard`).
+  CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`,
+  and where one kind of action means something of its own by a reason (`group_has_work` to a student
+  signing up, to someone archiving a group, to a placement approved after work began) under
+  `groups.refusalOf`, first: `groupRefusalScopes(type)`, which `reasonText(e, type)` asks too, so that an
+  action's refusal reads the same in My actions, the approvals and its page. A student's page goes to a
+  student, and to a delegate that neither forms groups nor reads the member list (a student's own
+  agent); other staff without either see the staff's page read only, nobody named. Once students are
+  moved the focus goes where they went (`focusAfterMove`): the moved row's own "Move … to…", the group
+  (its heading, `tabindex="-1"`) or those in no group, or the request where it waits for approval. A
+  group's work is shown to a reader whose scope reaches one of its members, so an empty group's to one
+  who reaches every student and assignment (`reachesEveryStudent`): to anyone else, archiving one is
+  offered, saying that a group with work they are not shown stays.
+  The feed names sets and groups from `groupNames.ts` (read once, and again for an id it does not know,
+  once two minutes old, and after the app's own change to them, `forgetGroupNames`) and says their
+  events' facts with `groupEventFacts`; an action about groups is said in words: its set (or group) by
+  `GroupTarget` in `ActionTarget`'s line, its fields by `GroupFieldValue` (`groupFieldKind`) in
+  `FieldsView`, and what it does, or did, by `GroupProposal` on the approvals queue and an action's page.
+  A student's member page lists their groups (`MemberGroupsCard`), and says to a reader whose scope does
+  not reach the student (`scopeReaches`) that they are not shown, never that there are none.
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

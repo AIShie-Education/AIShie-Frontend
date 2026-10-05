@@ -37,6 +37,14 @@ import {
 //
 // With E2E_SHOTS set to a directory, the set's page, the split and the
 // student's sign-up are photographed there.
+//
+// Once students are moved from the keyboard, the focus goes where they went,
+// not to the page's top. What the feed, My actions, the approvals and an
+// action's page say of groups is said in words: the set and its groups by
+// name, a group made since the page was opened among them, a split's result,
+// a refusal. A teaching assistant listed for some students is told, on
+// another student's page, that their groups are not shown to them; one whose
+// member list was taken away sees the groups read only, never a sign-up page.
 
 const STAMP = Date.now().toString(36)
 const SET = `Project groups ${STAMP}`
@@ -46,8 +54,11 @@ let setId = ''
 let reportId = ''
 type Student = DemoActor & { member_id: string; name: string }
 const students: Record<'ada' | 'ben' | 'cy' | 'dee' | 'eve' | 'fay', Student> = {} as never
-/** Two teaching assistants: Tess reads the member list and forms no groups; Tam's forming them waits for approval. */
-const tas: Record<'tess' | 'tam', DemoActor> = {} as never
+/**
+ * Teaching assistants: Tess reads the member list and forms no groups; Tam's forming them waits for approval;
+ * Lu is listed for Ada alone; Tia's seat does not read the member list.
+ */
+const tas: Record<'tess' | 'tam' | 'lu' | 'tia', DemoActor> = {} as never
 
 function teacher(): DemoActor {
   return demo().actors.instructor
@@ -96,15 +107,17 @@ test.beforeAll(async () => {
     })
     students[key] = { ...who, member_id: seat.member_id as string, name }
   }
-  for (const [key, name, perms] of [
-    ['tess', 'Tess Ma', undefined],
-    ['tam', 'Tam Yu', { assignment_write: 'confirm_required' }],
+  for (const [key, name, seat] of [
+    ['tess', 'Tess Ma', {}],
+    ['tam', 'Tam Yu', { perms: { assignment_write: 'confirm_required' } }],
+    ['lu', 'Lu Ka', { student_scope: 'listed', listed_students: [students.ada.member_id] }],
+    ['tia', 'Tia Ko', { perms: { member_read: 'denied' } }],
   ] as const) {
     const who = await registerPerson(name, { email: `${key}+${STAMP}@groups.test` })
     await ok(teacher().token, 'POST', `/v1/courses/${courseId}/members`, {
       actor_id: who.actor_id,
       preset: 'ta',
-      perms,
+      ...seat,
     })
     tas[key] = who
   }
@@ -201,6 +214,18 @@ test.describe.serial('a course’s groups', () => {
     expect(await membersOf(card(page, 'Group 1'))).toEqual(['Ada Lee'])
     await expect(none(page)).toContainText('In no group: 5')
     await expect(page.locator('.set-view__chosen')).toHaveText('Choose students to move them.')
+    // "Move to…" is off with nobody chosen: the focus is on the group she went to, not the page's top.
+    await expect(card(page, 'Group 1').locator('.group-card__name')).toBeFocused()
+
+    // Ben, by his row's own menu: the focus follows him to his row in the group he went to.
+    await none(page).getByRole('button', { name: 'Move Ben Ho to…' }).focus()
+    await page.keyboard.press('Enter')
+    await expect(items.first()).toBeFocused()
+    await page.keyboard.press('ArrowDown')
+    await page.keyboard.press('Enter')
+    await expectToasted(page, 'Moved Ben Ho to Group 2.')
+    await expect(card(page, 'Group 2').getByRole('button', { name: 'Move Ben Ho to…' })).toBeFocused()
+    await expect(none(page)).toContainText('In no group: 4')
     await photograph(page, 'groups-set')
   })
 
@@ -262,6 +287,25 @@ test.describe.serial('a course’s groups', () => {
     expect(dealt.unassigned).toEqual([])
     for (const g of dealt.groups)
       await expect.poll(() => membersOf(card(page, g.name)), { message: g.name }).toEqual(g.members)
+
+    // My actions names the set; the split's page says what it made, placed and left alone, in words.
+    await openCourseTab(page, 'My actions')
+    const mine = page.locator('tr').filter({ hasText: 'Split students into groups at random' }).first()
+    await expect(mine.locator('.action-target')).toHaveText(SET)
+    await mine.click()
+    await expect(page).toHaveURL(/\/actions\/[0-9a-f-]{36}$/)
+    const what = page
+      .locator('.app-card')
+      .filter({ has: page.getByRole('heading', { name: 'What it does to the groups' }) })
+    await expect(what).toContainText('New groupsGroup 3')
+    await expect(what).toContainText('Placed5 students')
+    await expect(what).toContainText('Left aloneGroup 1')
+    await expect(what).not.toContainText('Approving it')
+    const came = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'What came of it' }) })
+    await expect(came.locator('.fields-view')).toContainText('Group 3')
+    await expect(came.locator('.fields-view')).toContainText('Group 1: it has work for an assignment of this set')
+    for (const raw of ['{', 'has_work', 'group_id'])
+      expect(await came.locator('.fields-view').innerText(), raw).not.toContain(raw)
   })
 
   test('moving Ada out of the group with her draft says first what becomes of it', async ({ page }) => {
@@ -279,6 +323,9 @@ test.describe.serial('a course’s groups', () => {
     await dialog.getByRole('button', { name: 'Move them anyway' }).click()
     await expectToasted(page, 'Moved Ada Lee to Group 3.')
     await expect(card(page, 'Group 3').locator('.student-item__name', { hasText: 'Ada Lee' })).toBeVisible()
+    // The focus follows her, past the dialog (gone, and not taking it back), to her row in the group she went to.
+    await expect(dialog).toBeHidden()
+    await expect(card(page, 'Group 3').getByRole('button', { name: 'Move Ada Lee to…' })).toBeFocused()
     await expect(card(page, 'Group 1')).toContainText('Nobody is in this group yet.')
   })
 
@@ -386,6 +433,13 @@ test.describe.serial('a course’s groups', () => {
     // Read again: it says so, and is not offered.
     await expect(row(other.name)).toContainText('額滿')
     await expect(row(other.name).getByRole('button')).toBeDisabled()
+    // Her actions say the refused sign-up in words: the set by name, why in words, never the bare reason.
+    await page.goto(`/courses/${courseId}/my-actions`)
+    const refused = page.locator('tr').filter({ hasText: '失敗' }).filter({ hasText: SET }).first()
+    await expect(refused.locator('.action-target')).toContainText(`${SET}→ ${other.name}`)
+    await expect(refused).toContainText('該小組已額滿。')
+    await expect(refused).not.toContainText('group_full')
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
 
     await row(room.name)
       .getByRole('button', { name: `轉到${room.name}` })
@@ -477,6 +531,64 @@ test.describe.serial('a course’s groups', () => {
     await expect(page.getByRole('button', { name: 'Download CSV' })).toBeVisible()
   })
 
+  test('a teaching assistant listed for Ada is told, on Ben’s page, that his groups are not shown, never that he is in none', async ({
+    page,
+  }) => {
+    await signIn(page, tas.lu)
+    await page.goto(`/courses/${courseId}/members/${students.ben.member_id}`)
+    const groups = page.locator('.member-groups')
+    await expect(groups).toContainText('This student is not among the students your seat reaches')
+    await expect(groups).not.toContainText('In no group')
+    await expect(groups.getByRole('button', { name: 'History' })).toHaveCount(0)
+    // Ada, whom the seat lists, is named in her group, and her history is hers.
+    const dealt = await setAsTeacher()
+    const hers = dealt.groups.find((g) => g.members.includes('Ada Lee'))!
+    await page.goto(`/courses/${courseId}/members/${students.ada.member_id}`)
+    await expect(groups.locator('.member-groups__group')).toHaveText(hers.name)
+    await groups.getByRole('button', { name: 'History' }).click()
+    await expect(groups.locator('.member-groups__stays li').first()).toContainText(hers.name)
+  })
+
+  test('a teaching assistant whose seat does not read the member list sees the groups read only, never a sign-up page', async ({
+    page,
+  }) => {
+    await signIn(page, tas.tia)
+    await page.goto(`/courses/${courseId}/groups`)
+    await expect(page.locator('.page-header')).toContainText('Group sets of this course')
+    await expect(page.locator('.groups__row').filter({ hasText: SET })).not.toContainText('You are in no group')
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    await expect(page.locator('.group-card').first()).toBeVisible()
+    await expect(page.getByText('Who is in each group is shown to those who may read the member list.')).toBeVisible()
+    await expect(page.locator('.student-set__mine, .student-set__signup')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: /^(Join|Switch|Leave)/ })).toHaveCount(0)
+    expect(await page.locator('.app-main').innerText()).not.toContain('You are in no group')
+  })
+
+  test('the feed names a group made since the page was opened, without a reload', async ({ page }) => {
+    await keepToasts(page)
+    await signIn(page, teacher())
+    await page.goto(`/courses/${courseId}/activity`)
+    await expect(page.locator('.event-item__title', { hasText: 'Put in a group' }).first()).toBeVisible()
+    // The rest by the app's own links: a reload would read every name afresh anyway.
+    await openCourseTab(page, 'Groups')
+    await page.locator('.groups__row').getByRole('link', { name: SET }).click()
+    await header(page).getByRole('button', { name: 'Add groups' }).click()
+    const add = page.getByRole('dialog', { name: 'Add groups' })
+    await add.getByLabel('Names before the number').fill('Lab ')
+    await add.getByRole('button', { name: 'Add 1 group' }).click()
+    await expectToasted(page, 'Added Lab 1.')
+    const from = (await setAsTeacher()).groups.find((g) => g.members.includes('Eve Lam'))!
+    await card(page, from.name).getByRole('button', { name: 'Move Eve Lam to…' }).click()
+    await page.locator('.move-menu__list:visible .move-menu__item', { hasText: 'Lab 1' }).click()
+    await expectToasted(page, 'Moved Eve Lam to Lab 1.')
+    await openCourseTab(page, 'Activity')
+    const made = page.locator('.event-item').filter({ hasText: 'Group created' }).first()
+    await expect(made.locator('.event-item__subject')).toHaveText(`Lab 1, ${SET}`)
+    const placed = page.locator('.event-item').filter({ hasText: 'Put in a group' }).first()
+    await expect(placed.locator('.event-item__subject')).toHaveText(`Lab 1, ${SET}`)
+    await expect(placed).toContainText(`from ${from.name}`)
+  })
+
   test('a placement that waits for approval says so, and the approvals say who goes where', async ({ page }) => {
     const dealt = await setAsTeacher()
     const from = dealt.groups.find((g) => g.members.includes('Fay Ito'))!
@@ -500,13 +612,22 @@ test.describe.serial('a course’s groups', () => {
     await page.goto(`/courses/${courseId}/approvals`)
     const queued = page.locator('.action-card').filter({ hasText: 'Place students in groups' })
     await expect(queued).toHaveCount(1)
-    await expect(queued.locator('.group-proposal')).toHaveText(`${SET}1 student placed`)
+    // The set by name, once, and what it does.
+    await expect(queued.locator('.action-target')).toHaveText(SET)
+    await expect(queued.locator('.group-proposal')).toHaveText('1 student placed')
     await page.goto(`/courses/${courseId}/actions/${actionId}`)
+    await expect(page.locator('.action-view__target .action-target')).toHaveText(SET)
     const what = page
       .locator('.app-card')
       .filter({ has: page.getByRole('heading', { name: 'What it does to the groups' }) })
     await expect(what.locator('.group-proposal__list li')).toHaveText([`Fay Ito to ${to.name}`])
     await expect(what.getByRole('link', { name: SET })).toHaveAttribute('href', `/courses/${courseId}/groups/${setId}`)
+    // What was asked, in words: the set, and who goes where, never ids or the request's fields.
+    const asked = page.locator('.app-card').filter({ has: page.getByRole('heading', { name: 'What was asked' }) })
+    await expect(asked.locator('.fields-view')).toContainText(`Group set${SET}`)
+    await expect(asked.locator('.fields-view')).toContainText(`Fay Ito to ${to.name}`)
+    for (const raw of ['{', 'student_member_id', setId.slice(0, 8)])
+      expect(await asked.locator('.fields-view').innerText(), raw).not.toContain(raw)
 
     await ok(teacher().token, 'POST', `/v1/courses/${courseId}/actions/${actionId}/decide`, { decision: 'approve' })
     const after = await setAsTeacher()
