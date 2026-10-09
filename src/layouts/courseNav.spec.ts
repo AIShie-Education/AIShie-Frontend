@@ -54,6 +54,7 @@ describe('the course’s tabs', () => {
       'Notebook',
       'DocumentChecked',
       'User',
+      'GroupsIcon',
       'AgentSeatIcon',
       'Bell',
       'Clock',

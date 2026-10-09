@@ -821,6 +821,39 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
   waiting work and paused or removed students marked, and no text a spreadsheet would run as a
   formula (`csvText`).
+- **A course's groups** (分組: the Groups tab, `/groups`, `GroupsView`; a set, `/groups/:setId`,
+  `GroupSetView`; their parts in `src/views/course/groups/`) are read by every reader of the course
+  (`group_set.list`, `.get`, with `document_read`) and formed by whoever writes assignments
+  (`assignment_write`: `group_set.*`, `group.create`, `.update`, `.set_members`, `.split`). What the
+  server sends is what is shown: names of a group's members to those who read the member list, and to a
+  student their own group's alone, so a student's page (`StudentSet`) shows no other group's members and
+  no group's work. Students are moved by choosing them (a box each) and "Move to…" (`MoveMenu`, an
+  `el-dropdown`, which the keyboard opens and walks), a row's own "Move … to…", or by dragging one onto
+  a group, never by dragging alone; `usePlacements` sends `group.set_members`, and a refusal of
+  `group_has_work` opens `AffectsWorkDialog`, which says what becomes of each work before placing them
+  again with `affects_work`. A random split (`SplitDialog`) is previewed by the server's own deal,
+  `split.ts` (`planSplit` in `groupModel.ts` over the set as read), which must keep AIShie-Core's
+  `internal/groupsplit` golden values (`split.spec.ts`): the seed shown is sent, so the preview is what is
+  dealt. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
+  CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`,
+  and where one kind of action means something of its own by a reason (`group_has_work` to a student
+  signing up, to someone archiving a group, to a placement approved after work began) under
+  `groups.refusalOf`, first: `groupRefusalScopes(type)`, which `reasonText(e, type)` asks too, so that an
+  action's refusal reads the same in My actions, the approvals and its page. A student's page goes to a
+  student, and to a delegate that neither forms groups nor reads the member list (a student's own
+  agent); other staff without either see the staff's page read only, nobody named. Once students are
+  moved the focus goes where they went (`focusAfterMove`): the moved row's own "Move … to…", the group
+  (its heading, `tabindex="-1"`) or those in no group, or the request where it waits for approval. A
+  group's work is shown to a reader whose scope reaches one of its members, so an empty group's to one
+  who reaches every student and assignment (`reachesEveryStudent`): to anyone else, archiving one is
+  offered, saying that a group with work they are not shown stays.
+  The feed names sets and groups from `groupNames.ts` (read once, and again for an id it does not know,
+  once two minutes old, and after the app's own change to them, `forgetGroupNames`) and says their
+  events' facts with `groupEventFacts`; an action about groups is said in words: its set (or group) by
+  `GroupTarget` in `ActionTarget`'s line, its fields by `GroupFieldValue` (`groupFieldKind`) in
+  `FieldsView`, and what it does, or did, by `GroupProposal` on the approvals queue and an action's page.
+  A student's member page lists their groups (`MemberGroupsCard`), and says to a reader whose scope does
+  not reach the student (`scopeReaches`) that they are not shown, never that there are none.
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

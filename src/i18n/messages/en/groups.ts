@@ -1,0 +1,391 @@
+// A course's groups: its group sets, each holding groups that group assignments use, formed by hand, by a random
+// split, or by students signing themselves up (views/course/groups).
+export default {
+  title: 'Groups',
+  subtitle: {
+    staff: 'Group sets of this course: each holds the groups that group assignments use.',
+    student: 'Your groups in this course, and sign-up where your teacher has opened it.',
+  },
+  newSet: 'New group set',
+  archived: 'Archived',
+  // A change that waits for someone's approval (proposed), with a link to it.
+  proposed: {
+    title: 'Your change waits for approval: it is made once someone approves it.',
+    view: 'View the request',
+  },
+  empty: {
+    staff: 'No group sets yet. Make one to split the class into groups for group work.',
+    student: 'There are no groups in this course.',
+  },
+  list: {
+    heading: 'Group sets',
+    showArchived: 'Show archived sets',
+    yourGroup: 'Your group: {name}',
+    with: 'with {names}',
+    noGroup: 'You are in no group of this set.',
+    groups: '{n} group | {n} groups',
+    unassigned: '{n} student in no group | {n} students in no group',
+    allPlaced: 'Everyone is in a group',
+    usedBy: 'Used by',
+    unpublished: 'not published',
+    notUsed: 'No assignment uses it yet.',
+  },
+  // A set's sign-up: students putting themselves in its groups, while the teacher has opened it.
+  signup: {
+    title: 'Sign-up',
+    open: 'Sign-up open',
+    closed: 'Sign-up closed',
+    until: 'until {at}',
+    noDeadline: 'with no deadline',
+    closedAt: 'Closed {at}',
+    // The time left before it closes, counted down: "3 days and 4 hours left", or a clock in the last hour.
+    remaining: '{time} left',
+    days: '{n} day | {n} days',
+    hours: '{n} hour | {n} hours',
+    minutes: '{n} minute | {n} minutes',
+    why: {
+      off: 'Your teacher places students in groups.',
+      offStaff: 'Students do not sign themselves up: you place them.',
+      set_archived: 'The set is archived.',
+      course_archived: 'The course is archived.',
+    },
+    hint: 'Join a group, switch to another or leave yours until sign-up closes. A group takes nobody more once it is full.',
+    yours: 'Your group',
+    join: 'Join',
+    switch: 'Switch here',
+    leave: 'Leave',
+    joinNamed: 'Join {name}',
+    switchNamed: 'Switch to {name}',
+    leaveNamed: 'Leave {name}',
+    leaveTitle: 'Leave your group?',
+    leaveConfirm: 'You leave {name}. While sign-up is open, you can join a group that has room again.',
+    done: {
+      join: 'You joined {name}.',
+      switch: 'You switched to {name}.',
+      leave: 'You left {name}.',
+    },
+    noGroups: 'There are no groups to sign up to yet.',
+  },
+  // A student's own group in a set.
+  mine: {
+    title: 'Your group',
+    members: 'Its members',
+    noneSignup: 'You are in no group yet: choose one below.',
+    noneClosed: 'You are in no group, and sign-up has closed: ask your teacher to place you.',
+    noneTeacher: 'You are in no group yet: your teacher places students.',
+  },
+  // Making a set, and changing it.
+  setForm: {
+    createTitle: 'New group set',
+    editTitle: 'Edit group set',
+    name: 'Name',
+    namePlaceholder: 'Project groups',
+    nameRequired: 'Give it a name.',
+    nameTooLong: 'A name is at most 100 characters.',
+    nameOneLine: 'A name is one line.',
+    description: 'What it is for',
+    descriptionPlaceholder: 'The groups for the term project, four or five each.',
+    descriptionTooLong: 'At most 2000 characters.',
+    signup: 'Sign-up',
+    signupOpen: 'Let students sign themselves up to its groups',
+    signupHint:
+      'Each student joins, switches or leaves a group themselves, up to its capacity. You can still place anyone yourself.',
+    deadline: 'Sign-up closes',
+    deadlinePlaceholder: 'No deadline',
+    deadlineHint: 'On your clock ({zone}). After it, only you place students.',
+    deadlinePast: 'That time has passed: students cannot sign up until you set a later one.',
+    created: 'Made the group set “{name}”.',
+    saved: 'Saved.',
+  },
+  // A group of a set, as a card on the set's page.
+  card: {
+    size: '{n} student | {n} students',
+    sizeOf: '{n} of {of}',
+    // Beside a member who signed themselves up.
+    signedUp: 'signed up',
+    full: 'Full',
+    over: '{n} over capacity | {n} over capacity',
+    work: 'Its work',
+    empty: 'Nobody is in this group yet.',
+    hidden: '{n} more you do not reach | {n} more you do not reach',
+    chooseAll: 'Choose everyone in {name}',
+    more: 'More actions for {name}',
+    edit: 'Rename or set capacity…',
+    archive: 'Archive group',
+    restore: 'Bring back',
+    archiveNotEmpty: 'Only an empty group is archived: move its members first.',
+    archiveHasWork: 'It has work for an assignment, so it stays.',
+    archiveTitle: 'Archive group',
+    archiveConfirm: '{name} is hidden from this set and from sign-up. You can bring it back.',
+    // Said with archiveConfirm to a reader whose seat does not reach every student: a group's work is shown to those
+    // who reach one of its members, so an empty group's is not shown them.
+    archiveUnseenWork:
+      'If it has work for an assignment of this set that you are not shown, a draft perhaps, it stays as it is.',
+    archived: 'Archived {name}.',
+    restored: 'Brought back {name}.',
+  },
+  // Moving students between groups.
+  move: {
+    label: 'Move to…',
+    one: 'Move {name} to…',
+    none: 'No group',
+    done: 'Moved {names} to {group}. | Moved {names} to {group}.',
+    doneOut: 'Took {names} out of their group. | Took {names} out of their groups.',
+    doneMany: 'Moved {n} student. | Moved {n} students.',
+    nothing: 'Nothing changed: they were already there.',
+    overTitle: 'Over capacity',
+    over: '{groups} now has more members than its capacity: sign-up takes nobody more into it. | {groups} now have more members than their capacity: sign-up takes nobody more into them.',
+  },
+  // What moving students does to a group's work.
+  affects: {
+    title: 'This touches group work',
+    lead: 'A group these students leave or join has work for an assignment of this set:',
+    unnamed: 'A group these students leave or join has work for an assignment of this set.',
+    anAssignment: 'An assignment',
+    draft:
+      'A draft follows the group: whoever is in the group now reads and writes it, so a student who leaves no longer does, and one who joins does.',
+    handedIn:
+      'Work handed in, or recorded missing, stays the work of those it was handed in for: a student who leaves keeps their part in it and their grade, and one who joins has none.',
+    confirm: 'Move them anyway',
+  },
+  // Adding groups to a set.
+  add: {
+    title: 'Add groups',
+    count: 'How many',
+    prefix: 'Names before the number',
+    prefixBad: 'At most 96 characters, on one line.',
+    capacity: 'Capacity',
+    noLimit: 'No limit',
+    capacityHint: 'How many students sign-up takes it to. It does not bind you: you can place more yourself.',
+    names: 'They will be called',
+    submit: 'Add {n} group | Add {n} groups',
+    done: 'Added {names}. | Added {names}.',
+  },
+  // Renaming a group, and its capacity.
+  edit: {
+    title: 'Rename or set capacity',
+    name: 'Name',
+    capacityHint: 'It has {n} now. Set to that, it takes nobody more by sign-up.',
+    done: 'Saved {name}.',
+  },
+  // The random split.
+  split: {
+    title: 'Split at random',
+    defaultPrefix: 'Group ',
+    by: 'Make',
+    bySize: 'Groups of a size',
+    byCount: 'A number of groups',
+    nSize: 'Students in each group, at most',
+    nCount: 'Groups in this set',
+    from: 'Who',
+    fromUnassigned: 'Only the students in no group: groups keep their members',
+    fromAll: 'Everyone: empty the groups and deal them all again',
+    capacity: 'Capacity of the groups it makes',
+    seed: 'Seed',
+    reseed: 'Another seed',
+    seedHint: 'The same seed deals the same students into the same groups: what is shown below is what is dealt.',
+    preview: 'What it will do',
+    nBad: 'Give a number from 1 to 500.',
+    seedBad: 'A seed is 1 to 64 characters: letters, figures, spaces and punctuation of the keyboard’s.',
+    nothing: 'Nothing to do: there is nobody to place, and no group to make.',
+    summary: 'Places {students} into {groups}.',
+    students: '{n} student | {n} students',
+    makes: 'Makes {names}. | Makes {names}.',
+    emptied:
+      'First takes {n} student out of their group, to deal again. | First takes {n} students out of their groups, to deal again.',
+    kept: 'Left alone, as it has work for an assignment of this set: {names}. | Left alone, as they have work for an assignment of this set: {names}.',
+    new: 'New',
+    leftAlone: 'Left alone',
+    stays: 'stays',
+    staysHint: 'Names in grey stay where they are.',
+    submit: 'Split',
+    doneTitle: 'Split at random, with the seed {seed}',
+    donePlaced: 'Placed {n} student. | Placed {n} students.',
+    doneCreated: 'Made {names}. | Made {names}.',
+    doneKept:
+      'Left {names} alone: it has work for an assignment of this set. | Left {names} alone: they have work for an assignment of this set.',
+    doneNoneKept: 'No group was left alone.',
+  },
+  // The set's page.
+  set: {
+    title: 'Group set',
+    addGroups: 'Add groups',
+    split: 'Split at random',
+    restore: 'Bring back',
+    more: 'More actions for {name}',
+    archiveMenu: 'Archive set…',
+    archive: 'Archive',
+    archiveTitle: 'Archive group set',
+    archiveConfirm:
+      '“{name}” is hidden from new assignments and its sign-up closes. Assignments already using it go on as they are. You can bring it back.',
+    archived: 'Archived “{name}”.',
+    restored: 'Brought back “{name}”.',
+    signupSettings: 'Sign-up settings…',
+    signupOnHint:
+      'Students choose a group themselves, within each group’s capacity, until sign-up closes. You can still place anyone.',
+    signupOffHint: 'You place the students. Open sign-up to let them choose a group themselves.',
+    groupsTitle: 'Groups',
+    chooseHint: 'Choose students to move them.',
+    chosen: '{n} student chosen | {n} students chosen',
+    clearChosen: 'Choose none',
+    showArchived: 'Show {n} archived group | Show {n} archived groups',
+    chooseNone: 'Choose everyone in no group',
+    none: 'In no group: {n} | In no group: {n}',
+    allPlaced: 'Everyone is in a group.',
+    noGroups: 'This set has no groups yet.',
+    noGroupsForm: 'This set has no groups yet: add some, or split the class at random.',
+    // To staff whose seat does not read the member list: the server names no group's members to them.
+    namesHidden: 'Who is in each group is shown to those who may read the member list.',
+    dragHint: 'You can also drag a student onto a group.',
+  },
+  // Who was in which group when.
+  history: {
+    button: 'History',
+    title: 'Who was in which group',
+    search: 'Find a student',
+    noMatch: 'No student by that name in this set’s history.',
+    empty: 'Nobody has been in a group of this set yet.',
+    joined: 'Joined {how} {at}, by {by}',
+    left: 'Left {how} {at}, by {by}',
+    still: 'Still in it',
+    joinedHow: {
+      assigned: 'by being placed',
+      split: 'by a random split',
+      signup: 'by signing up',
+    },
+    leftHow: {
+      moved: 'by being moved',
+      unassigned: 'by being taken out',
+      split: 'to be dealt again',
+      left: 'by leaving',
+      switched: 'by switching',
+    },
+  },
+  // A set's groups as a spreadsheet.
+  csv: {
+    button: 'Download CSV',
+    set: 'Group set',
+    group: 'Group',
+    member: 'Student',
+    loginId: 'Login ID',
+    joinedAt: 'Joined',
+    noGroup: '(no group)',
+  },
+  // What the course's feed says of events about groups (groupEvents.ts).
+  event: {
+    aSet: 'Group set',
+    aGroup: 'Group',
+    groupOf: '{group}, {set}',
+    from: 'from {group}',
+    joined: {
+      assigned: 'Placed by hand',
+      split: 'By a random split',
+      signup: 'Signed up',
+    },
+    left: {
+      moved: 'Moved to another group',
+      unassigned: 'Taken out',
+      split: 'Dealt again by a split',
+      left: 'Left the group',
+      switched: 'Switched groups',
+    },
+    archived: 'Archived',
+    restored: 'Brought back',
+    signupOpened: 'Sign-up opened',
+    signupClosed: 'Sign-up closed',
+    changed: {
+      name: 'Renamed',
+      description: 'Description changed',
+      signup_closes_at: 'Sign-up deadline changed',
+      capacity: 'Capacity changed',
+    },
+  },
+  // What an action about groups does, where it is decided (GroupProposal).
+  proposal: {
+    title: 'What it does to the groups',
+    set: 'Group set',
+    group: 'Group',
+    bySize: 'Groups of up to {n} student | Groups of up to {n} students',
+    byCount: '{n} group in the set | {n} groups in the set',
+    seedHint: 'Approving it deals the students as this seed deals them.',
+    newGroups: 'New groups',
+    // A split still to be made: whether it makes any depends on the groups then.
+    namedLikeIfAny: 'Any it makes are named like {example}',
+    noneMade: 'None',
+    noneKept: 'None',
+    students: '{n} student | {n} students',
+    capacity: 'capacity {n}',
+    placementsLabel: 'Who goes where',
+    placements: '{n} student placed | {n} students placed',
+    placedIn: '{student} to {group}',
+    takenOut: '{student} out of their group',
+    affectsWork:
+      'It moves students out of, or into, a group with work: a draft follows the group, and work handed in keeps who it was handed in for.',
+    signUp: 'Sign-up',
+    joins: '{student} joins {group}',
+    leaves: '{student} leaves their group',
+    archive: 'Archive',
+    signupOn: 'Students may sign themselves up',
+    signupOff: 'Students do not sign themselves up',
+  },
+  // A student's groups, on their member page (MemberGroupsCard).
+  member: {
+    title: 'Groups',
+    none: 'In no group',
+    history: 'History',
+    hideHistory: 'Hide history',
+    historyFailed: 'The history could not be read.',
+    noHistory: 'Never in a group of this set.',
+    // The reader's seat does not reach this student: the server shows them none of the student's groups.
+    outOfScope: 'This student is not among the students your seat reaches, so their groups are not shown to you.',
+    // The reader's seat may not reach this student, and the page cannot tell (a delegate's principal's reach).
+    notShown: 'In no group shown to you',
+    noHistoryShown: 'None of their time in this set’s groups is shown to you.',
+  },
+  // An action about groups' fields, on its page (GroupFieldValue).
+  fields: {
+    work: 'Work of the group',
+    workOf: '{group}: {assignment}',
+    made: 'Groups added',
+    joined: 'Joined',
+    movedFrom: '{student} to {group}, from {from}',
+    movedOut: '{student} out of {from}',
+    kept: '{names}: it has work for an assignment of this set | {names}: they have work for an assignment of this set',
+  },
+  // The server's refusals, by reason.
+  refusal: {
+    name_taken: 'Another one here is called that, in any case: names are unique among those not archived.',
+    signup_closed: 'Sign-up is closed: your teacher places students now.',
+    group_full: 'That group is full.',
+    group_has_work: 'A group this touches has work for an assignment of this set, a draft included.',
+    group_archived: 'That group is archived.',
+    set_archived: 'This group set is archived: bring it back first.',
+    course_archived: 'The course is archived: nothing in it changes.',
+    not_a_student: 'Only a current student of the course is placed in a group or signs up to one.',
+    group_not_empty: 'The group has members: move them elsewhere first.',
+    no_room:
+      'There is no room for everyone: every group that takes students is full. Raise their capacity, or split by size.',
+    bad_split: 'That split cannot be made: check the number of groups or students, and the seed.',
+    student_out_of_scope: 'A split deals every student of the course, and your seat does not reach them all.',
+  },
+  // A refusal's words where one kind of action means something of its own by it (groupRefusalScopes).
+  refusalOf: {
+    // A student signing up, or their agent for them.
+    signUp: {
+      group_has_work:
+        'That group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
+      your_group_has_work:
+        'Your group has handed work in for an assignment of this set: who did it is your teacher’s to change now.',
+    },
+    // Archiving a group.
+    update: {
+      group_has_work:
+        'That group has work for an assignment of this set, if only a draft: a group with work stays, and is not archived.',
+    },
+    // Placing students without saying what becomes of a group's work (a request approved after work was begun).
+    setMembers: {
+      group_has_work:
+        'A group these students leave or join has work for an assignment of this set, a draft included, and this did not say what becomes of it: place them again from the set’s page.',
+    },
+  },
+}

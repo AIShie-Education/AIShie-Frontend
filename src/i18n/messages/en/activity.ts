@@ -71,6 +71,8 @@ export default {
     course: 'the course',
     action: 'an action',
     gradebook: 'the gradebook',
+    group_set: 'a group set',
+    group: 'a group',
     upload: 'an upload',
     actor: 'a person or agent',
     conversation: 'a conversation',

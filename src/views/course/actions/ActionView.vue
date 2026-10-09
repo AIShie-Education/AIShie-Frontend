@@ -34,6 +34,8 @@ import AnswerProposal from './components/AnswerProposal.vue'
 import DecidePanel from './components/DecidePanel.vue'
 import DelegateGrant from './components/DelegateGrant.vue'
 import DeletionProposal from './components/DeletionProposal.vue'
+import GroupProposal from '@/views/course/groups/components/GroupProposal.vue'
+import { isGroupAction } from '@/views/course/groups/components/groupEvents'
 import FieldsView from './components/FieldsView.vue'
 import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
@@ -253,7 +255,7 @@ function actionRoute(id: string | null | undefined) {
 }
 
 const error = computed(() => (action.value ? storedError(action.value) : null))
-const errorWhy = computed(() => reasonText(error.value))
+const errorWhy = computed(() => reasonText(error.value, action.value?.action_type))
 const errorDetails = computed(() => {
   const d = error.value?.details
   if (!d) return null
@@ -347,6 +349,7 @@ const errorTitle = computed(() => {
           v-if="lastDone"
           :course-id="courseId"
           :done="lastDone"
+          :action-type="action?.action_type"
           closable
           class="action-view__notice"
           @close="lastDone = null"
@@ -441,6 +444,11 @@ const errorTitle = computed(() => {
               <DeletionProposal :action="action" :course-id="courseId" />
             </section>
 
+            <section v-if="isGroupAction(action.action_type)" class="app-card">
+              <h2 class="app-card__title">{{ t('groups.proposal.title') }}</h2>
+              <GroupProposal :action="action" :course-id="courseId" />
+            </section>
+
             <section class="app-card">
               <h2 class="app-card__title">{{ t('actions.detail.what') }}</h2>
               <p class="action-view__help">{{ t('actions.detail.whatHelp') }}</p>
@@ -514,7 +522,7 @@ const errorTitle = computed(() => {
                     {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
                     <code>{{ error.code }}</code>
                   </p>
-                  <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" />
+                  <FieldsView v-if="errorDetails" :course-id="courseId" :value="errorDetails" :action-type="action.action_type" />
                 </div>
               </el-alert>
 

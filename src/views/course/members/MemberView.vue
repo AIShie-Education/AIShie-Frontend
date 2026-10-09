@@ -36,6 +36,7 @@ import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
 import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
 import RoleDialog from './components/RoleDialog.vue'
+import MemberGroupsCard from '@/views/course/groups/components/MemberGroupsCard.vue'
 import { resetPasswordOffer, roleChangeBlock } from './components/roles'
 import {
   fullPerms,
@@ -621,6 +622,9 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </router-link>
           </div>
         </section>
+
+        <!-- A student's groups, set by set -->
+        <MemberGroupsCard v-if="m.role === 'student'" :course-id="courseId" :member-id="m.id" />
 
         <!-- A person's own agents here -->
         <section v-if="delegates.length" class="app-card">

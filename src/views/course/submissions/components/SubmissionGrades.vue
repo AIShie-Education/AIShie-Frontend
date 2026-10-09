@@ -17,7 +17,8 @@ import PendingGradeProposals from './PendingGradeProposals.vue'
 const props = defineProps<{
   courseId: string
   assignmentId: string
-  studentId: string
+  /** Whose work it is; none for a group's, whose grades are each member's. */
+  studentId?: string | null
   grades: GradeSummary[]
   pointsPossible?: Decimal | null
   loading?: boolean
@@ -46,7 +47,11 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
       <router-link
         v-if="!own && !forbidden"
         class="sub-grades__all"
-        :to="{ name: 'course-grades', params: { courseId }, query: { assignment: assignmentId, student: studentId } }"
+        :to="{
+          name: 'course-grades',
+          params: { courseId },
+          query: { assignment: assignmentId, student: studentId ?? undefined },
+        }"
       >
         {{ t('submissions.grades.allLink') }}
       </router-link>

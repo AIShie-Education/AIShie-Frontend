@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // What an action is about, in a line: for a grade the score and whose work,
 // for a hand-in the student and assignment, for a new member who and as what,
-// for publishing which version, for a decision the proposal it decides.
+// for publishing which version, for a decision the proposal it decides, for
+// forming groups the set (GroupTarget).
 // Names are looked up where the caller's seat can read them; otherwise the id
 // is shown.
 import { computed, onMounted } from 'vue'
@@ -18,6 +19,8 @@ import AgentBadge from '@/components/AgentBadge.vue'
 import IdText from '@/components/IdText.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
+import GroupTarget from '@/views/course/groups/components/GroupTarget.vue'
+import { isGroupAction } from '@/views/course/groups/components/groupEvents'
 import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import MaybeLink from './MaybeLink.vue'
@@ -363,6 +366,11 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
       <span v-if="messageFiles.length" class="action-target__muted" :title="formatList(messageFiles)">
         {{ t('actions.summary.files', { n: messageFiles.length }, messageFiles.length) }}
       </span>
+    </template>
+
+    <!-- A course's groups: the set, or the group, by name -->
+    <template v-else-if="isGroupAction(type)">
+      <GroupTarget :action="action" :course-id="courseId" :link="link" />
     </template>
 
     <template v-else-if="group === 'course'">

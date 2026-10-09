@@ -25,6 +25,7 @@ import {
 } from '@element-plus/icons-vue'
 import type { Perm } from '@/api/types'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import GroupsIcon from '@/components/GroupsIcon.vue'
 import { useCourseStore } from '@/stores/course'
 import { courseTabClaim } from '@/composables/useCourseTab'
 
@@ -53,6 +54,8 @@ export const COURSE_TABS: CourseTab[] = [
   { name: 'course-grades', label: 'layout.course.grades', icon: Notebook, perms: ['grade_read'], also: ['course-grade', 'course-gradebook', 'course-scheme'] },
   { name: 'course-approvals', label: 'layout.course.approvals', icon: DocumentChecked, perms: ['action_decide'], also: ['course-action'] },
   { name: 'course-members', label: 'layout.course.members', icon: User, perms: ['member_read', 'member_invite'], also: ['course-member'] },
+  // Every reader of the course: staff form the groups, a student sees their own and signs up.
+  { name: 'course-groups', label: 'layout.course.groups', icon: markRaw(GroupsIcon), perms: ['document_read'], also: ['course-group-set'] },
   // Those who manage the members manage the agents; those who decide actions oversee what they answered.
   { name: 'course-agents', label: 'layout.course.agents', icon: markRaw(AgentSeatIcon), perms: ['member_manage', 'action_decide'] },
   { name: 'course-activity', label: 'layout.course.activity', icon: Bell, perms: ['document_read'] },

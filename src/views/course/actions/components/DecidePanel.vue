@@ -294,7 +294,7 @@ function tell(
       ElNotification({
         type: 'warning',
         title: t('actions.outcome.cancelled'),
-        message: reasonText(error) ?? error?.message ?? '',
+        message: reasonText(error, props.action.action_type) ?? error?.message ?? '',
         duration: 8000,
       })
       break

@@ -69,7 +69,8 @@ const blank = (): Form => ({ score: '', allowExtra: false, breakdown: [], feedba
 const form = reactive<Form>(blank())
 const formRef = ref<FormInstance>()
 
-type Outcome = { status: 'executed'; gradeId: string; review: boolean } | { status: 'proposed' }
+/** gradeId: the grade written; null for a group's work, which gives each member a grade of their own. */
+type Outcome = { status: 'executed'; gradeId: string | null; review: boolean } | { status: 'proposed' }
 const outcome = ref<Outcome | null>(null)
 
 const points = computed(() => props.assignment?.points_possible)
@@ -291,7 +292,7 @@ async function submit() {
   if (!out) return
   outcome.value =
     out.status === 'executed'
-      ? { status: 'executed', gradeId: out.result.grade_id, review: out.reviewState === 'pending' }
+      ? { status: 'executed', gradeId: out.result.grade_id ?? null, review: out.reviewState === 'pending' }
       : { status: 'proposed' }
   reset()
   emit('graded')
@@ -318,7 +319,10 @@ async function submit() {
         <template v-if="outcome.review">{{ t('submissions.grade.savedReview') }}</template>
       </p>
       <div class="grade-panel__links">
-        <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: outcome.gradeId } }">
+        <router-link
+          v-if="outcome.gradeId"
+          :to="{ name: 'course-grade', params: { courseId, gradeId: outcome.gradeId } }"
+        >
           {{ t('submissions.grade.openGrade') }}
         </router-link>
         <router-link

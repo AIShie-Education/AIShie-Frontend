@@ -1,5 +1,6 @@
 import type { NavigationGuardWithThis, RouteRecordRaw } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
+import groupRoutes from './groups'
 
 /**
  * An old link to a course's conversations: the chat opens on the
@@ -113,6 +114,7 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'members.detail.title' },
   },
+  ...groupRoutes,
   {
     path: 'approvals',
     name: 'course-approvals',

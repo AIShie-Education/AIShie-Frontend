@@ -19,7 +19,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { EditPen, MagicStick, SortDown } from '@element-plus/icons-vue'
 import { read, type ToolOut } from '@/api/http'
-import type { Decimal, GradeSummary, GradebookLine } from '@/api/types'
+import { workOf, type Decimal, type GradeSummary, type GradebookLine } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
@@ -114,7 +114,7 @@ const seenStudents = useAsync(
       course.can('submission_read')
         ? collect((after) =>
             read('submission.list', { course_id: props.courseId, limit: 200, after }).then((o) => ({
-              ids: (o.submissions ?? []).map((x) => x.student_member_id),
+              ids: (o.submissions ?? []).flatMap(workOf),
               next: o.next,
             })),
           ).catch(() => undefined)
