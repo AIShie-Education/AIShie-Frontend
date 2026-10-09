@@ -22,6 +22,7 @@ import GradePanel from './components/GradePanel.vue'
 import LatenessControl from './components/LatenessControl.vue'
 import SubmissionGrades from './components/SubmissionGrades.vue'
 import { loadPendingGradeProposals } from './components/proposals'
+import PeerSubmissionPanel from '@/views/course/peer/PeerSubmissionPanel.vue'
 
 const props = defineProps<{ courseId: string; submissionId: string }>()
 const { t } = useI18n()
@@ -346,6 +347,14 @@ function onGraded() {
           :grades-hidden="gradesHidden"
           :proposals="proposalList"
           @graded="onGraded"
+        />
+
+        <!-- A group's peer evaluation, for those who grade. -->
+        <PeerSubmissionPanel
+          v-if="s.group_id && (course.can('grade_submit') || course.can('grade_post'))"
+          :course-id="courseId"
+          :assignment-id="s.assignment_id"
+          :group-id="s.group_id"
         />
       </template>
     </AsyncState>

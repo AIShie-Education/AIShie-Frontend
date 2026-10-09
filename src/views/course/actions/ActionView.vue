@@ -41,6 +41,8 @@ import MaybeLink from './components/MaybeLink.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
 import RevisesLine from './components/RevisesLine.vue'
 import SeatGrant from './components/SeatGrant.vue'
+import PeerProposal from '@/views/course/peer/PeerProposal.vue'
+import { isPeerAction, peerActionTitle, peerFieldsShown } from '@/views/course/peer/peer'
 import {
   invalidateAfter,
   isAboutAction,
@@ -429,6 +431,14 @@ const errorTitle = computed(() => {
               </dl>
             </section>
 
+            <!-- Peer evaluation: counting it in grades by each member's factor, the form it sets, or the evaluation a student sends. -->
+            <section v-if="isPeerAction(action.action_type) && !action.redacted" class="app-card">
+              <h2 class="app-card__title">
+                {{ t(`peer.proposal.title.${peerActionTitle(action.action_type)}`) }}
+              </h2>
+              <PeerProposal :action="action" :course-id="courseId" />
+            </section>
+
             <section v-if="action.action_type === 'conversation.answer'" class="app-card">
               <h2 class="app-card__title">{{ t('actions.answer.title') }}</h2>
               <AnswerProposal :action="action" :course-id="courseId" />
@@ -483,7 +493,12 @@ const errorTitle = computed(() => {
                   <IdText :id="action.target_id" />
                 </MaybeLink>
               </div>
-              <FieldsView :course-id="courseId" :value="action.payload" :action="action" />
+              <FieldsView
+                :course-id="courseId"
+                :value="action.payload"
+                :action="action"
+                :exclude="peerFieldsShown(action.action_type)"
+              />
               <el-collapse class="action-view__raw">
                 <el-collapse-item :title="t('actions.detail.raw')" name="raw">
                   <JsonView :value="action.payload" />

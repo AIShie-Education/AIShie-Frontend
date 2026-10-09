@@ -16,6 +16,8 @@ const SAYS_WHERE_DATA_GOES = [
   "'hosting.school.warning'",
   // Files of personal data, to administrators who export conversations.
   "'auditExport.privacy.title'",
+  // A file of each member's peer evaluation, to those who grade.
+  "'peer.results.csvNotice'",
   // To those who ask, in the chat: the first time's points, the line under the composer, and where it
   // goes to be answered in the whole notice.
   "'chat.privacy.firstTitle'",
