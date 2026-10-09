@@ -1,5 +1,7 @@
+import peerRoutes from './peer'
 import type { NavigationGuardWithThis, RouteRecordRaw } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
+import groupRoutes from './groups'
 
 /**
  * An old link to a course's conversations: the chat opens on the
@@ -57,6 +59,8 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'assignments.detail.title' },
   },
+  // An assignment's peer evaluation (modules/peer.ts).
+  ...peerRoutes,
   {
     path: 'submissions',
     name: 'course-submissions',
@@ -113,6 +117,7 @@ const routes: RouteRecordRaw[] = [
     props: true,
     meta: { title: 'members.detail.title' },
   },
+  ...groupRoutes,
   {
     path: 'approvals',
     name: 'course-approvals',

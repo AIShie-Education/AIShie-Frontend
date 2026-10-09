@@ -17,6 +17,8 @@ import MarkdownView from '@/components/MarkdownView.vue'
 import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
+import GroupFieldValue from '@/views/course/groups/components/GroupFieldValue.vue'
+import { groupFieldKind, groupFieldLabel, type GroupFieldKind } from '@/views/course/groups/components/groupFields'
 import MaybeLink from './MaybeLink.vue'
 import VersionRef from './VersionRef.vue'
 import GroupGradeField from './GroupGradeField.vue'
@@ -43,6 +45,8 @@ const props = defineProps<{
   action?: ActionRow
   /** The action this is the result of, where it is one: the seat it made is named as its proposal named it. */
   resultOf?: ActionRow
+  /** The kind of action this is of, where it is neither (the details of its refusal): some fields mean more in its light. */
+  actionType?: string
 }>()
 const { t } = useI18n()
 const course = useCourseStore()
@@ -65,6 +69,25 @@ const ORDER = [
   'message_id',
   'kind',
   'state',
+  // A course's groups: the set, how a split deals, who goes where, and what came of it.
+  'set_id',
+  'group_id',
+  'left_group_id',
+  'by',
+  'n',
+  'from',
+  'seed',
+  'name_prefix',
+  'groups',
+  'placements',
+  'affects_work',
+  'created',
+  'placed',
+  'moved',
+  'kept',
+  'emptied',
+  'over_capacity',
+  'group_ids',
   'student_member_id',
   'submission_id',
   'assignment_id',
@@ -110,7 +133,7 @@ const MEMBERS = new Set([
   'author_member_id',
   'principal_member_id',
 ])
-const TIMES = new Set(['due_at', 'expires_at', 'submitted_at', 'posted_at', 'created_at'])
+const TIMES = new Set(['due_at', 'expires_at', 'submitted_at', 'posted_at', 'created_at', 'signup_closes_at', 'closes_at'])
 const COMPONENTS = new Set(['component_id', 'parent_id', 'new_parent_id'])
 const REVIEW_STATES = new Set(['none', 'pending', 'reviewed', 'escalated'])
 
@@ -143,6 +166,11 @@ function componentName(id: unknown): string | undefined {
 const presets = useLookup(() => (obj.value.preset_id || obj.value.preset ? specs.presets(props.courseId) : null))
 const preset = computed(() => presetOf(presets.value?.value, obj.value))
 const actionType = computed(() => props.action?.action_type)
+/** What kind of action the fields are of, asked or answered: an action about groups shows its sets and groups by name. */
+const ofType = computed(() => props.action?.action_type ?? props.resultOf?.action_type ?? props.actionType)
+function groupKind(k: string): GroupFieldKind {
+  return groupFieldKind(k, obj.value[k], ofType.value)!
+}
 /** A proposal to publish a version, still to be decided: how it stands against what is read now matters. */
 const checkVersion = computed(() => actionType.value === 'document.publish' && props.action?.status === 'proposed')
 
@@ -167,10 +195,14 @@ function label(k: string): string {
   if (k === 'role' && actionType.value === 'member.update_perms_bulk') return t('actions.fields.bulkRole')
   // grade.adjust's kind, with its points and reason, is one adjustment.
   if (k === 'kind' && actionType.value === 'grade.adjust') return t('actions.fields.adjustment')
+  const forGroups = groupFieldLabel(k, ofType.value)
+  if (forGroups) return t(forGroups)
   return fieldLabel(k)
 }
 
 function kindOf(k: string, v: unknown): string {
+  // A set, a group, who goes where: by name (an action about groups, or the work a refusal of one names).
+  if (groupFieldKind(k, v, ofType.value)) return 'group'
   if (groupGradeField(k, v, actionType.value ?? props.resultOf?.action_type)) return 'groupGrade'
   if (k === 'breakdown' && Array.isArray(v)) return 'breakdown'
   if (k === 'perms' && isObject(v)) return 'perms'
@@ -179,6 +211,8 @@ function kindOf(k: string, v: unknown): string {
   if (k === 'files' && Array.isArray(v) && v.every((f) => isObject(f) && ('upload_token' in f || 'filename' in f)))
     return 'versionFiles'
   if (k === 'listed_students' && Array.isArray(v)) return 'memberList'
+  // Whom a group's work is for: a hand-in proposed for the group's members then.
+  if (k === 'members' && Array.isArray(v) && v.every((x) => typeof x === 'string')) return 'memberList'
   if (k === 'listed_assignments' && Array.isArray(v)) return 'assignmentList'
   if (DECIMALS.has(k) && (typeof v === 'number' || typeof v === 'string')) return 'decimal'
   if (TEXT.has(k) && typeof v === 'string') return 'markdown'
@@ -248,7 +282,14 @@ function json(v: unknown) {
     <div v-for="k in fields" :key="k" class="fields-view__row" :class="`fields-view__row--${kindOf(k, obj[k])}`">
       <dt class="fields-view__label">{{ label(k) }}</dt>
       <dd class="fields-view__value">
-        <template v-if="kindOf(k, obj[k]) === 'decimal'">
+        <GroupFieldValue
+          v-if="kindOf(k, obj[k]) === 'group'"
+          :course-id="courseId"
+          :kind="groupKind(k)"
+          :field="k"
+          :value="obj[k]"
+        />
+        <template v-else-if="kindOf(k, obj[k]) === 'decimal'">
           <span class="fields-view__score">
             {{ exactDecimal(obj[k] as number | string) }}
             <template v-if="k === 'score' && obj.out_of !== undefined && obj.out_of !== null">

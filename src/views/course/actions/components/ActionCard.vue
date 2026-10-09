@@ -18,7 +18,10 @@ import ActionActor from './ActionActor.vue'
 import ActionTarget from './ActionTarget.vue'
 import AnswerSources from './AnswerSources.vue'
 import DecidePanel from './DecidePanel.vue'
+import GroupProposal from '@/views/course/groups/components/GroupProposal.vue'
+import { isGroupAction } from '@/views/course/groups/components/groupEvents'
 import RevisesLine from './RevisesLine.vue'
+import PeerProposal from '@/views/course/peer/PeerProposal.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 
@@ -123,9 +126,17 @@ const excerpt = computed(() => {
       </div>
     </dl>
 
+    <GroupProposal v-if="isGroupAction(action.action_type)" :action="action" :course-id="courseId" compact />
     <div v-if="message" class="action-card__message"><MarkdownView :source="message" /></div>
     <p v-else-if="excerpt" class="action-card__excerpt">{{ excerpt }}</p>
     <AnswerSources v-if="message && action.action_type === 'conversation.answer'" :payload="p" />
+    <!-- Counting peer evaluation in grades, each member's factor as the proposal recorded it; or a
+         student's evaluation, what it gives each member. -->
+    <PeerProposal
+      v-if="(action.action_type === 'grade.apply_peer' || action.action_type === 'peer_review.submit') && !action.redacted"
+      :action="action"
+      :course-id="courseId"
+    />
 
     <footer class="action-card__foot">
       <DecidePanel

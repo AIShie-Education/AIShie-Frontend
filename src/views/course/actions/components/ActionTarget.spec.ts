@@ -201,3 +201,38 @@ describe('ActionTarget, an assignment deleted for good', () => {
     w.unmount()
   })
 })
+
+describe('ActionTarget, peer evaluation', () => {
+  it('names the assignment counting peer evaluation is about, and how many grades it writes again', async () => {
+    asStudent()
+    const course = useCourseStore()
+    course.assignments = new Map([['asg-1', { id: 'asg-1', title: 'Group project' }]]) as never
+    course.assignmentsState = 'loaded'
+    const w = mount(ActionTarget, {
+      props: {
+        action: row({
+          action_type: 'grade.apply_peer',
+          target_type: 'assignment',
+          target_id: 'asg-1',
+          status: 'proposed',
+          payload: {
+            course_id: COURSE,
+            assignment_id: 'asg-1',
+            form_version: 2,
+            grades: [
+              { grade_id: 'g1', student_member_id: 'm-a', factor: 1.2 },
+              { grade_id: 'g2', student_member_id: 'm-b', factor: 0.8 },
+            ],
+          },
+        }),
+        courseId: COURSE,
+      },
+      global,
+    })
+    await flushPromises()
+    expect(w.text()).toContain('Group project')
+    expect(w.text()).toContain('2 grades')
+    expect(w.text()).not.toContain('asg-1')
+    w.unmount()
+  })
+})

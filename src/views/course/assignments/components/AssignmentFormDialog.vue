@@ -4,15 +4,18 @@
 // written here: a new one is created (document.create) and, if asked,
 // published (document.publish) before the assignment is saved. A change of
 // what it is worth after grades have been entered for it says what becomes
-// of them (existing_grades), explained in the actual numbers.
-import { computed, reactive, ref, watch } from 'vue'
+// of them (existing_grades), explained in the actual numbers. Whether it is
+// group work, and of which group set (group_set_id), is chosen here until
+// anyone has started on it (assignment_has_work).
+import { computed, inject, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { routerKey } from 'vue-router'
 import dayjs from 'dayjs'
 import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
 import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
-import type { ToolIn, WriteOutcome } from '@/api/http'
-import type { Assignment, DocumentSummary } from '@/api/types'
+import { read, type ToolIn, type WriteOutcome } from '@/api/http'
+import type { Assignment, DocumentSummary, ListItem } from '@/api/types'
 import { notifyError } from '@/composables/useErrors'
 import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -21,6 +24,7 @@ import { formatList, isDecimal, timeZoneName } from '@/utils/format'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
+import { groupSetRoute } from './groupWork'
 import { allDocuments, useScheme } from './useAssignmentData'
 import { emptyDocChoice, type DocChoice } from './types'
 
@@ -37,6 +41,8 @@ const scheme = useScheme(() => props.courseId, { immediate: false })
 
 const editing = computed(() => !!props.assignment)
 const disabled = computed(() => !course.writable)
+// Not useRouter: the dialog is also mounted where there is none (its tests).
+const router = inject(routerKey, null)
 
 interface FormState {
   title: string
@@ -45,6 +51,9 @@ interface FormState {
   componentId: string
   instructions: DocChoice
   rubric: DocChoice
+  /** Group work: each group of a set hands one piece of work in. */
+  group: boolean
+  groupSetId: string
 }
 const form = reactive<FormState>({
   title: '',
@@ -53,6 +62,8 @@ const form = reactive<FormState>({
   componentId: '',
   instructions: emptyDocChoice('instructions'),
   rubric: emptyDocChoice('rubric'),
+  group: false,
+  groupSetId: '',
 })
 // The clock the date picker is on, the reader's, named: the zone as it is on the day chosen (summer time or not).
 const dueZone = computed(() => (locale.value, timeZoneName((form.due ?? new Date()).toISOString())))
@@ -121,6 +132,80 @@ async function loadDocs() {
   docsLoading.value = false
 }
 
+// --- Group work ------------------------------------------------------------------
+type GroupSetSummary = ListItem<'group_set.list', 'sets'>
+/** The course's group sets, archived ones too (one the assignment uses stays shown); null while not read. */
+const groupSets = ref<GroupSetSummary[] | null>(null)
+const setsError = ref(false)
+const setsLoading = ref(false)
+/** Someone has started on it: whether it is group work, and of which set, no longer changes. */
+const workStarted = ref(false)
+let setsFor = 0
+async function loadSets() {
+  const n = ++setsFor
+  setsLoading.value = true
+  setsError.value = false
+  try {
+    const out = await read('group_set.list', { course_id: props.courseId, include_archived: true })
+    if (n === setsFor) groupSets.value = out.sets ?? []
+  } catch {
+    if (n === setsFor) {
+      groupSets.value = []
+      setsError.value = true
+    }
+  } finally {
+    if (n === setsFor) setsLoading.value = false
+  }
+}
+/**
+ * Whether anyone has started on it, where the caller reads submissions: a
+ * row of any kind (a draft, a hand-in, a record of missing work) fixes
+ * whether it is group work. Where they may not, Core says so on saving.
+ */
+async function loadStarted() {
+  workStarted.value = false
+  const a = props.assignment
+  if (!a || !course.can('submission_read')) return
+  try {
+    const out = await read('submission.list', { course_id: props.courseId, assignment_id: a.id, limit: 1 })
+    if (props.assignment?.id === a.id) workStarted.value = (out.submissions ?? []).length > 0
+  } catch {
+    /* not readable: Core refuses a change on saving, and the field says so then */
+  }
+}
+const setOptions = computed(() =>
+  (groupSets.value ?? [])
+    .filter((s) => !s.archived_at || s.id === props.assignment?.group_set_id)
+    .map((s) => ({
+      value: s.id,
+      label: t('common.aside', {
+        text: s.name,
+        aside: s.archived_at
+          ? t('groupWork.form.archived')
+          : t('groupWork.form.groups', (s.groups ?? []).filter((g) => !g.archived_at).length),
+      }),
+    })),
+)
+/** Whether it is group work no longer changes: the field shows what it is. */
+const groupLocked = computed(() => editing.value && workStarted.value)
+watch(groupLocked, (locked) => {
+  if (!locked) return
+  form.group = !!props.assignment?.group_set_id
+  form.groupSetId = props.assignment?.group_set_id ?? ''
+})
+/** The course's Groups page, where the app has one. */
+const groupsPage = computed(() => groupSetRoute(router, props.courseId))
+watch(
+  () => form.group,
+  (on) => {
+    // The one set there is is the one meant.
+    if (on && !form.groupSetId && setOptions.value.length === 1) form.groupSetId = setOptions.value[0]!.value
+    formRef.value?.clearValidate(['groupSetId'])
+  },
+)
+/** The set chosen, or '' for individual work. */
+const chosenSet = () => (form.group ? form.groupSetId : '')
+
 function currentDocId(kind: DocKind): string | null | undefined {
   return kind === 'instructions' ? props.assignment?.instructions_document_id : props.assignment?.rubric_document_id
 }
@@ -133,6 +218,8 @@ function init() {
   form.componentId = a?.component_id ?? ''
   form.instructions = emptyDocChoice('instructions', a?.instructions_document_id)
   form.rubric = emptyDocChoice('rubric', a?.rubric_document_id)
+  form.group = !!a?.group_set_id
+  form.groupSetId = a?.group_set_id ?? ''
   docNotice.value = null
   existing.value = ''
   coreAsked.value = false
@@ -140,6 +227,8 @@ function init() {
   void loadDocs()
   void scheme.reload()
   void loadGraded()
+  void loadSets()
+  void loadStarted()
 }
 watch(visible, (v) => v && init(), { immediate: true })
 
@@ -213,6 +302,13 @@ const rules = computed<Record<string, FormItemRule[]>>(() => ({
   ],
   instructions: [docRule('instructions')],
   rubric: [docRule('rubric')],
+  groupSetId: [
+    {
+      validator: (_r, _v, cb) =>
+        form.group && !form.groupSetId ? cb(new Error(t('groupWork.form.setRequired'))) : cb(),
+      trigger: 'submit',
+    },
+  ],
 }))
 
 // --- Saving ------------------------------------------------------------------------
@@ -350,11 +446,16 @@ async function create(made: Made, instructionsId?: string, rubricId?: string) {
       component_id: form.componentId || undefined,
       instructions_document_id: instructionsId,
       rubric_document_id: rubricId,
+      group_set_id: chosenSet() || undefined,
     },
     { notify: false },
   )
   if (!out) {
-    if (createAssignment.lastError.value) notifyError(createAssignment.lastError.value)
+    const err = createAssignment.lastError.value
+    if (err) {
+      onGroupRefusal(err.details?.reason)
+      notifyError(err, undefined, { reasons: 'groupWork.refusal' })
+    }
     return noteCreatedDocs()
   }
   announceSaved(out, 'created', made)
@@ -399,6 +500,12 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
     args.rubric_document_id = rubricId
     changed = true
   }
+  const set = chosenSet()
+  if (set !== (a.group_set_id ?? '')) {
+    if (set) args.group_set_id = set
+    else args.clear_group_set = true
+    changed = true
+  }
   if (!changed) {
     ElMessage.info(t('assignments.form.nothingChanged'))
     visible.value = false
@@ -412,7 +519,8 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
       coreAsked.value = true
       if (course.can('grade_read')) void loadGraded()
     }
-    if (err) notifyError(err, undefined, { reasons: 'grades.pointsChange.refusal' })
+    onGroupRefusal(err?.details?.reason)
+    if (err) notifyError(err, undefined, { reasons: ['grades.pointsChange.refusal', 'groupWork.refusal'] })
     return noteCreatedDocs()
   }
   if (out.status === 'executed' && (out.result.rescaled || out.result.snapshots) && !out.replayed) {
@@ -428,6 +536,12 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
   course.invalidate('assignments')
   visible.value = false
   emit('saved', { status: out.status, id: a.id })
+}
+
+/** Core refused because of the group set: the field shows why from now on. */
+function onGroupRefusal(reason: unknown) {
+  if (reason === 'assignment_has_work') workStarted.value = true
+  else if (reason === 'set_archived') void loadSets()
 }
 
 async function submit() {
@@ -555,6 +669,32 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
         </div>
       </el-form-item>
 
+      <el-form-item :label="t('groupWork.form.label')" prop="groupSetId" class="assignment-form__group">
+        <el-checkbox v-model="form.group" class="assignment-form__toggle" :disabled="groupLocked || setsError">
+          {{ t('groupWork.form.toggle') }}
+        </el-checkbox>
+        <el-select
+          v-if="form.group"
+          v-model="form.groupSetId"
+          class="assignment-form__set"
+          :loading="setsLoading"
+          :disabled="groupLocked || setsError"
+          :placeholder="t('groupWork.form.setPlaceholder')"
+          :aria-label="t('groupWork.form.set')"
+        >
+          <el-option v-for="o in setOptions" :key="o.value" :value="o.value" :label="o.label" />
+        </el-select>
+        <div v-if="groupLocked" class="app-form-hint assignment-form__lock">
+          <el-icon><Lock /></el-icon>{{ t('groupWork.form.locked') }}
+        </div>
+        <div v-else-if="setsError" class="app-form-hint">{{ t('groupWork.form.unreadable') }}</div>
+        <div v-else-if="form.group && groupSets && !setOptions.length" class="app-form-hint">
+          {{ t('groupWork.form.noSets') }}
+          <router-link v-if="groupsPage" :to="groupsPage">{{ t('groupWork.form.makeSet') }}</router-link>
+        </div>
+        <div v-else-if="form.group" class="app-form-hint">{{ t('groupWork.form.hint') }}</div>
+      </el-form-item>
+
       <el-form-item :label="t('assignments.form.instructions')" prop="instructions">
         <DocChoiceField
           v-model="form.instructions"
@@ -632,6 +772,33 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
 .assignment-form__lock .el-icon {
   margin-top: 2px;
   flex-shrink: 0;
+}
+.assignment-form__group :deep(.el-form-item__content) {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.assignment-form__set {
+  width: 100%;
+}
+/* Element Plus keeps a checkbox's label on one line: this one is a sentence, and wraps on a phone. */
+.assignment-form__toggle {
+  height: auto;
+  min-height: 32px;
+  max-width: 100%;
+  margin-right: 0;
+  align-items: flex-start;
+  white-space: normal;
+}
+.assignment-form__toggle :deep(.el-checkbox__input) {
+  margin-top: 8px;
+}
+.assignment-form__toggle :deep(.el-checkbox__label) {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  white-space: normal;
+  line-height: var(--app-lh-text);
+  overflow-wrap: anywhere;
 }
 .assignment-form__footer {
   display: flex;

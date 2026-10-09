@@ -31,6 +31,7 @@ import LatenessControl from './components/LatenessControl.vue'
 import SubmissionGrades from './components/SubmissionGrades.vue'
 import { loadPendingGradeProposals } from './components/proposals'
 import { workMemberIds, workReach, type WorkReach } from './components/groupGrading'
+import PeerSubmissionPanel from '@/views/course/peer/PeerSubmissionPanel.vue'
 
 const props = defineProps<{ courseId: string; submissionId: string }>()
 const { t } = useI18n()
@@ -402,6 +403,14 @@ function onGraded() {
           :work-grades="gradeList"
           :reach="reach"
           @graded="onGraded"
+        />
+
+        <!-- A group's peer evaluation, for those who grade. -->
+        <PeerSubmissionPanel
+          v-if="s.group_id && (course.can('grade_submit') || course.can('grade_post'))"
+          :course-id="courseId"
+          :assignment-id="s.assignment_id"
+          :group-id="s.group_id"
         />
       </template>
     </AsyncState>

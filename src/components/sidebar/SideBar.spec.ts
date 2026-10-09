@@ -133,6 +133,7 @@ async function mountAs(
         'scheme',
         'approvals',
         'members',
+        'groups',
         'agents',
         'activity',
         'my-actions',

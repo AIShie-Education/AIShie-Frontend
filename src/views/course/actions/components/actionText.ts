@@ -9,6 +9,8 @@ import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { formatDecimal } from '@/utils/format'
+import { groupRefusalScopes, isGroupAction } from '@/views/course/groups/components/groupEvents'
+import { forgetGroupNames } from '@/views/course/groups/components/groupNames'
 import { useMyAgents } from './myAgents'
 
 const t = (key: string, args?: Record<string, unknown>) => i18n.global.t(key, args ?? {})
@@ -98,15 +100,22 @@ export function storedDecision(
  * Where the app keeps words of its own for the refusals of an action of a
  * kind, by Core's reason, asked first, in order (as the page that makes the
  * call names them to useWrite): a refusal is said on the action pages as it
- * is where it was met. A refusal met only on approval, because what was
- * proposed changed meanwhile, is said there for an action carried out later
- * (groupGrading.actionRefusal), the rest as the grader meets them.
+ * is where it was met. A refusal of grading group work met only on approval,
+ * because what was proposed changed meanwhile, is said there for an action
+ * carried out later (groupGrading.actionRefusal), the rest as the grader
+ * meets them; an action about groups in the words of the pages that do it
+ * (a sign-up refused because the group is full), groupRefusalScopes.
  */
-const REFUSAL_SCOPES: Record<string, readonly string[]> = {
+const GRADING_REFUSAL_SCOPES: Record<string, readonly string[]> = {
   'grade.submit': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
   'grade.regrade': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
   'grade.adjust': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
   'submission.set_members': ['groupGrading.actionRefusal', 'groupGrading.refusal'],
+}
+
+/** Where the pages that do an action of this kind keep words for its refusals, by reason. */
+function refusalScopes(type: string | null | undefined): string[] {
+  return [...(GRADING_REFUSAL_SCOPES[type ?? ''] ?? []), ...groupRefusalScopes(type)]
 }
 
 /** Why a proposal was cancelled or an attempt refused, in words, and whether every part of it is the app's own. */
@@ -133,7 +142,7 @@ function explain(
       ? t(k1)
       : te(k2)
         ? t(k2)
-        : reasonMessage(new ApiError({ status: 400, ...e }), { reasons: REFUSAL_SCOPES[actionType ?? ''] ?? [] })
+        : reasonMessage(new ApiError({ status: 400, ...e }), { reasons: refusalScopes(actionType) })
     if (!said) bare = true
     parts.push(said ?? reason)
   }
@@ -155,8 +164,9 @@ function explain(
 
 /**
  * Why a proposal was cancelled or an attempt refused, in words, where Core
- * said: the app's own for the action's kind where it has them, else Core's
- * name for the reason.
+ * said: in the words of the pages that do that kind of action, where they
+ * have their own (a sign-up refused because the group is full, a group's
+ * posted grade), given the kind; else Core's name for the reason.
  */
 export function reasonText(e: StoredError | null | undefined, actionType?: string | null): string | null {
   return explain(e, actionType).text
@@ -213,20 +223,27 @@ export function routeFor(courseId: string, kind: string, id: string | null | und
     case 'conversation_id':
       // The address of the page conversations once had: it opens the chat panel on it, and the page stays.
       return { name: 'course-conversations', params: { courseId, conversationId: id } }
+    case 'group_set':
+    case 'set_id':
+      return { name: 'course-group-set', params: { courseId, setId: id } }
   }
   return null
 }
 
 /**
  * After a decision carried something out: forget the course's look-ups that
- * it may have changed (who is seated, which assignments there are).
+ * it may have changed (who is seated, which assignments there are, the
+ * names of its group sets and groups).
  */
 export function invalidateAfter(type: string | null | undefined) {
   const course = useCourseStore()
   const group = (type ?? '').split('.')[0]
   if (group === 'member') course.invalidate('members')
   else if (group === 'assignment') course.invalidate('assignments')
-  else if (group === 'action') course.invalidate('all')
+  else if (group === 'action') {
+    course.invalidate('all')
+    forgetGroupNames(course.courseId)
+  } else if (isGroupAction(type)) forgetGroupNames(course.courseId)
 }
 
 /** A decision (action.decide's decision) as a tag: its colour and its words; one the app does not know, as Core names it. */

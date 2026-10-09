@@ -20,7 +20,7 @@ const props = defineProps<{
   done: Done
   /** Of a decision about a decision: the one beneath, as the result says it (OutcomeAlert reads it). */
   inner: DecideResult | null
-  /** The kind of action decided (its action_type). */
+  /** The kind of action decided (its action_type), where known: its refusals are said in the words of the pages that do it. */
   actionType?: string | null
 }>()
 const { t } = useI18n()

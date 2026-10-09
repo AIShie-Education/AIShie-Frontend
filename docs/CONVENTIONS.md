@@ -268,6 +268,34 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `print()`; its title is the PDF's name. The button says what it does, 「下載為 PDF」, with
   「在列印視窗選擇『另存為 PDF』」 in its tooltip, to a screen reader, and as the window opens. No PDF
   is made in the page.
+- **Peer evaluation within a group (組員互評)** (`peer_form.*`, `peer_review.*`, `grade.apply_peer`,
+  AIShie-Core #75) lives in `views/course/peer/`, with its words in `peer` and its route in
+  `router/modules/peer.ts`. A group assignment's page shows its teaching staff `PeerSettingsCard`: the
+  form in words (`PeerFormSummary`), set up and changed by whoever writes assignments in `PeerFormDialog`
+  over the version read (`setArgs`; `version_mismatch` reads it again and keeps what was typed), its
+  shape (kind, criteria, scale, self-evaluation) off once an evaluation is written (`in_use`), and who
+  sees what as the form says it (`whoSees`). A student in a group's circle fills theirs in on the same
+  page (`PeerTaskPanel`, `peerSheet.ts`): exactly whom `task.to_evaluate` names, in the circle's order,
+  themselves last; shares typed as whole numbers that must add up to 100, said as they are typed, or a
+  rating of every member on every criterion; sent again until it closes, reading the page again keeping
+  what was typed; read only once it closes, with their own average where the form shares it. A person
+  writes it, never an agent (`people_only`). Those who grade read every group's results on
+  `/assignments/:assignmentId/peer` (`PeerResultsView`, `PeerGroupResults`) and a group's on its work's
+  page (`PeerSubmissionPanel`): each member's factor said in words, as what they received against an
+  even share from the same raters ("120% of an even share, from 2 peers"), naming their own evaluation
+  where self-evaluation puts it in the factor, as Core's does ("from 1 peer and themselves", "from
+  their own evaluation alone"), never as a bare number; the score it gives at the form's weight beside
+  the group's, and none on a form for reference only, where every score is the group's; Core's flags,
+  who wrote nothing, and every evaluation with who wrote it; `FairShareExplainer` says how the factor
+  and the weight make a score, with the group's own figures. Counting it in grades (`ApplyPeerDialog`,
+  for whoever enters and posts grades) shows each member's score now and after (`applyPreview`), a
+  grader's own adjustment kept, and tells a seat that reaches only some students that Core writes
+  every group's grades it would change, refusing it whole (`student_out_of_scope`) if any is beyond
+  them. `PeerProposal` shows, on the approvals queue's card and the action's page, each member's
+  factor as a proposal of counting it recorded them, and a student's evaluation sent for approval as
+  what it gives each member, by name and by criterion. Its CSV (`peerCsv`) follows the class
+  gradebook's rules and leaves the raters' comments out. A percentage in its words is a placeholder
+  `formatPct` fills.
 - **Deleting an assignment for good** (`assignment.delete`, AIShie-Core #73) is offered to whoever
   writes assignments in its ⋯ menu (`AssignmentMoreMenu`): its page's header, at the far end, and
   its row in the list, which the menu opens no row of (in a column of its own, at the row's end,
@@ -304,6 +332,40 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   action shows what it was confirmed with, beside what would go now while it waits
   (`DeletionProposal`, which warns that approving would fail where more would go); and a total's
   working says of its line only that it was an assignment since deleted.
+- **Group work (小組作業)** (AIShie-Core #74): an assignment its groups hand in names a group set
+  (`group_set_id`), chosen in its form (`AssignmentFormDialog`; the course's one set is chosen
+  already) only while nobody has started on it: a row of work found (`submission.list`), or Core's
+  `assignment_has_work`, locks the field and says why. Its page says "Group work", its set, and to a
+  student their group (`my_group`). A student's work is their group's (`MyWorkPanel`, with
+  `assignments/components/groupWork.ts`): one draft its members write together, each edit naming the
+  revision it was written over (`base_revision`). The draft is read again every 20 seconds while it is
+  open, beside the page's own reading (a read that fails leaves the editor as it was), and says who
+  changed it last; a change by someone else under unsaved text, read or refused as `draft_changed`, is
+  a conflict the student settles (`readDraft`, `keepMine`, `loadTheirs`): load the draft as it is now,
+  or keep theirs, saved over the revision read; a read older than the revision held is no news. A
+  hand-in reads the draft again first and hands in nothing the student has not seen; it names whom it
+  is for (`members`, which Core holds it to: `members_changed`), warns a student who is part of
+  another group's work that it leaves them out, and says whom it left out (`left_out`). A draft that
+  stops being the student's while it is open says so: handed in by someone else (read so, or a save
+  refused and the draft read again), or not their group's now (`student_out_of_scope` on reading,
+  saving or handing it in, `notInDraftsGroup`: moved, or out of the set), when the page reads their
+  group again (`groupChanged`). A refresh that finds it gone from their attempts before the draft's
+  own reading answers keeps what they typed before the editor goes, and reads the draft again to say
+  which (`draftGone`). Either way what they typed and had not saved stays on the page,
+  read-only with Copy, until they discard it. Its attempts say their group, whom each was handed in
+  or recorded missing for, and who handed it in. A student in
+  no group of the set (`no_group`) is told so, with sign-up's deadline where it is open, and has
+  nothing to start. Names are the work's own (`useWorkNames`: "you", and "someone in the course"
+  where nobody may name them). A set's page is linked by its address (`groupSetRoute`), and only
+  where the app has one. A group assignment's roster (`GroupRoster`, `rosterByGroup.ts`) is by group:
+  its members now and, where they differ, whom its work is for; the students in no group under the
+  groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
+  missing for its members now (`submission.record_missing` with `group_id`), offered only to a seat
+  that reaches every one of them, as Core requires: a seat listed to some students is shown only those
+  of each group's members, and the group's size from its set (`group_set.get`) says how many more
+  there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
+  says its group, and whose work it is where the student has moved since. Its words are in
+  `groupWork`.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
@@ -854,6 +916,39 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   kind, those met only when a proposal is carried out (`members_changed`, `grades_changed`) under
   `groupGrading.actionRefusal`, and show Core's own message (written for agents, naming its
   tools) only where the app has no words for it.
+- **A course's groups** (分組: the Groups tab, `/groups`, `GroupsView`; a set, `/groups/:setId`,
+  `GroupSetView`; their parts in `src/views/course/groups/`) are read by every reader of the course
+  (`group_set.list`, `.get`, with `document_read`) and formed by whoever writes assignments
+  (`assignment_write`: `group_set.*`, `group.create`, `.update`, `.set_members`, `.split`). What the
+  server sends is what is shown: names of a group's members to those who read the member list, and to a
+  student their own group's alone, so a student's page (`StudentSet`) shows no other group's members and
+  no group's work. Students are moved by choosing them (a box each) and "Move to…" (`MoveMenu`, an
+  `el-dropdown`, which the keyboard opens and walks), a row's own "Move … to…", or by dragging one onto
+  a group, never by dragging alone; `usePlacements` sends `group.set_members`, and a refusal of
+  `group_has_work` opens `AffectsWorkDialog`, which says what becomes of each work before placing them
+  again with `affects_work`. A random split (`SplitDialog`) is previewed by the server's own deal,
+  `split.ts` (`planSplit` in `groupModel.ts` over the set as read), which must keep AIShie-Core's
+  `internal/groupsplit` golden values (`split.spec.ts`): the seed shown is sent, so the preview is what is
+  dealt. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
+  CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`,
+  and where one kind of action means something of its own by a reason (`group_has_work` to a student
+  signing up, to someone archiving a group, to a placement approved after work began) under
+  `groups.refusalOf`, first: `groupRefusalScopes(type)`, which `reasonText(e, type)` and `reasonWords` ask
+  too, so that an action's refusal reads the same in My actions, the approvals and its page. A student's page goes to a
+  student, and to a delegate that neither forms groups nor reads the member list (a student's own
+  agent); other staff without either see the staff's page read only, nobody named. Once students are
+  moved the focus goes where they went (`focusAfterMove`): the moved row's own "Move … to…", the group
+  (its heading, `tabindex="-1"`) or those in no group, or the request where it waits for approval. A
+  group's work is shown to a reader whose scope reaches one of its members, so an empty group's to one
+  who reaches every student and assignment (`reachesEveryStudent`): to anyone else, archiving one is
+  offered, saying that a group with work they are not shown stays.
+  The feed names sets and groups from `groupNames.ts` (read once, and again for an id it does not know,
+  once two minutes old, and after the app's own change to them, `forgetGroupNames`) and says their
+  events' facts with `groupEventFacts`; an action about groups is said in words: its set (or group) by
+  `GroupTarget` in `ActionTarget`'s line, its fields by `GroupFieldValue` (`groupFieldKind`) in
+  `FieldsView`, and what it does, or did, by `GroupProposal` on the approvals queue and an action's page.
+  A student's member page lists their groups (`MemberGroupsCard`), and says to a reader whose scope does
+  not reach the student (`scopeReaches`) that they are not shown, never that there are none.
 - Link with route **names** and params: `{ name: 'course-assignment', params: { courseId, assignmentId } }`.
   Route names are in `src/router/modules/*.ts`; views receive route params as props.
 - What a browser remembers (`localStorage`, `sessionStorage`) is kept under a key starting `aishie.`,

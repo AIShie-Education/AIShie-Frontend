@@ -71,6 +71,7 @@ export default {
     gradebook: 'Gradebook',
     scheme: 'Grading scheme',
     members: 'Members',
+    groups: 'Groups',
     approvals: 'Approvals',
     agentProposals: 'Your agents’ proposals',
     myActions: 'My actions',
