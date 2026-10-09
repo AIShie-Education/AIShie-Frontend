@@ -3,8 +3,10 @@
 //
 //   Projects (a group set):  Team A — Ana, Ben, Cai     Team B — Dev, Eva
 //   Fay, a student in no group; Tom, a TA; Ivy, a TA listed for Ana and Ben
-//   alone, who posts grades; Kit, a TA who may not read grades; grader-g, a
-//   grading agent; approver-a, an agent whose decisions wait for approval.
+//   alone, who posts grades; Uma, as Ivy, but who may not read the members
+//   (so whom her seat reaches is not known to the app); Kit, a TA who may not
+//   read grades; grader-g, a grading agent; approver-a, an agent whose
+//   decisions wait for approval.
 //
 // "Group project" (100 points, in the course's one component) is a group
 // assignment of Projects, published: Ben hands Team A's report in, Dev Team
@@ -29,7 +31,7 @@ export interface GroupGradingWorld {
   assignment: { id: string; title: string }
   submissions: { a: string; b: string }
   people: Record<
-    'teacher' | 'ta' | 'ivy' | 'kit' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader' | 'approver',
+    'teacher' | 'ta' | 'ivy' | 'uma' | 'kit' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader' | 'approver',
     WorldPerson
   >
 }
@@ -136,6 +138,7 @@ export async function buildGroupGradingWorld(
     teacher: await person('teacher', 'Teacher Wong'),
     ta: await person('ta', 'Tom Lee'),
     ivy: await person('ivy', 'Ivy Kwok'),
+    uma: await person('uma', 'Uma Siu'),
     kit: await person('kit', 'Kit Mak'),
     ana: await person('ana', 'Ana Chan'),
     ben: await person('ben', 'Ben Ho'),
@@ -179,6 +182,12 @@ export async function buildGroupGradingWorld(
     student_scope: 'listed',
     listed_students: [people.ana.member_id, people.ben.member_id],
     perms: { grade_post: 'autonomous' },
+  })
+  // As Ivy, but her seat's list of students cannot be read (no member_read): whether she reaches Cai is not known.
+  await seat('uma', 'ta', {
+    student_scope: 'listed',
+    listed_students: [people.ana.member_id, people.ben.member_id],
+    perms: { grade_post: 'autonomous', member_read: 'denied' },
   })
   await seat('kit', 'ta', { perms: { grade_read: 'denied' } })
 

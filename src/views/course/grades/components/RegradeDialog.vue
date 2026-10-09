@@ -16,7 +16,10 @@
 // seat the grades only of those it reaches: the grade's page offers such a
 // seat no regrade, and one that opens it all the same (its reach read only
 // as it opens) is told so, shown no member's line (a grade it was not given
-// would read as none) and offered nothing to save.
+// would read as none) and offered nothing to save. Where whether the seat
+// reaches a member is not known (its list cannot be read), a member with no
+// grade shown is kept as their grade has it, unseen and unsent, and said so:
+// never shown as the group's score.
 import { computed, reactive, ref, watch } from 'vue'
 import { read } from '@/api/http'
 import { useI18n } from 'vue-i18n'
@@ -118,7 +121,8 @@ const groupWork = useAsync(
       /** Some member of the work is outside the caller's reach: their grades were not read, and Core refuses it. */
       unreached: workReach(workMemberIds(sub), course.reachesStudent) === 'some',
       writes,
-      rows: rowsFor(writes, live),
+      // A member with no grade shown whom the seat may not reach: theirs was not given, and is kept unseen.
+      rows: rowsFor(writes, live, course.reachesStudent),
       replaces: writes
         .map((id) => live.get(id))
         .filter((x): x is GradeSummary => !!x)
@@ -134,6 +138,8 @@ watch(
   (w) => (adjustRows.value = w ? w.rows.map((r) => ({ ...r })) : []),
 )
 const rowsChecked = ref(false)
+/** Some member's grade is not shown: the seat may not reach them, and their line is kept as it is. */
+const someUnseen = computed(() => isGroup.value && !!groupWork.data.value?.rows.some((r) => r.unseen))
 /** Some member of the work is outside the seat's reach: nothing is offered but to close. */
 const unreached = computed(() => isGroup.value && !!groupWork.data.value?.unreached)
 const groupBlocked = computed(
@@ -314,6 +320,9 @@ async function submit() {
           @retry="groupWork.reload"
         >
           <p class="app-form-hint grades-hint regrade__members-hint">{{ t('groupGrading.regrade.membersHint') }}</p>
+          <p v-if="someUnseen" class="app-form-hint grades-hint regrade__members-hint">
+            {{ t('groupGrading.regrade.someUnseen') }}
+          </p>
           <GroupAdjustments
             v-model="adjustRows"
             :members="groupWork.data.value?.members ?? []"

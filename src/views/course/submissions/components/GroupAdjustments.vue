@@ -3,8 +3,9 @@
 // score, a score of their own, or plus or minus, each of the last two with a
 // reason the member reads with their grade. Every line shows the score it
 // comes to as the group's score is typed, and says what is wrong with it.
-// Where the work's grades cannot be read (unseen), each line starts kept as
-// the member's grade has it, which is not shown, and may be left so.
+// A member whose grade is not shown (the work's grades cannot be read, or
+// the caller's seat may not reach them: the row is unseen) starts kept as
+// their grade has it, which is not shown, and may be left so.
 // v-model is the lines, numbers kept as the text typed.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -40,12 +41,12 @@ const props = defineProps<{
   /** Mark what is missing as well as what is wrong: after a save was tried. */
   strict?: boolean
   disabled?: boolean
-  /** The work's grades cannot be read: a line may be kept as the member's grade has it, unseen. */
-  unseen?: boolean
 }>()
 const { t } = useI18n()
 
-const kinds = computed<readonly LineKind[]>(() => (props.unseen ? ['keep', ...ADJUST_KINDS] : ADJUST_KINDS))
+/** What a line may be set to: kept as it is, too, where the member's grade is not shown. */
+const UNSEEN_KINDS: readonly LineKind[] = ['keep', ...ADJUST_KINDS]
+const kindsOf = (row: AdjustRow): readonly LineKind[] => (row.unseen ? UNSEEN_KINDS : ADJUST_KINDS)
 /** A line set apart from the group's score here: a score of their own, or plus or minus. */
 const setApart = (row: AdjustRow) => row.kind === 'replace' || row.kind === 'delta'
 
@@ -129,7 +130,7 @@ const outOf = computed(() =>
           :aria-label="t('groupGrading.editor.kindLabel', { name: l.name ?? t('groupGrading.editor.thisMember') })"
           @update:model-value="(v: LineKind) => setKind(l.row.memberId, v)"
         >
-          <el-option v-for="k in kinds" :key="k" :value="k" :label="t(`groupGrading.editor.kind.${k}`)" />
+          <el-option v-for="k in kindsOf(l.row)" :key="k" :value="k" :label="t(`groupGrading.editor.kind.${k}`)" />
         </el-select>
         <div v-if="setApart(l.row)" class="group-adjust__fields">
           <el-input

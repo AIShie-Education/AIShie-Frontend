@@ -214,6 +214,24 @@ describe('grading a group’s work', () => {
   })
 })
 
+/** Team A's grades posted, as Core lists them to a TA listed for Ana and Ben: Cai's (70 after -10) left out. */
+function answerPosted() {
+  vi.mocked(read).mockImplementation(async (tool: string) => {
+    if (tool === 'submission.get') return SUB as never
+    if (tool === 'grade.get') return grade({ id: 'p-ana', state: 'posted' }) as never
+    if (tool === 'component.tree') return { components: [] } as never
+    if (tool === 'grade.list') {
+      return {
+        grades: [
+          grade({ id: 'p-ana', state: 'posted' }),
+          grade({ id: 'p-ben', student_member_id: 'ben', state: 'posted' }),
+        ],
+      } as never
+    }
+    throw new Error(`no answer for ${tool}`)
+  })
+}
+
 describe('a grader whose seat does not reach every member of the work', () => {
   // Team A is Ana, Ben and Cai; the TA is listed for Ana and Ben. Core shows the TA the work, the grades of Ana and
   // Ben alone, and the group's members and history of Ana and Ben alone; it grades the work, and corrects its members
@@ -325,24 +343,6 @@ describe('a grader whose seat does not reach every member of the work', () => {
     expect(wrapper.findAll('button').some((b) => b.text().includes('Correct members'))).toBe(false)
   })
 
-  /** Team A's grades posted, as Core lists them to the TA: Ana's and Ben's alone (Cai's, 70 after -10, left out). */
-  function answerPosted() {
-    vi.mocked(read).mockImplementation(async (tool: string) => {
-      if (tool === 'submission.get') return SUB as never
-      if (tool === 'grade.get') return grade({ id: 'p-ana', state: 'posted' }) as never
-      if (tool === 'component.tree') return { components: [] } as never
-      if (tool === 'grade.list') {
-        return {
-          grades: [
-            grade({ id: 'p-ana', state: 'posted' }),
-            grade({ id: 'p-ben', student_member_id: 'ben', state: 'posted' }),
-          ],
-        } as never
-      }
-      throw new Error(`no answer for ${tool}`)
-    })
-  }
-
   it('is offered no regrade of the group on a member’s posted grade, and told why; adjusting the member stays', async () => {
     const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben'])
     answerPosted()
@@ -403,6 +403,89 @@ describe('a grader whose seat does not reach every member of the work', () => {
     expect(dialog.querySelector('form')).toBeNull()
     const footer = Array.from(dialog.querySelectorAll('.el-dialog__footer button')).map((b) => b.textContent?.trim())
     expect(footer).toEqual(['Close'])
+  })
+})
+
+describe('a grader whose seat is not known to reach every member of the work', () => {
+  // The TA is listed for Ana and Ben, but its list cannot be read (no member_read): whether it reaches Cai is not
+  // known. Core gives it Ana's and Ben's grades alone; Cai's (70, the group's 80 minus 10) was not given to it.
+  const PERMS = {
+    grade_submit: 'autonomous',
+    grade_post: 'autonomous',
+    grade_read: 'autonomous',
+    member_read: 'denied',
+    rubric_read: 'autonomous',
+  }
+  const mounting = { attachTo: document.body }
+  function setUpUnknown() {
+    const out = setUp(PERMS)
+    useCourseStore().membership = { member_id: 't', student_scope: 'listed' } as never
+    return out
+  }
+
+  it('is offered the form, Cai’s line kept as his grade has it, never as the group’s score', async () => {
+    const { pinia } = setUpUnknown()
+    answers['grade.submit'] = { group_grade_id: 'gg2', member_grades: [] }
+    const wrapper = mount(GradePanel, {
+      props: {
+        courseId: COURSE,
+        submission: SUB,
+        assignment: ASSIGNMENT,
+        liveDraft: grade({ id: 'd-ana' }),
+        workGrades: [grade({ id: 'd-ana' }), grade({ id: 'd-ben', student_member_id: 'ben' })],
+        reach: 'unknown',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    await wrapper.find('input[placeholder="e.g. 8.5"]').setValue('85')
+    const lines = wrapper.findAll('.group-adjust__item')
+    expect(lines.map((l) => l.find('.group-adjust__name').text())).toEqual(['Ana Chan', 'Ben Ho', 'Cai Lam'])
+    expect(lines[0].text()).toContain('Comes to 85 / 100')
+    expect(lines[2].text()).toContain('As their grade has it now')
+    expect(lines[2].text()).not.toContain('Comes to')
+    expect(wrapper.text()).toContain('member whose grade is not shown to you keeps what their grade has now')
+    expect(wrapper.text()).toContain('saved only by someone whose seat reaches every member of the work')
+    await wrapper.find('form').trigger('submit')
+    await flushPromises()
+    expect(writes).toHaveLength(1)
+    expect(writes[0].args).toMatchObject({ score: '85', members: ['ana', 'ben', 'cai'] })
+    // Nothing is said of Cai's: Core carries it, or refuses a seat that does not reach him.
+    expect(writes[0].args.adjustments).toEqual([
+      { student_member_id: 'ana', kind: 'none' },
+      { student_member_id: 'ben', kind: 'none' },
+    ])
+  })
+
+  it('is offered the regrade, Cai’s line kept as his grade has it, never as the group’s score', async () => {
+    const { pinia } = setUpUnknown()
+    answerPosted()
+    const wrapper = mount(RegradeDialog, {
+      props: {
+        courseId: COURSE,
+        modelValue: false,
+        grade: grade({ id: 'p-ana', state: 'posted' }) as unknown as Grade,
+        outOf: 100,
+        what: 'Group project',
+      },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await wrapper.setProps({ modelValue: true })
+    await flushPromises()
+    const dialog = document.body.querySelector('.el-dialog')!
+    const lines = Array.from(dialog.querySelectorAll('.group-adjust__item'))
+    expect(lines.map((l) => l.querySelector('.group-adjust__name')?.textContent?.trim())).toEqual([
+      'Ana Chan',
+      'Ben Ho',
+      'Cai Lam',
+    ])
+    expect(lines[0].textContent).toContain('Comes to 80 / 100')
+    expect(lines[2].textContent).toContain('As their grade has it now')
+    expect(lines[2].textContent).not.toContain('Comes to')
+    expect(lines[2].textContent).not.toContain('The group’s score')
+    expect(dialog.textContent).toContain('member whose grade is not shown to you keeps what their grade has now')
   })
 })
 

@@ -28,6 +28,16 @@ async function as(page: Page, who: WorldPerson) {
   await signIn(page, { email: who.email, display_name: who.display_name })
 }
 
+/** The work's members, in the order Core lists them, which each list of their lines follows. */
+async function workOrder(submission: string): Promise<string[]> {
+  const call = await toolCaller(w.core)
+  const out = await call(w.people.teacher.token, 'submission.get', {
+    course_id: w.course.id,
+    submission_id: submission,
+  })
+  return out.result.members.map((m: { member_id: string }) => m.member_id)
+}
+
 /** The page scrolls up and down only: nothing on it is wider than the window. */
 async function expectNoSidewaysScroll(page: Page) {
   const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -152,6 +162,34 @@ test.describe.serial('grading group work', () => {
     await photograph(page, 'group-grading-partial-reach')
   })
 
+  test('a TA whose seat’s reach is not known is never told Cai has the group’s score', async ({ page }) => {
+    // Uma is listed for Ana and Ben, as Ivy is, but may not read the members: the app cannot know whether her seat
+    // reaches Cai, and offers the form, for Core to decide. Core gives her neither Cai's grade (70, set apart) nor
+    // anyone's name, so each line is found by where Core lists its member.
+    const order = await workOrder(w.submissions.a)
+    const at = (who: WorldPerson) => order.indexOf(who.member_id)
+    await as(page, w.people.uma)
+    await page.goto(path(`submissions/${w.submissions.a}`))
+    const shown = grades(page).locator('.group-grades__item')
+    await expect(shown.nth(at(w.people.ana))).toContainText('80')
+    await expect(shown.nth(at(w.people.cai))).toContainText('No grade of theirs is shown to you')
+
+    const panel = page.locator('.grade-panel')
+    await panel.getByPlaceholder('e.g. 8.5').fill('85')
+    const lines = panel.locator('.group-adjust__item')
+    await expect(lines).toHaveCount(3)
+    await expect(lines.nth(at(w.people.ana))).toContainText('Comes to 85 / 100')
+    await expect(lines.nth(at(w.people.ben))).toContainText('Comes to 85 / 100')
+    // Cai's line is kept as his grade has it, which she is not shown: never "the group's score".
+    const cai = lines.nth(at(w.people.cai))
+    await expect(cai).toContainText('As their grade has it now')
+    await expect(cai).not.toContainText('Comes to')
+    await expect(cai.locator('.el-select')).toContainText('Kept as it is')
+    await expect(panel).toContainText('member whose grade is not shown to you keeps what their grade has now')
+    await cai.scrollIntoViewIfNeeded()
+    await photograph(page, 'group-grading-unknown-reach')
+  })
+
   test('the teacher posts, adjusts Ana’s posted grade, corrects the members and regrades the group', async ({
     page,
   }) => {
@@ -242,6 +280,40 @@ test.describe.serial('grading group work', () => {
     await expect(card.getByRole('button', { name: 'Adjust' })).toBeVisible()
     await card.scrollIntoViewIfNeeded()
     await photograph(page, 'group-grading-regrade-partial-reach')
+  })
+
+  test('the TA whose seat’s reach is not known regrades with Cai’s and Fay’s lines kept as their grades have them', async ({
+    page,
+  }) => {
+    // Core lists Uma Ana's and Ben's grades alone (Cai's 74 and Fay's 84 among those left out); whether her seat reaches
+    // them is not known to the app, so the regrade is offered, and Core decides.
+    const order = await workOrder(w.submissions.a)
+    const at = (who: WorldPerson) => order.indexOf(who.member_id)
+    const call = await toolCaller(w.core)
+    const anaGrade = (
+      await call(w.people.teacher.token, 'grade.list', {
+        course_id: w.course.id,
+        student_member_id: w.people.ana.member_id,
+      })
+    ).result.grades.find(
+      (g: { state: string; submission_id?: string }) => g.state === 'posted' && g.submission_id === w.submissions.a,
+    ).id as string
+    await as(page, w.people.uma)
+    await page.goto(path(`grades/${anaGrade}`))
+    await expect(page.locator('.group-grade')).toContainText('Team A')
+    await page.getByRole('button', { name: 'Regrade the group' }).click()
+    const regrade = page.getByRole('dialog', { name: 'Regrade the group' })
+    const lines = regrade.locator('.group-adjust__item')
+    await expect(lines).toHaveCount(4)
+    await expect(lines.nth(at(w.people.ana))).toContainText('Comes to 90 / 100')
+    await expect(lines.nth(at(w.people.ben))).toContainText('Comes to 84 / 100')
+    for (const who of [w.people.cai, w.people.fay]) {
+      await expect(lines.nth(at(who))).toContainText('As their grade has it now')
+      await expect(lines.nth(at(who))).not.toContainText('Comes to')
+    }
+    await expect(regrade).toContainText('member whose grade is not shown to you keeps what their grade has now')
+    await lines.nth(at(w.people.cai)).scrollIntoViewIfNeeded()
+    await photograph(page, 'group-grading-regrade-unknown-reach')
   })
 
   test('the class’s gradebook marks group grades and adjusted members, and its CSV says so', async ({ page }) => {

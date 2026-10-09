@@ -14,12 +14,14 @@
 // each member's line (GroupAdjustments), set apart from the group's score
 // with a reason where the grader says so. Every member's line is sent, as it
 // is shown, with the work's members, so that a proposal is refused if they
-// change. Where the work's grades cannot be read, each line is kept as the
-// member's grade has it, unseen and unsent, for Core to carry, until the
-// grader sets it. Once a grade from it is posted the group is regraded
-// instead. A seat that does not reach every member of the work is not
-// offered the form: a group's grade is every member's, and Core grades it
-// only for a seat that reaches them all.
+// change. Where a member's grade is not shown (the work's grades cannot be
+// read, or the seat is not known to reach them), their line is kept as
+// their grade has it, unseen and unsent, for Core to carry, until the
+// grader sets it: never shown as the group's score, which a grade the seat
+// was not given would read as. Once a grade from it is posted the group is
+// regraded instead. A seat that does not reach every member of the work is
+// not offered the form: a group's grade is every member's, and Core grades
+// it only for a seat that reaches them all.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
@@ -112,13 +114,18 @@ type Outcome =
 const outcome = ref<Outcome | null>(null)
 
 // Each member's line, as their grade on the work has it now: what Core
-// would carry, shown, and sent as shown. Where the grades are not known,
-// kept as they are, unseen, and not sent.
+// would carry, shown, and sent as shown. Where a member's grade is not
+// known (the grades cannot be read, or the seat may not reach them, and so
+// was not given theirs), kept as it is, unseen, and not sent.
 const members = computed(() => (isGroup.value ? workMemberIds(props.submission) : []))
 const liveGrades = computed(() =>
   props.gradesHidden ? null : liveByMember(props.workGrades ?? [], props.submission.id),
 )
-const carried = computed(() => rowsFor(members.value, liveGrades.value))
+/** Whether the seat reaches a member of the work: every one where it reaches them all. */
+const reached = (id: string): boolean | null => (props.reach === 'all' ? true : course.reachesStudent(id))
+const carried = computed(() => rowsFor(members.value, liveGrades.value, reached))
+/** Some members' grades are not shown, though the work's grades were read: the seat may not reach them. */
+const someUnseen = computed(() => !props.gradesHidden && carried.value.some((r) => r.unseen))
 const adjustRows = ref<AdjustRow[]>([])
 /** What the lines are read from: read again (after saving), they start from it again. */
 const carriedKey = computed(() => JSON.stringify(carried.value))
@@ -533,7 +540,13 @@ async function submit() {
           <el-form-item v-if="isGroup" :label="t('groupGrading.editor.title')">
             <div class="grade-panel__block">
               <div class="app-form-hint grade-panel__members-hint">
-                {{ gradesHidden ? t('groupGrading.editor.hintUnseen') : t('groupGrading.editor.hint') }}
+                {{
+                  gradesHidden
+                    ? t('groupGrading.editor.hintUnseen')
+                    : someUnseen
+                      ? t('groupGrading.editor.hintSomeUnseen')
+                      : t('groupGrading.editor.hint')
+                }}
               </div>
               <GroupAdjustments
                 v-model="adjustRows"
@@ -542,7 +555,6 @@ async function submit() {
                 :points-possible="points"
                 :allow-extra="above && form.allowExtra"
                 :strict="rowsChecked"
-                :unseen="gradesHidden"
               />
             </div>
           </el-form-item>

@@ -902,9 +902,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   nor without a grade), and offered no grading form, correction, lateness or regrade (a member's
   grade's page, `GradeView`, reads the work to know, and offers the regrade only once it does;
   `RegradeDialog`, opened all the same, shows no member's line, since a grade it was not given
-  would read as none). Once a grade from it is posted the group is regraded (`RegradeDialog`,
-  sending the members it writes and the grades it replaces), and one member is adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a
-  draft as entering a grade is gated, a posted grade as a regrade). Whose work it is
+  would read as none). Where that is not known (`'unknown'`), the form and the regrade are
+  offered, and Core decides; a member with no grade shown whom the seat is not known to reach
+  (`rowsFor`'s `reached` not true) has their line kept as their grade has it (`keep`, the row
+  `unseen`), unsent, and said so, never shown as the group's score. Once a grade from it is
+  posted the group is regraded (`RegradeDialog`, sending the members it writes and the grades it
+  replaces), and one member is adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a draft as
+  entering a grade is gated, a posted grade as a regrade). Whose work it is
   (`GroupWorkMembers`) is marked against the group now for those who grade, who correct it
   (`submission.set_members`). A member's grade says how it came
   from the group's (`AdjustmentText`): its reason to the member too, who set it to those who grade

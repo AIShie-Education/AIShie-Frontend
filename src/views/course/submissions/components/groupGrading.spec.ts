@@ -101,24 +101,61 @@ describe('each member’s live grade on the work', () => {
       ],
       's1',
     )
-    const rows = rowsFor(workMemberIds({ members: [{ member_id: 'm1' }, { member_id: 'm2' }] }), live)
-    expect(rows.map((r) => [r.memberId, r.kind, r.points])).toEqual([
-      ['m1', 'none', ''],
-      ['m2', 'delta', '-5'],
+    const rows = rowsFor(workMemberIds({ members: [{ member_id: 'm1' }, { member_id: 'm2' }] }), live, () => true)
+    expect(rows.map((r) => [r.memberId, r.kind, r.points, !!r.unseen])).toEqual([
+      ['m1', 'none', '', false],
+      ['m2', 'delta', '-5', false],
     ])
   })
 })
 
 describe('the lines where the work’s grades are not known', () => {
   it('keeps every member’s as their grade has it, unseen: nothing to check, no score to show', () => {
-    const rows = rowsFor(['m1', 'm2'], null)
-    expect(rows.map((r) => [r.memberId, r.kind])).toEqual([
-      ['m1', 'keep'],
-      ['m2', 'keep'],
+    const rows = rowsFor(['m1', 'm2'], null, () => true)
+    expect(rows.map((r) => [r.memberId, r.kind, r.unseen])).toEqual([
+      ['m1', 'keep', true],
+      ['m2', 'keep', true],
     ])
     expect(memberScore('80', rows[0])).toBeNull()
     expect(rowProblem(rows[0], '80', 100, false)).toBeNull()
     expect(anyAbove(rows, '80', 100)).toBe(false)
+  })
+})
+
+describe('the lines where whom the seat reaches is not known', () => {
+  // Cai's grade (70, the group's 80 minus 10) was not given to a seat that may not reach him.
+  const live = liveByMember(
+    [
+      grade({ student_member_id: 'ana' }),
+      grade({
+        student_member_id: 'ben',
+        group: { group_grade_id: 'gg', score: 80, adjustment: { kind: 'delta', points: 5, reason: 'r' } },
+      }),
+    ],
+    's1',
+  )
+
+  it('keeps a member with no grade shown as their grade has it, unseen, never as the group’s score', () => {
+    const rows = rowsFor(['ana', 'ben', 'cai'], live, () => null)
+    expect(rows.map((r) => [r.memberId, r.kind, r.points, !!r.unseen])).toEqual([
+      ['ana', 'none', '', false],
+      ['ben', 'delta', '5', false],
+      ['cai', 'keep', '', true],
+    ])
+    expect(memberScore('80', rows[2])).toBeNull()
+    // Nothing is said of Cai's: Core carries his.
+    expect(adjustmentsArg(rows)).toEqual([
+      { student_member_id: 'ana', kind: 'none' },
+      { student_member_id: 'ben', kind: 'delta', points: '5', reason: 'r' },
+    ])
+  })
+
+  it('keeps one known to be out of reach so too; one known to be reached, with no grade, has none', () => {
+    const reaches = (id: string) => (id === 'cai' ? false : id === 'dev' ? true : null)
+    expect(rowsFor(['cai', 'dev'], live, reaches).map((r) => [r.memberId, r.kind])).toEqual([
+      ['cai', 'keep'],
+      ['dev', 'none'],
+    ])
   })
 })
 

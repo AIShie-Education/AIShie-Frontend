@@ -50,6 +50,9 @@ export default {
     // Where the work's grades cannot be read: each line is kept as the member's grade has it, unseen.
     hintUnseen:
       'The grades already given for this work cannot be shown to you, so each member’s line keeps what their grade has now: a score set apart from the group’s stays, with its reason. Set a line only to change it.',
+    // Where the grades were read, but some member's is not shown: the seat may not reach them.
+    hintSomeUnseen:
+      'Each member is given the group’s score unless you set theirs apart here, with a reason: they read it with their grade, and no other member sees it. But a member whose grade is not shown to you keeps what their grade has now, if they have one, until you set their line; and a group’s grade is saved only by someone whose seat reaches every member of the work.',
     kind: {
       keep: 'Kept as it is',
       none: 'The group’s score',
@@ -147,6 +150,9 @@ export default {
       'Some members’ grades from the group’s grade are still drafts. Post them first, then regrade the group.',
     unreached:
       'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
+    // Some member's grade is not shown: the seat may not reach them.
+    someUnseen:
+      'A member whose grade is not shown to you keeps what their grade has now until you set their line; and the group is regraded only by someone whose seat reaches every member.',
   },
   // Whose work a group's submission is.
   members: {

@@ -6,9 +6,10 @@
 //
 // What the member table shows is what is written: every member's adjustment
 // is sent, those shown with none as `none`, so that nothing Core would carry
-// from an earlier grade is written unseen. Where the work's grades cannot be
-// read, each line is kept as their grade has it (`keep`), which is not sent,
-// so that Core carries it: only a line the grader sets is written.
+// from an earlier grade is written unseen. Where a member's grade is not
+// shown (the work's grades cannot be read, or the caller's seat may not reach
+// them), their line is kept as their grade has it (`keep`), which is not
+// sent, so that Core carries it: only a line the grader sets is written.
 import type { Decimal, GradeSummary, Submission } from '@/api/types'
 import { isDecimal } from '@/utils/format'
 import { decimalAbove, isNonNegativeDecimal, sumDecimals } from './decimal'
@@ -42,6 +43,12 @@ export interface AdjustRow {
    * shown, never sent. It is worked out again as the grade is written.
    */
   peer: Adjustment | null
+  /**
+   * Their grade is not shown to the caller: the work's grades cannot be read,
+   * or the caller's seat may not reach them. The line starts kept as their
+   * grade has it (`keep`), and may be put back so.
+   */
+  unseen?: boolean
 }
 
 /** A grader's own adjustment (replace or delta), as against none or peer evaluation's. */
@@ -81,12 +88,30 @@ export function liveByMember(grades: readonly GradeSummary[], submissionId: stri
 
 /**
  * The lines for every member of the work, each as their live grade has it
- * now; or, where the work's grades are not known (they cannot be read, or
- * could not be), each kept as it is, unseen.
+ * now; or, where their grade is not known, kept as it is, unseen: every one
+ * where the work's grades are not known (they cannot be read, or could not
+ * be), and a member with no grade shown whom the caller's seat is not known
+ * to reach (`reached` not true), since Core gives a seat the grades only of
+ * the students it reaches, and a grade it was not given would read as none.
  */
-export function rowsFor(memberIds: readonly string[], live: ReadonlyMap<string, GradeSummary> | null): AdjustRow[] {
-  if (!live) return memberIds.map((memberId) => ({ memberId, kind: 'keep', points: '', reason: '', peer: null }))
-  return memberIds.map((id) => rowFrom(id, live.get(id)?.group?.adjustment))
+export function rowsFor(
+  memberIds: readonly string[],
+  live: ReadonlyMap<string, GradeSummary> | null,
+  reached: (id: string) => boolean | null,
+): AdjustRow[] {
+  const kept = (memberId: string): AdjustRow => ({
+    memberId,
+    kind: 'keep',
+    points: '',
+    reason: '',
+    peer: null,
+    unseen: true,
+  })
+  if (!live) return memberIds.map(kept)
+  return memberIds.map((id) => {
+    const g = live.get(id)
+    return !g && reached(id) !== true ? kept(id) : rowFrom(id, g?.group?.adjustment)
+  })
 }
 
 /** The members a group's submission is the work of, by id, in the order Core lists them. */
