@@ -5,11 +5,13 @@
 // (submission.submit), starting again (submission.create), and the posted
 // grade of each attempt (grade.list).
 //
-// Handing in names what is being handed in: the draft's text and its files,
-// and the version of the instructions the student read. Core refuses the
-// hand-in if the draft holds anything else by then — an edit from another tab,
-// say — or if other instructions have been published since, so nothing is
-// handed in that the student did not see.
+// Handing in names what is being handed in: the draft's text and its files
+// as the student saw them when they pressed Hand in (kept then, before
+// anything is read again), and the version of the instructions the student
+// read. Core refuses the hand-in if the draft holds anything else by then —
+// an edit from another tab, say, or a file a groupmate attached — or if other
+// instructions have been published since, so nothing is handed in that the
+// student did not see.
 //
 // A change or a hand-in that waits for approval is found again in the
 // student's own actions (action.list_mine), so that it is not asked for twice
@@ -24,7 +26,11 @@
 // open, so that what the others wrote shows, with who changed it last; a
 // change made while the student has unsaved text is a conflict they settle
 // (load the draft as it is now, or keep theirs and save it over it), and
-// nothing is handed in that they have not seen. A hand-in names whom it is
+// nothing is handed in that they have not seen: the draft read just before
+// it is handed in is compared with what they saw, its files as well as its
+// text, whose revision Core counts and a file's coming or going does not,
+// and the 20-second read waits while a hand-in is under way, its
+// confirmation open. A hand-in names whom it is
 // for, and says whom it left out (left_out); a student in no group of the
 // set is told so, and where they may sign up, in place of a draft to start.
 // Where the draft stops being theirs while it is open — another member hands
@@ -70,7 +76,10 @@ import {
   readDraft,
   refusedAsChanged,
   savedDraft,
+  seenDraft,
+  draftChange,
   type GroupSet,
+  type SeenDraft,
   type SharedDraft,
 } from './groupWork'
 import { allGrades, allSubmissions, myActionsSince } from './useAssignmentData'
@@ -321,6 +330,9 @@ function draftNotMine(id: string, groupName?: string | null) {
   void grades.reload()
 }
 
+/** A hand-in is under way, from the press of Hand in to Core's answer, its confirmation included. */
+const handingIn = ref(false)
+
 // A group's draft, read again now and then while it is open, so that what the
 // others wrote shows. Read beside the page's own reading, so that a read that
 // fails leaves the draft on the page as it was.
@@ -335,9 +347,15 @@ usePolling(
       if (draft.value?.id === d.id && notInDraftsGroup(e)) return draftNotMine(d.id)
       throw e
     }
-    if (draft.value?.id === d.id && !busy.value) draftFull.data.value = fresh
+    // Not while something is being written, nor while a hand-in is under
+    // way: what its confirmation hands in is what the student saw.
+    if (draft.value?.id === d.id && !busy.value && !handingIn.value) draftFull.data.value = fresh
   },
-  { intervalMs: 20_000, immediate: false, enabled: () => shared.value && !!draft.value && canWrite.value },
+  {
+    intervalMs: 20_000,
+    immediate: false,
+    enabled: () => shared.value && !!draft.value && canWrite.value && !handingIn.value,
+  },
 )
 
 /** Who changed the group's draft last, and when. */
@@ -618,11 +636,12 @@ function isStaleInstructions(e: ApiError | null): boolean {
 
 /**
  * A group's draft, read again just before it is handed in: what the person
- * hands in must be what they have seen, and for whom it is handed in is the
- * group's members now. Null where it cannot be read (Core checks anyway);
- * false where it has changed, which the page now shows.
+ * hands in must be what they have seen (seen: its text and its files when
+ * they pressed Hand in), and for whom it is handed in is the group's members
+ * now. Null where it cannot be read (Core checks anyway); false where it has
+ * changed, its text or its files, which the page now shows.
  */
-async function freshGroupDraft(id: string): Promise<Submission | null | false> {
+async function freshGroupDraft(id: string, seen: SeenDraft): Promise<Submission | null | false> {
   let fresh: Submission
   try {
     fresh = await read('submission.get', { course_id: props.courseId, submission_id: id })
@@ -631,16 +650,27 @@ async function freshGroupDraft(id: string): Promise<Submission | null | false> {
     draftNotMine(id)
     return false
   }
-  const changed = fresh.state !== 'draft' || fresh.revision !== baseRevision.value
+  const change = fresh.state === 'draft' ? draftChange(seen, fresh) : null
   draftFull.data.value = fresh
-  if (changed && fresh.state === 'draft') changedBeforeHandIn(fresh)
-  return changed ? false : fresh
+  if (fresh.state !== 'draft') return false
+  if (change) {
+    changedBeforeHandIn(fresh, change)
+    return false
+  }
+  return fresh
 }
-function changedBeforeHandIn(d: Pick<Submission, 'revised_by_member_id' | 'revised_at' | 'members'>) {
-  warning.value = t('groupWork.work.changedBeforeHandIn', {
-    name: nameIn(d.revised_by_member_id, d.members),
-    when: fromNow(d.revised_at),
-  })
+/** The draft changed before it was handed in: its text, by whom and when, or its files, which name nobody. */
+function changedBeforeHandIn(
+  d: Pick<Submission, 'revised_by_member_id' | 'revised_at' | 'members'>,
+  what: 'text' | 'files',
+) {
+  warning.value =
+    what === 'files'
+      ? t('groupWork.work.filesChangedBeforeHandIn')
+      : t('groupWork.work.changedBeforeHandIn', {
+          name: nameIn(d.revised_by_member_id, d.members),
+          when: fromNow(d.revised_at),
+        })
 }
 
 /** The words of the hand-in's confirmation, a paragraph each. */
@@ -661,6 +691,15 @@ function handInLines(members: Submission['members']): string[] {
 }
 
 async function handIn() {
+  if (handingIn.value) return
+  handingIn.value = true
+  try {
+    await handInNow()
+  } finally {
+    handingIn.value = false
+  }
+}
+async function handInNow() {
   const d = draft.value
   if (!d || !current.value || handInBlocked.value) return
   notice.value = null
@@ -668,19 +707,24 @@ async function handIn() {
   warning.value = null
   leftOutNote.value = null
   if (dirty.value && !(await save())) return
+  // What the student sees now is what is handed in: kept before anything is
+  // read again (the draft, below; a reading after the save; the 20-second
+  // read, which waits meanwhile).
+  const seen = seenDraft(serverBody.value, files.value, baseRevision.value)
+  const group = current.value?.group_name ?? myGroup.value?.name ?? ''
   if (!(await instructionsStillCurrent())) {
     instructionsChanged()
     return
   }
-  let members = current.value.members ?? []
+  let members = current.value?.members ?? []
   if (shared.value) {
-    const fresh = await freshGroupDraft(d.id)
+    const fresh = await freshGroupDraft(d.id, seen)
     if (fresh === false) return
     if (fresh) members = fresh.members ?? []
   }
   const lines = handInLines(members)
   const title = shared.value
-    ? t('groupWork.work.handInTitle', { n: d.attempt, group: current.value.group_name ?? myGroup.value?.name ?? '' })
+    ? t('groupWork.work.handInTitle', { n: d.attempt, group })
     : t('assignments.work.handInConfirmTitle', { n: d.attempt })
   try {
     // One paragraph a sentence: joined with spaces, Chinese would get a stray one after each 。.
@@ -699,15 +743,14 @@ async function handIn() {
   } catch {
     return
   }
-  const revisionBefore = baseRevision.value
   const out = await submitW.run(
     {
       course_id: props.courseId,
       submission_id: d.id,
-      // What is being handed in, as the person sees it: Core refuses if the
+      // What is being handed in, as the person saw it: Core refuses if the
       // draft holds anything else.
-      body: serverBody.value,
-      files: files.value.map((f) => f.document_id),
+      body: seen.body,
+      files: seen.files,
       instructions_version_id: props.instructionsVersionId ?? undefined,
       // And for whom: Core refuses if the group's members are others by then.
       members: shared.value ? members.map((m) => m.member_id) : undefined,
@@ -720,12 +763,13 @@ async function handIn() {
     if (shared.value && notInDraftsGroup(err)) return draftNotMine(d.id)
     await draftFull.reload()
     const now = draftFull.data.value
+    const change = shared.value && now?.state === 'draft' ? draftChange(seen, now) : null
     // Published between the check above and the hand-in.
     if (isStaleInstructions(err)) instructionsChanged()
     else if (shared.value && err?.details?.reason === 'members_changed')
       warning.value = errorMessage(err, { reasons: 'groupWork.refusal' })
-    // Someone in the group changed the draft in the meantime.
-    else if (shared.value && now?.state === 'draft' && now.revision !== revisionBefore) changedBeforeHandIn(now)
+    // Someone in the group changed the draft in the meantime, its text or its files.
+    else if (now && change) changedBeforeHandIn(now, change)
     else if (!(shared.value && now && now.state !== 'draft'))
       notifyError(err, undefined, { reasons: 'groupWork.refusal' })
     return

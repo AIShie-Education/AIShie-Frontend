@@ -6,13 +6,16 @@
 // they hand work in later, it takes that record's place. The page loads the
 // rows; this shows them, and marks. On a group assignment (groupMode) each
 // row says the student's group, a student in no group says so, and a group,
-// not a student, is recorded as missing (GroupRoster).
-import { computed, h, ref, useTemplateRef, watch } from 'vue'
+// not a student, is recorded as missing (GroupRoster). A row whose work is
+// another group's (the student moved since it was handed in) says whose:
+// the group whose latest work it is, or, where that group has an attempt
+// since or is not listed, the work's own group, read from the work.
+import { computed, h, reactive, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
-import type { ApiError } from '@/api/http'
+import { read, type ApiError } from '@/api/http'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
@@ -23,7 +26,7 @@ import MemberName from '@/components/MemberName.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import WorkStateTag from './WorkStateTag.vue'
-import { NO_GROUP, workGroupIfOther, type RosterGroup } from './rosterByGroup'
+import { NO_GROUP, workGroupFrom, workGroupIfOther, type RosterGroup, type WorkGroup } from './rosterByGroup'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
@@ -179,8 +182,54 @@ const nameOrder = (a: RosterEntry, b: RosterEntry) => nameOf(a).localeCompare(na
 /** A student's group now, by name, on a group assignment's roster; null for none. */
 const groupNames = computed(() => new Map((props.groups ?? []).map((g) => [g.group_id, g.name])))
 const groupOf = (row: RosterEntry) => (row.group_id ? (groupNames.value.get(row.group_id) ?? null) : null)
-/** The group whose work a row is about, where it is not the student's group now (they moved since). */
-const otherWork = (row: RosterEntry) => (props.groupMode ? workGroupIfOther(row, props.groups ?? []) : null)
+/**
+ * The groups of works whose group the roster does not say (workGroupIfOther's
+ * 'unknown'), read from each work once: by submission id, null while it is
+ * read, false where it could not be.
+ */
+const workOf = reactive(new Map<string, { group_id?: string | null; group_name?: string | null } | null | false>())
+const unknownWorks = computed(() => {
+  if (!props.groupMode || props.groups === null || props.groups === undefined) return []
+  const groups = props.groups
+  return [
+    ...new Set(
+      props.rows.filter((r) => workGroupIfOther(r, groups) === 'unknown').map((r) => r.submission_id as string),
+    ),
+  ]
+})
+watch(
+  unknownWorks,
+  (ids) => {
+    for (const id of ids) {
+      if (workOf.has(id)) continue
+      workOf.set(id, null)
+      read('submission.get', { course_id: props.courseId, submission_id: id }).then(
+        (s) => workOf.set(id, { group_id: s.group_id, group_name: s.group_name }),
+        () => workOf.set(id, false),
+      )
+    }
+  },
+  { immediate: true },
+)
+/**
+ * The group whose work a row is about, where it is not the student's group
+ * now (they moved since): named where the roster or the work says which,
+ * nameless (another group's) where the work could not be read.
+ */
+function otherWork(row: RosterEntry): WorkGroup | null {
+  if (!props.groupMode || props.groups === null || props.groups === undefined) return null
+  const g = workGroupIfOther(row, props.groups)
+  if (g !== 'unknown') return g
+  const work = workOf.get(row.submission_id as string)
+  if (work === false) return { group_id: '', name: '' }
+  return work ? workGroupFrom(row, work) : null
+}
+/** What a row says of whose its work is: "Alpha’s work", or "Another group’s work". */
+function otherWorkText(row: RosterEntry): string | null {
+  const g = otherWork(row)
+  if (!g) return null
+  return g.name ? t('groupWork.roster.workOf', { group: g.name }) : t('groupWork.roster.workOfAnother')
+}
 const groupOrder = (a: RosterEntry, b: RosterEntry) =>
   (groupOf(a) ?? '').localeCompare(groupOf(b) ?? '', undefined, { numeric: true })
 
@@ -237,7 +286,7 @@ const emptyText = computed(() =>
             </div>
             <div class="roster-cards__meta">
               <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
-              <span v-if="otherWork(row)">{{ t('groupWork.roster.workOf', { group: otherWork(row)!.name }) }}</span>
+              <span v-if="otherWorkText(row)">{{ otherWorkText(row) }}</span>
               <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
               <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
               <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
@@ -304,8 +353,8 @@ const emptyText = computed(() =>
           <template #default="{ row }">
             <span v-if="groupOf(row)" class="roster-table__name">{{ groupOf(row) }}</span>
             <span v-else class="app-muted">{{ t('groupWork.roster.noGroupCell') }}</span>
-            <div v-if="otherWork(row)" class="roster-table__work-of">
-              {{ t('groupWork.roster.workOf', { group: otherWork(row)!.name }) }}
+            <div v-if="otherWorkText(row)" class="roster-table__work-of">
+              {{ otherWorkText(row) }}
             </div>
           </template>
         </el-table-column>

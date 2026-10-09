@@ -84,6 +84,7 @@ export default {
     keptDiscardTitle: '要捨棄你未儲存的內容嗎？',
     keptDiscardBody: '這些內容沒有保存在其他地方，捨棄後無法復原。',
     changedBeforeHandIn: '繳交前草稿已有變動：{name}於{when}修改了它。請重新閱讀後再繳交。',
+    filesChangedBeforeHandIn: '繳交前草稿的檔案已有變動：有組員附加或移除了檔案。請先檢查檔案，再繳交。',
     handInTitle: '要為{group}繳交第{n}次提交嗎？',
     handInFor: '這份作業會為{names}繳交：繳交後就是他們的作業，之後小組有任何變動也不會改變。',
     handInLeftOutMe: '你不會包括在內：你已是{group}這份作業的成員。',
@@ -110,6 +111,7 @@ export default {
     handedInFor: '為{names}繳交',
     missingFor: '為{names}記錄為缺交',
     workOf: '{group}的作業',
+    workOfAnother: '另一個小組的作業',
     nobody: '沒有組員',
     handedInBy: '由{name}繳交',
     empty: '這個分組還沒有小組。',
@@ -126,6 +128,11 @@ export default {
     confirmTitle: '要把{group}記錄為缺交嗎？',
     confirmBody:
       '{group}會被記錄為沒有繳交「{assignment}」，記錄屬於現在的組員：{names}。之後便可以評分。如小組之後繳交作業，作業會取代這筆紀錄。',
+    confirmBodyFor:
+      '{group}會被記錄為沒有繳交「{assignment}」，記錄屬於{names}。之後便可以評分。如小組之後繳交作業，作業會取代這筆紀錄。',
+    confirmLeftOut: '{names}不包括在內：他們已是另一個小組這份作業的成員。',
+    otherWorkSome: '{names}已是另一個小組這份作業的成員，因此把小組記錄為缺交時不包括他們',
+    otherWorkAll: '{names}已是另一個小組這份作業的成員，因此此小組沒有組員可記錄為缺交',
     done: '已把{group}記錄為缺交。',
     noGroupCell: '無',
   },

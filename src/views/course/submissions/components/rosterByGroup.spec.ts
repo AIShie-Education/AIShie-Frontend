@@ -4,10 +4,13 @@ import {
   groupProposalKey,
   groupRosterView,
   groupsFor,
+  inOtherWork,
   mayMarkGroupMissing,
+  missingFor,
   NO_GROUP,
   reachesWholeGroup,
   unreachedMembers,
+  workGroupFrom,
   workGroupIfOther,
   workMembersIfOthers,
 } from './rosterByGroup'
@@ -149,8 +152,64 @@ describe('whose a group’s work is, once someone has moved', () => {
   })
 
   it('names, on a student’s row, the group whose work it is where it is not theirs now', () => {
-    expect(workGroupIfOther(movedRows[1]!, moved)?.name).toBe('Alpha')
+    expect(workGroupIfOther(movedRows[1]!, moved)).toMatchObject({ name: 'Alpha' })
     expect(workGroupIfOther(movedRows[0]!, moved)).toBeNull()
     expect(workGroupIfOther({ group_id: 'g-beta' }, moved)).toBeNull()
+  })
+
+  it('does not take a row for its group’s now, once the group whose work it is has started again', () => {
+    // Alpha starts its attempt 2: its latest is a draft, and Ken's row still names attempt 1.
+    const again = moved.map((g) => (g.group_id === 'g-alpha' ? { ...g, state: 'draft', submission_id: 's-a2' } : g))
+    expect(workGroupIfOther(movedRows[1]!, again)).toBe('unknown')
+    // Read from the work itself: Alpha's, not Beta, where Ken is now.
+    expect(workGroupFrom(movedRows[1]!, { group_id: 'g-alpha', group_name: 'Alpha' })).toEqual({
+      group_id: 'g-alpha',
+      name: 'Alpha',
+    })
+    // An attempt of their own group's, before they moved out and back: theirs.
+    expect(workGroupFrom(movedRows[1]!, { group_id: 'g-beta', group_name: 'Beta' })).toBeNull()
+    // Yuki's row names Alpha's latest: hers, and nothing to read.
+    expect(workGroupIfOther({ ...movedRows[0]!, submission_id: 's-a2' }, again)).toBeNull()
+  })
+})
+
+describe('recording a group missing, once someone has moved', () => {
+  // Alpha (Yuki and Ken) handed in; Ken moved to Quince (Eve), then Rowan has Ken alone.
+  const quince = {
+    group_id: 'g-quince',
+    name: 'Quince',
+    members: [
+      { member_id: 'm-eve', display_name: 'Eve' },
+      { member_id: 'm-ken', display_name: 'Ken' },
+    ],
+    state: 'not_started',
+  }
+  const rowan = { group_id: 'g-rowan', name: 'Rowan', members: [{ member_id: 'm-ken' }], state: 'not_started' }
+  const moved: RosterEntry[] = [
+    { student_member_id: 'm-yuki', group_id: 'g-alpha', state: 'submitted', submission_id: 's-a' },
+    { student_member_id: 'm-ken', group_id: 'g-quince', state: 'submitted', submission_id: 's-a' },
+    { student_member_id: 'm-eve', group_id: 'g-quince', state: 'not_started' },
+  ]
+
+  it('is for its members now less those another group’s work names, as Core records it', () => {
+    expect(inOtherWork(quince, moved)).toEqual([{ member_id: 'm-ken', display_name: 'Ken' }])
+    expect(missingFor(quince, moved)).toEqual([{ member_id: 'm-eve', display_name: 'Eve' }])
+    expect(mayMarkGroupMissing(quince, { ...ctx, rows: moved })).toBe(true)
+  })
+
+  it('is not offered on a group whose members are all part of other work: Core finds nobody to record it for', () => {
+    expect(missingFor(rowan, moved)).toEqual([])
+    expect(mayMarkGroupMissing(rowan, { ...ctx, rows: moved })).toBe(false)
+    // Without the rows it cannot tell.
+    expect(mayMarkGroupMissing(rowan, ctx)).toBe(true)
+  })
+
+  it('leaves in a member whose row is not read yet, or whose group’s own draft it is', () => {
+    expect(missingFor(quince, moved.slice(2))).toHaveLength(2)
+    expect(inOtherWork({ ...quince, state: 'draft' }, moved)).toEqual([])
+    const drafting: RosterEntry[] = [
+      { student_member_id: 'm-ken', group_id: 'g-quince', state: 'draft', submission_id: 's-q' },
+    ]
+    expect(inOtherWork(quince, drafting)).toEqual([])
   })
 })

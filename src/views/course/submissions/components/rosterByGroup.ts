@@ -6,11 +6,13 @@
 // no_group for a student in no group of the set, who hands nothing in and is
 // not recorded as missing. A group that has not started, with someone in
 // it, can be recorded as having handed in nothing (submission.record_missing
-// with group_id), for its members now, by someone whose seat reaches every
-// one of them: a seat listed to some students is shown only those of each
-// group's members, and the group's size, from its set, says whether that is
-// all of them.
-import type { RosterGroup } from '@/views/course/assignments/components/groupWork'
+// with group_id), for its members now less those another group's work names
+// already (as Core records it), by someone whose seat reaches every one of
+// them: a seat listed to some students is shown only those of each group's
+// members, and the group's size, from its set, says whether that is all of
+// them. A group whose members are all part of other work has nobody to
+// record it for.
+import type { RosterGroup, WorkMember } from '@/views/course/assignments/components/groupWork'
 import { countByState, type MarkContext, type RosterEntry, type StateCount } from './roster'
 
 export type { RosterGroup }
@@ -79,19 +81,52 @@ export function reachesWholeGroup(g: Pick<RosterGroup, 'group_id' | 'members'>, 
   return size !== undefined && size === (g.members ?? []).length
 }
 
+/** The states of work handed in, or recorded missing: work that names whose it is. */
+const NAMING = new Set(['submitted', 'late', 'missing'])
+
+/**
+ * Of a group with no work, its members (as the roster names them) whom
+ * another group's work for the assignment names already, handed in or
+ * recorded missing: their rows name that work, the group having none of its
+ * own. Recording the group missing leaves them out, as Core does (a student
+ * is part of one group's work for an assignment). None where the group has
+ * work, or a member's row is not read yet.
+ */
+export function inOtherWork(
+  g: Pick<RosterGroup, 'state' | 'members'>,
+  rows: readonly Pick<RosterEntry, 'student_member_id' | 'submission_id' | 'state'>[],
+): WorkMember[] {
+  if (g.state !== 'not_started') return []
+  const named = new Set(rows.filter((r) => !!r.submission_id && NAMING.has(r.state)).map((r) => r.student_member_id))
+  return (g.members ?? []).filter((m) => named.has(m.member_id))
+}
+
+/** Whom recording a group missing is for: its members now, less those another group's work names (inOtherWork). */
+export function missingFor(
+  g: Pick<RosterGroup, 'state' | 'members'>,
+  rows: readonly Pick<RosterEntry, 'student_member_id' | 'submission_id' | 'state'>[],
+): WorkMember[] {
+  const out = new Set(inOtherWork(g, rows).map((m) => m.member_id))
+  return (g.members ?? []).filter((m) => !out.has(m.member_id))
+}
+
 /**
  * Whether to offer recording a group as missing: one with no work at all
- * (not even a draft) and someone in it, every one of whom the caller's seat
- * reaches, for a published assignment, by someone who may enter grades, in a
- * course that can still change.
+ * (not even a draft) and someone in it it would be recorded for (with the
+ * roster's rows, someone another group's work does not name already), every
+ * one of whom the caller's seat reaches, for a published assignment, by
+ * someone who may enter grades, in a course that can still change.
  */
 export function mayMarkGroupMissing(
   g: Pick<RosterGroup, 'group_id' | 'state' | 'members'>,
-  ctx: MarkContext & { reach?: GroupReach },
+  ctx: MarkContext & {
+    reach?: GroupReach
+    rows?: readonly Pick<RosterEntry, 'student_member_id' | 'submission_id' | 'state'>[]
+  },
 ): boolean {
   return (
     g.state === 'not_started' &&
-    (g.members ?? []).length > 0 &&
+    (ctx.rows ? missingFor(g, ctx.rows) : (g.members ?? [])).length > 0 &&
     reachesWholeGroup(g, ctx.reach ?? null) &&
     ctx.canGrade &&
     ctx.writable &&
@@ -129,12 +164,37 @@ export function workMembersIfOthers(
   return same ? null : of.map((r) => ({ member_id: r.student_member_id, display_name: r.display_name }))
 }
 
-/** The group whose work a student's row is about, where it is not the group they are in now. */
+/** A group a student's row may name as the one whose work it is. */
+export type WorkGroup = Pick<RosterGroup, 'group_id' | 'name'>
+
+/**
+ * The group whose work a student's row is about, where it is not the group
+ * they are in now: the listed group whose latest work it is. 'unknown' where
+ * no listed group's latest is that work, and their own group's is not
+ * either: the work's group has another attempt since (or is not listed to
+ * the reader), or it is an earlier attempt of their own group's (moved out
+ * and back), which only the work itself says (submission.get). Null where
+ * it is their own group's latest, or they have none.
+ */
 export function workGroupIfOther(
   row: Pick<RosterEntry, 'submission_id' | 'group_id'>,
   groups: readonly Pick<RosterGroup, 'group_id' | 'submission_id' | 'name'>[],
-): Pick<RosterGroup, 'group_id' | 'submission_id' | 'name'> | null {
+): WorkGroup | 'unknown' | null {
   if (!row.submission_id) return null
   const g = groups.find((x) => x.submission_id === row.submission_id)
-  return g && g.group_id !== row.group_id ? g : null
+  if (g) return g.group_id !== row.group_id ? g : null
+  return 'unknown'
+}
+
+/**
+ * The group a work whose group the roster does not say (workGroupIfOther's
+ * 'unknown') is of, from the work itself, where it is not the row's group
+ * now; null where it is.
+ */
+export function workGroupFrom(
+  row: Pick<RosterEntry, 'group_id'>,
+  work: { group_id?: string | null; group_name?: string | null },
+): WorkGroup | null {
+  if (!work.group_id || work.group_id === row.group_id) return null
+  return { group_id: work.group_id, name: work.group_name ?? '' }
 }
