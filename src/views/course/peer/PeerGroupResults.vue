@@ -28,7 +28,7 @@ import {
   type PeerGroupResult,
   type PeerMemberResult,
 } from './peer'
-import { flagsOf, membersOf, missingIn, peerRaters, ratedSelf } from './peerResults'
+import { aloneInCircle, flagsOf, membersOf, missingIn, peerRaters, ratedSelf } from './peerResults'
 
 const props = withDefaults(
   defineProps<{
@@ -54,8 +54,11 @@ const counts = computed(() => formCounts(props.form))
 /** A weight above 0: the score Core works out moves from the group's (counted, or if it were). */
 const weighted = computed(() => Number(props.form.weight) > 0)
 const weightPct = computed(() => (ui.locale, formatPct(props.form.weight / 100, 0)))
-const missing = computed(() => (ui.locale, formatList(missingIn(props.group).map((m) => m.display_name))))
+const missingMembers = computed(() => missingIn(props.group, props.form))
+const missing = computed(() => (ui.locale, formatList(missingMembers.value.map((m) => m.display_name))))
 const pair = computed(() => (props.group.flags ?? []).includes('pair_without_self_evaluation'))
+/** Alone in the circle, self-evaluation off: nobody to evaluate, and nothing of theirs missing. */
+const alone = computed(() => aloneInCircle(props.group, props.form))
 
 /** A factor as a share of an even one: 1.2 → "120%". */
 function pct(v: number | string | null | undefined): string {
@@ -131,7 +134,10 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
     </div>
 
     <AppNote v-if="pair" plain class="peer-group__note">{{ t('peer.fair.pair') }}</AppNote>
-    <p v-if="missingIn(group).length" class="peer-group__missing">
+    <AppNote v-if="alone" plain class="peer-group__note peer-group__alone">
+      {{ t('peer.results.aloneNote', { name: members[0]?.display_name ?? '' }) }}
+    </AppNote>
+    <p v-if="missingMembers.length" class="peer-group__missing">
       {{ t('peer.results.missingLine', { names: missing }) }}
     </p>
 
@@ -139,7 +145,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
       <li v-for="m in members" :key="m.member_id" class="peer-member" :data-test="`peer-member-${m.member_id}`">
         <div class="peer-member__head">
           <strong class="peer-member__name">{{ m.display_name }}</strong>
-          <AppTag v-for="f in flagsOf(m)" :key="f" :tone="flagTone(f)">{{ t(`peer.flag.${f}`) }}</AppTag>
+          <AppTag v-for="f in flagsOf(m, alone)" :key="f" :tone="flagTone(f)">{{ t(`peer.flag.${f}`) }}</AppTag>
         </div>
         <dl class="peer-member__facts">
           <div class="peer-member__fact">
@@ -148,6 +154,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
               <i18n-t v-if="m.submitted && m.submitted_at" keypath="peer.results.wroteAt" tag="span" scope="global">
                 <template #at><TimeText :value="m.submitted_at" /></template>
               </i18n-t>
+              <span v-else-if="alone" class="app-muted">{{ t('peer.results.alone') }}</span>
               <span v-else class="peer-member__none">{{ t('peer.results.notWritten') }}</span>
             </dd>
           </div>

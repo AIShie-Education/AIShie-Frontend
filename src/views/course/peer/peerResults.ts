@@ -1,7 +1,9 @@
 // Peer evaluation's results as those who grade read them
 // (peer_review.results): who has not written an evaluation, what Core flags,
 // what counting it in grades would write (grade.apply_peer), and the
-// results as CSV.
+// results as CSV. A member alone in their group's circle, with
+// self-evaluation off, has nobody to evaluate: no evaluation of theirs is
+// missing, though Core flags it so (aloneInCircle).
 import type { Decimal } from '@/api/types'
 import { csvText } from '@/views/course/grades/components/classMatrix'
 import {
@@ -16,22 +18,36 @@ import {
   type PeerResults,
 } from './peer'
 
-export function membersOf(g: PeerGroupResult): PeerMemberResult[] {
+export function membersOf(g: Pick<PeerGroupResult, 'members'>): PeerMemberResult[] {
   return g.members ?? []
 }
 
-export function flagsOf(m: Pick<PeerMemberResult, 'flags'>): string[] {
-  return m.flags ?? []
+/**
+ * Whether a group's circle is one member, with self-evaluation off: they
+ * have nobody to evaluate (their task names nobody, and Core takes no sheet
+ * of nobody), so no evaluation of theirs is missing, whatever Core's flag
+ * says, and their factor is an even share: their score is the group's.
+ */
+export function aloneInCircle(g: Pick<PeerGroupResult, 'members'>, form: Pick<FormLike, 'self_evaluation'>): boolean {
+  return !form.self_evaluation && membersOf(g).length === 1
 }
 
-/** The members of a group's circle who have written no evaluation. */
-export function missingIn(g: PeerGroupResult): PeerMemberResult[] {
+/** A member's flags, Core's, less "missing" for one who has nobody to evaluate (alone). */
+export function flagsOf(m: Pick<PeerMemberResult, 'flags'>, alone = false): string[] {
+  const flags = m.flags ?? []
+  return alone ? flags.filter((f) => f !== 'missing') : flags
+}
+
+/** The members of a group's circle who have written no evaluation, and had someone to evaluate. */
+export function missingIn(g: PeerGroupResult, form: Pick<FormLike, 'self_evaluation'>): PeerMemberResult[] {
+  if (aloneInCircle(g, form)) return []
   return membersOf(g).filter((m) => !m.submitted)
 }
 
 /** Whether a group has anything Core flags: a member's or a rater's flag, or the group's own. */
-export function flaggedGroup(g: PeerGroupResult): boolean {
-  return (g.flags ?? []).length > 0 || membersOf(g).some((m) => flagsOf(m).length > 0)
+export function flaggedGroup(g: PeerGroupResult, form: Pick<FormLike, 'self_evaluation'>): boolean {
+  const alone = aloneInCircle(g, form)
+  return (g.flags ?? []).length > 0 || membersOf(g).some((m) => flagsOf(m, alone).length > 0)
 }
 
 /** How many raters rated a member, themselves left out. */
@@ -133,6 +149,8 @@ export interface PeerCsvWords {
   flags: string
   yes: string
   no: string
+  /** Whether they wrote one, for a member with nobody to evaluate (aloneInCircle). */
+  alone: string
   flag: (flag: string) => string
   /** Words in a list, as the language writes one (formatList). */
   list: (items: string[]) => string
@@ -181,11 +199,12 @@ export function peerCsv(r: Pick<PeerResults, 'form' | 'groups'>, w: PeerCsvWords
   head.push(w.groupScore, w.grade, w.flags)
   const lines = [head.map(csvText).join(',')]
   for (const g of r.groups ?? []) {
+    const alone = aloneInCircle(g, form)
     for (const m of membersOf(g)) {
       const cells = [
         csvText(g.name),
         csvText(m.display_name),
-        csvText(m.submitted ? w.yes : w.no),
+        csvText(m.submitted ? w.yes : alone ? w.alone : w.no),
         m.submitted_at ?? '',
         String(peerRaters(m)),
       ]
@@ -198,7 +217,7 @@ export function peerCsv(r: Pick<PeerResults, 'form' | 'groups'>, w: PeerCsvWords
       cells.push(
         plain(g.group_score),
         grade ? csvText(w.gradeNow(plain(grade.score), grade.state, isOwnAdjustment(grade.adjustment_kind))) : '',
-        csvText(w.list(flagsOf(m).map(w.flag))),
+        csvText(w.list(flagsOf(m, alone).map(w.flag))),
       )
       lines.push(cells.join(','))
     }

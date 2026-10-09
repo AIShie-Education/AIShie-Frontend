@@ -52,21 +52,22 @@ const groups = computed(() => data.value?.groups ?? [])
 
 type Show = 'flagged' | 'missing'
 const show = ref<Show | ''>('')
+const form = computed(() => data.value?.form ?? { self_evaluation: false })
+const flagged = (g: (typeof groups.value)[number]) => flaggedGroup(g, form.value)
+const missing = (g: (typeof groups.value)[number]) => missingIn(g, form.value).length > 0
 const shown = computed(() =>
-  groups.value.filter((g) =>
-    show.value === 'flagged' ? flaggedGroup(g) : show.value === 'missing' ? missingIn(g).length > 0 : true,
-  ),
+  groups.value.filter((g) => (show.value === 'flagged' ? flagged(g) : show.value === 'missing' ? missing(g) : true)),
 )
 const chips = computed(() => [
   {
     value: 'flagged' as const,
     label: t('peer.results.filter.flagged'),
-    count: groups.value.filter(flaggedGroup).length,
+    count: groups.value.filter(flagged).length,
   },
   {
     value: 'missing' as const,
     label: t('peer.results.filter.missing'),
-    count: groups.value.filter((g) => missingIn(g).length > 0).length,
+    count: groups.value.filter(missing).length,
   },
 ])
 
@@ -107,6 +108,7 @@ function exportCsv() {
     flags: t('peer.csv.flags'),
     yes: t('common.labels.yes'),
     no: t('common.labels.no'),
+    alone: t('peer.csv.alone'),
     flag: (f) => t(`peer.flag.${f}`),
     list: (items) => (ui.locale, formatList(items)),
     gradeNow: (score, state, own) =>

@@ -143,6 +143,8 @@ export default {
       'Only your teachers read your evaluation, with your name. No other student sees it, or what anyone wrote about them.',
     counts: 'It counts towards each member’s grade, at {weight}.',
     reference: 'Your teachers use it for reference.',
+    // A student alone in their group, with self-evaluation off: their task names nobody.
+    nobody: 'You are the only member of {group}, so there is nobody for you to evaluate and nothing to fill in.',
     agent: 'A peer evaluation is your own judgment of your classmates: only you write it, never an agent.',
     proposed: 'Your evaluation waits for approval before it counts as sent.',
     average: 'What your peers gave you',
@@ -230,6 +232,10 @@ export default {
     wrote: 'Their evaluation',
     wroteAt: 'Written {at}',
     notWritten: 'Not written',
+    // In place of notWritten, for a member alone in their group with self-evaluation off.
+    alone: 'Nobody to evaluate',
+    aloneNote:
+      '{name} is alone in the group, and members do not evaluate themselves: there is nobody for them to evaluate, so no evaluation of theirs is missing, and their score is the group’s.',
     received: 'Received',
     nobodyRated: 'Nobody has rated them',
     noPeerRated: 'No peer has rated them',
@@ -364,5 +370,7 @@ export default {
     grade_posted: '{score}',
     gradeOwn: '{score} (your adjustment)',
     flags: 'Flags',
+    // Whether they wrote an evaluation, for a member alone in their group with self-evaluation off.
+    alone: 'Nobody to evaluate',
   },
 }

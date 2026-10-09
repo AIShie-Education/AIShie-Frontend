@@ -6,7 +6,10 @@
 // open, as often as they like, the last one counting. A share form splits
 // 100 points, which must add up; a rating form rates every member on every
 // criterion. Once it closes, they read what they sent, and, where the form
-// shares it, their own average from two peers or more.
+// shares it, their own average from two peers or more. A student alone in
+// their group, self-evaluation off, has nobody to evaluate (to_evaluate is
+// empty, and Core takes no sheet of nobody): they are told so, and shown no
+// form to fill in.
 //
 // Nothing of anyone else's evaluation, what was said of them, or who rated
 // them is ever read here: Core gives a student none of it. A peer
@@ -54,6 +57,8 @@ const me = computed(() => course.myMemberId)
 const shown = computed(() => !!form.value && !!task.value)
 
 const win = computed(() => windowState(task.value?.window.state))
+/** Nobody to evaluate: alone in the group's circle, with self-evaluation off. */
+const nobody = computed(() => !!task.value && !(task.value.to_evaluate ?? []).length)
 const rating = computed(() => !!form.value && isRating(form.value))
 const criteria = computed(() => criteriaOf(form.value))
 const names = computed(() => new Map((task.value?.circle ?? []).map((c) => [c.member_id, c.display_name])))
@@ -212,6 +217,9 @@ defineExpose({ reload: () => state.reload() })
     <el-alert v-if="form.enabled === false" type="warning" :closable="false" show-icon class="peer-task__alert">
       {{ t('peer.task.off') }}
     </el-alert>
+    <AppNote v-else-if="nobody" class="peer-task__alert" data-test="peer-nobody">
+      {{ t('peer.task.nobody', { group: task.group_name }) }}
+    </AppNote>
     <AppNote v-else class="peer-task__alert">
       <p class="peer-task__para">
         {{
@@ -239,7 +247,7 @@ defineExpose({ reload: () => state.reload() })
     </AppNote>
 
     <!-- Their own average, once it has closed, where the form shares it. -->
-    <div v-if="win === 'closed' && average" class="peer-task__average" data-test="peer-own-average">
+    <div v-if="!nobody && win === 'closed' && average" class="peer-task__average" data-test="peer-own-average">
       <h3 class="peer-task__subtitle">{{ t('peer.task.average') }}</h3>
       <p v-if="!rating && sharePct" class="peer-task__para">
         {{ t('peer.task.averageShare', { pct: sharePct, even: formatPct(1, 0) }) }}
@@ -256,17 +264,19 @@ defineExpose({ reload: () => state.reload() })
         </dl>
       </template>
     </div>
-    <p v-else-if="averageWithheld" class="app-form-hint peer-task__para">{{ t('peer.task.averageWithheld') }}</p>
+    <p v-else-if="!nobody && averageWithheld" class="app-form-hint peer-task__para">
+      {{ t('peer.task.averageWithheld') }}
+    </p>
 
-    <!-- The evaluation. -->
-    <div v-if="win !== 'not_open' || sheet" class="peer-task__status">
+    <!-- The evaluation: none for someone with nobody to evaluate. -->
+    <div v-if="!nobody && (win !== 'not_open' || sheet)" class="peer-task__status">
       <i18n-t v-if="sheet" keypath="peer.task.submittedAt" tag="span" scope="global">
         <template #at><TimeText :value="sheet.submitted_at" /></template>
       </i18n-t>
       <span v-else>{{ win === 'closed' ? t('peer.task.noneWritten') : t('peer.task.notSubmitted') }}</span>
     </div>
 
-    <form v-if="win === 'open' || sheet" class="peer-task__sheet" @submit.prevent="submit">
+    <form v-if="!nobody && (win === 'open' || sheet)" class="peer-task__sheet" @submit.prevent="submit">
       <!-- A share form: 100 points split among those evaluated. -->
       <template v-if="!rating">
         <ul class="peer-task__shares">

@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   applyPreview,
   averageShare,
+  aloneInCircle,
   flaggedGroup,
+  flagsOf,
   missingIn,
   peerCsv,
   peerRaters,
@@ -128,9 +130,9 @@ describe('what counting peer evaluation would write', () => {
 describe('reading the results', () => {
   it('finds who has written nothing, and the groups with flags', () => {
     const r = results()
-    expect(missingIn(r.groups![0]).map((m) => m.member_id)).toEqual(['m-mei'])
-    expect(flaggedGroup(r.groups![0])).toBe(true)
-    expect(flaggedGroup(r.groups![1])).toBe(true)
+    expect(missingIn(r.groups![0], r.form).map((m) => m.member_id)).toEqual(['m-mei'])
+    expect(flaggedGroup(r.groups![0], r.form)).toBe(true)
+    expect(flaggedGroup(r.groups![1], r.form)).toBe(true)
     expect(peerRaters({ member_id: 'm-a', rated_by: ['m-a', 'm-b', 'm-c'] })).toBe(2)
     expect(
       averageShare({
@@ -141,6 +143,30 @@ describe('reading the results', () => {
       }),
     ).toBe(47.5)
     expect(averageShare({ shares: null })).toBeNull()
+  })
+
+  // Core gives a member alone in their group a task naming nobody, takes no sheet of nobody, and flags them missing.
+  const alone = {
+    group_id: 'g3',
+    name: 'Gamma',
+    window: { state: 'closed', opens: 'at', closes_at: '2026-10-05T12:00:00Z' },
+    points_possible: 100,
+    flags: [],
+    members: [{ member_id: 'm-lin', display_name: 'Lin', submitted: false, factor: 1, flags: ['missing'] }],
+    sheets: [],
+  } as unknown as NonNullable<PeerResults['groups']>[number]
+
+  it('counts nobody alone in their group, self-evaluation off, as missing an evaluation, nor flags them', () => {
+    const r = results()
+    expect(aloneInCircle(alone, r.form)).toBe(true)
+    expect(missingIn(alone, r.form)).toEqual([])
+    expect(flaggedGroup(alone, r.form)).toBe(false)
+    expect(flagsOf(alone.members![0]!, true)).toEqual([])
+    expect(flagsOf(alone.members![0]!)).toEqual(['missing'])
+    // A group of two is not alone, and one with self-evaluation on evaluates themselves.
+    expect(aloneInCircle(r.groups![1]!, r.form)).toBe(false)
+    expect(aloneInCircle(alone, { self_evaluation: true })).toBe(false)
+    expect(missingIn(alone, { self_evaluation: true }).map((m) => m.member_id)).toEqual(['m-lin'])
   })
 })
 
@@ -163,6 +189,7 @@ describe('the results as CSV', () => {
     flags: 'Flags',
     yes: 'Yes',
     no: 'No',
+    alone: 'Nobody to evaluate',
     flag: (f) => f.toUpperCase(),
     list: (items) => items.join(' and '),
     gradeNow: (score, state, own) => (own ? `${score} own` : state === 'draft' ? `${score} draft` : score),
@@ -199,6 +226,20 @@ describe('the results as CSV', () => {
     const lines = peerCsv(results({ weight: 0 }), words).slice(1).split('\r\n')
     expect(lines[0]).toBe('Group,Member,Wrote,Written at,Raters,Average share,Factor,Group score,Grade,Flags')
     expect(lines[1]).toBe('Alpha,Ken Wong,Yes,2026-10-05T11:00:00Z,2,45,0.9,80,80 draft,UNIFORM')
+  })
+
+  it('says a member alone in their group had nobody to evaluate, never that they wrote nothing', () => {
+    const r = results()
+    r.groups = [
+      {
+        ...r.groups![1]!,
+        name: 'Gamma',
+        flags: [],
+        members: [{ member_id: 'm-lin', display_name: 'Lin', submitted: false, rated_by: [], factor: 1, flags: ['missing'] }],
+      },
+    ]
+    const lines = peerCsv(r, words).slice(1).split('\r\n')
+    expect(lines[1]).toBe('Gamma,Lin,Nobody to evaluate,,0,,1,,,,')
   })
 })
 
