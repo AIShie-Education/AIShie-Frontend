@@ -26,6 +26,9 @@ export default {
     groups: '{n} group | {n} groups',
     unassigned: '{n} student in no group | {n} students in no group',
     allPlaced: 'Everyone is in a group',
+    // To a seat listed to some students: they are shown, and counted, only those it reaches.
+    unassignedReached: '{n} student you reach in no group | {n} students you reach in no group',
+    allPlacedReached: 'Every student you reach is in a group',
     usedBy: 'Used by',
     unpublished: 'not published',
     notUsed: 'No assignment uses it yet.',
@@ -184,6 +187,13 @@ export default {
     seed: 'Seed',
     reseed: 'Another seed',
     seedHint: 'The same seed deals the same students into the same groups: what is shown below is what is dealt.',
+    // Where the deal is not shown (split.unseen): the seed still deals the same way.
+    seedHintUnseen: 'The same seed deals the same students into the same groups.',
+    // To a seat not shown every group’s work for the set’s assignments, or who is in each group: what the server
+    // deals is worked out over all of it, so a deal worked out here would be another.
+    unseen:
+      'What it deals cannot be shown before it is made: it is dealt over every student and every group’s work for this set’s assignments, and you are not shown all of them. A group with work for an assignment of the set keeps its members and takes nobody, whether you are shown that work or not.',
+    unseenAfter: 'Once it is made, this page says whom it placed, the groups it made and those it left alone.',
     preview: 'What it will do',
     nBad: 'Give a number from 1 to 500.',
     seedBad: 'A seed is 1 to 64 characters: letters, figures, spaces and punctuation of the keyboard’s.',
@@ -232,8 +242,13 @@ export default {
     chooseNone: 'Choose everyone in no group',
     none: 'In no group: {n} | In no group: {n}',
     allPlaced: 'Everyone is in a group.',
+    // To a seat listed to some students: they are shown, and counted, only those it reaches.
+    noneReached: 'Students you reach in no group: {n} | Students you reach in no group: {n}',
+    allPlacedReached: 'Every student you reach is in a group.',
     noGroups: 'This set has no groups yet.',
     noGroupsForm: 'This set has no groups yet: add some, or split the class at random.',
+    // To one who forms groups and is not offered a split (a seat listed to some students).
+    noGroupsAdd: 'This set has no groups yet: add some.',
     // To staff whose seat does not read the member list: the server names no group's members to them.
     namesHidden: 'Who is in each group is shown to those who may read the member list.',
     dragHint: 'You can also drag a student onto a group.',

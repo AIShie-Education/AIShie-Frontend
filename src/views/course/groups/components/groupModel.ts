@@ -67,6 +67,30 @@ export function reachesEveryStudent(seat: ReaderScope | null | undefined): boole
   return seat?.student_scope === 'all' && !seat.delegate
 }
 
+/**
+ * Whether the reader's seat is listed to some students: it is shown only
+ * those, counted and named, and a split, which deals every student of the
+ * course, is refused it (student_out_of_scope).
+ */
+export function listedToSome(seat: ReaderScope | null | undefined): boolean {
+  return seat?.student_scope === 'listed'
+}
+
+/**
+ * Whether a split's deal can be worked out here as the server will deal it:
+ * the reader is shown who is in each group and in none (the member list),
+ * every group's work for every assignment of the set (a seat reaching every
+ * student and every assignment), as the server reads them all to deal. A
+ * group with work the reader is not shown is left alone by the server and
+ * dealt into here; a student not shown is dealt there and not here.
+ */
+export function previewsSplit(
+  seat: (ReaderScope & { assignment_scope?: string | null }) | null | undefined,
+  readsMembers: boolean,
+): boolean {
+  return readsMembers && reachesEveryStudent(seat) && seat?.assignment_scope === 'all'
+}
+
 /** Whether a group has work for an assignment of its set, as far as the reader is shown. */
 export function hasWork(g: Pick<Group, 'work'>): boolean {
   return (g.work?.length ?? 0) > 0

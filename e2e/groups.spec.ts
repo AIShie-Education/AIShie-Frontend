@@ -45,6 +45,14 @@ import {
 // a refusal. A teaching assistant listed for some students is told, on
 // another student's page, that their groups are not shown to them; one whose
 // member list was taken away sees the groups read only, never a sign-up page.
+//
+// A student who joins, switches and leaves from the keyboard keeps the focus
+// on the group's button, in English and in Traditional Chinese. A teaching
+// assistant listed for Ada who forms groups is offered no random split (it
+// deals every student) and is told every student she reaches is in a group,
+// never that everyone is; one listed for another assignment, not the set's,
+// is shown no deal before a split, since the server keeps groups with work
+// she is not shown.
 
 const STAMP = Date.now().toString(36)
 const SET = `Project groups ${STAMP}`
@@ -58,7 +66,9 @@ const students: Record<'ada' | 'ben' | 'cy' | 'dee' | 'eve' | 'fay', Student> = 
  * Teaching assistants: Tess reads the member list and forms no groups; Tam's forming them waits for approval;
  * Lu is listed for Ada alone; Tia's seat does not read the member list.
  */
-const tas: Record<'tess' | 'tam' | 'lu' | 'tia', DemoActor> = {} as never
+const tas: Record<'tess' | 'tam' | 'lu' | 'tia' | 'lin' | 'gus', DemoActor> = {} as never
+/** An assignment of the course that is not the set's: Gus is listed for it alone. */
+let notesId = ''
 
 function teacher(): DemoActor {
   return demo().actors.instructor
@@ -107,11 +117,33 @@ test.beforeAll(async () => {
     })
     students[key] = { ...who, member_id: seat.member_id as string, name }
   }
+  notesId = (
+    await ok(teacher().token, 'POST', `/v1/courses/${courseId}/assignments`, {
+      title: `Reading notes ${STAMP}`,
+      points_possible: 5,
+    })
+  ).id
   for (const [key, name, seat] of [
     ['tess', 'Tess Ma', {}],
     ['tam', 'Tam Yu', { perms: { assignment_write: 'confirm_required' } }],
     ['lu', 'Lu Ka', { student_scope: 'listed', listed_students: [students.ada.member_id] }],
     ['tia', 'Tia Ko', { perms: { member_read: 'denied' } }],
+    // Forms groups, listed for Ada alone.
+    [
+      'lin',
+      'Lin Bo',
+      {
+        perms: { assignment_write: 'autonomous' },
+        student_scope: 'listed',
+        listed_students: [students.ada.member_id],
+      },
+    ],
+    // Forms groups, reaches every student, and is listed for the reading notes alone, not the set's assignment.
+    [
+      'gus',
+      'Gus Oh',
+      { perms: { assignment_write: 'autonomous' }, assignment_scope: 'listed', listed_assignments: [notesId] },
+    ],
   ] as const) {
     const who = await registerPerson(name, { email: `${key}+${STAMP}@groups.test` })
     await ok(teacher().token, 'POST', `/v1/courses/${courseId}/members`, {
@@ -472,6 +504,56 @@ test.describe.serial('a course’s groups', () => {
     await expect(page.locator('.student-set__mine')).toContainText('You are in no group yet: choose one below.')
   })
 
+  test('a student who joins, switches and leaves from the keyboard keeps the focus on the group’s button', async ({
+    page,
+  }) => {
+    // Ada is in no group since she left Group 3; sign-up is open. Another group with room to switch to.
+    const raw = await ok(teacher().token, 'GET', `/v1/courses/${courseId}/group-sets/${setId}`)
+    const roomy = (
+      raw.groups as { name: string; archived_at?: string; size: number; capacity?: number | null; work?: unknown[] }[]
+    ).find(
+      (g) => !g.archived_at && g.name !== 'Group 3' && !(g.work ?? []).length && (!g.capacity || g.size < g.capacity),
+    )!
+    await keepToasts(page)
+    await signIn(page, students.ada)
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    const button = (name: string) => page.locator('.student-set__signup').getByRole('button', { name })
+    const focused = () => page.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName)
+
+    await button('Join Group 3').focus()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, 'You joined Group 3.')
+    await expect(page.locator('.student-set__group')).toHaveText('Group 3')
+    await expect.poll(focused).toBe('Leave Group 3')
+
+    await button(`Switch to ${roomy.name}`).focus()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, `You switched to ${roomy.name}.`)
+    await expect.poll(focused).toBe(`Leave ${roomy.name}`)
+
+    await page.keyboard.press('Enter')
+    const box = page.getByRole('dialog', { name: 'Leave your group?' })
+    await box.getByRole('button', { name: 'Leave' }).focus()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, `You left ${roomy.name}.`)
+    await expect(page.locator('.student-set__mine')).toContainText('You are in no group yet')
+    await expect.poll(focused).toBe(`Join ${roomy.name}`)
+
+    // In Traditional Chinese too.
+    await inTraditionalChinese(page)
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    await button('加入Group 3').focus()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, '你已加入Group 3。')
+    await expect.poll(focused).toBe('退出Group 3')
+    await page.keyboard.press('Enter')
+    const zh = page.getByRole('dialog', { name: '退出小組？' })
+    await zh.getByRole('button', { name: '退出' }).focus()
+    await page.keyboard.press('Enter')
+    await expectToasted(page, '你已退出Group 3。')
+    await expect.poll(focused).toBe('加入Group 3')
+  })
+
   test('on a phone, Sato’s set page fits and a student is placed from a row’s menu', async ({ browser }) => {
     // A phone as a phone is: its width, and a finger (a coarse pointer), which drags nothing.
     const phone = await browser.newContext({ ...devices['Pixel 7'], baseURL: test.info().project.use.baseURL })
@@ -562,6 +644,50 @@ test.describe.serial('a course’s groups', () => {
     await expect(page.locator('.student-set__mine, .student-set__signup')).toHaveCount(0)
     await expect(page.getByRole('button', { name: /^(Join|Switch|Leave)/ })).toHaveCount(0)
     expect(await page.locator('.app-main').innerText()).not.toContain('You are in no group')
+  })
+
+  test('a teaching assistant listed for Ada who forms groups is offered no split, and told every student she reaches is in a group', async ({
+    page,
+  }) => {
+    // Ada is in a group; others, whom Lin does not reach, may be in none.
+    expect((await setAsTeacher()).groups.some((g) => g.members.includes('Ada Lee'))).toBe(true)
+    await signIn(page, tas.lin)
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    await expect(page.locator('.group-card').first()).toBeVisible()
+    await expect(header(page).getByRole('button', { name: 'Add groups' })).toBeVisible()
+    await expect(header(page).getByRole('button', { name: 'Split at random' })).toHaveCount(0)
+    await expect(none(page)).toContainText('Every student you reach is in a group.')
+    expect(await page.locator('.app-main').innerText()).not.toContain('Everyone is in a group')
+    await page.goto(`/courses/${courseId}/groups`)
+    const row = page.locator('.groups__row').filter({ hasText: SET })
+    await expect(row).toContainText('Every student you reach is in a group')
+    await expect(row).not.toContainText('Everyone is in a group')
+    // And in Traditional Chinese.
+    await inTraditionalChinese(page)
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    await expect(none(page)).toContainText('你權限範圍內的學生均已分組。')
+    expect(await page.locator('.app-main').innerText()).not.toContain('所有學生均已分組')
+  })
+
+  test('a teaching assistant not listed for the set’s assignment is shown no deal before a split, and told why', async ({
+    page,
+  }) => {
+    await signIn(page, tas.gus)
+    await page.goto(`/courses/${courseId}/groups/${setId}`)
+    await expect(page.locator('.group-card').first()).toBeVisible()
+    // Group 1 has Ada's draft for the report, which Gus is not shown, and which the server keeps.
+    await expect(card(page, 'Group 1').locator('.group-card__work')).toHaveCount(0)
+    await header(page).getByRole('button', { name: 'Split at random' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Split at random' })
+    await expect(dialog).toContainText('What it deals cannot be shown before it is made')
+    await expect(dialog).toContainText('A group with work for an assignment of the set keeps its members')
+    await expect(dialog).toContainText('The same seed deals the same students into the same groups.')
+    await expect(dialog).not.toContainText('what is shown below is what is dealt')
+    await expect(dialog.locator('.split-dialog__group')).toHaveCount(0)
+    await expect(dialog).not.toContainText('Places')
+    await expect(dialog.getByRole('button', { name: 'Split', exact: true })).toBeEnabled()
+    await photograph(page, 'groups-split-unseen')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
   })
 
   test('the feed names a group made since the page was opened, without a reload', async ({ page }) => {

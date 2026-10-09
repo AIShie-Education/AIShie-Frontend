@@ -8,6 +8,12 @@
 // have work for an assignment of the set and keep their members. The seed
 // is sent with it, so that what is shown is what is dealt; a split is cheap
 // to redo, and it is adjusted afterwards by hand.
+//
+// The server deals over every student and every group's work for every
+// assignment of the set. To a seat not shown all of that (one that does not
+// read the member list, or reaches only some assignments: previewsSplit) a
+// deal worked out here would be another deal, so none is shown: it says
+// why, and the set's page says what was dealt once it is made.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ToolOut, WriteOutcome } from '@/api/http'
@@ -33,7 +39,15 @@ import {
 import { newSeed, validSeed, type SplitBy, type SplitFrom } from './split'
 
 const open = defineModel<boolean>({ default: false })
-const props = defineProps<{ courseId: string; set: GroupSet }>()
+const props = withDefaults(
+  defineProps<{
+    courseId: string
+    set: GroupSet
+    /** The reader is shown all the server deals over, so the deal is shown before it is made (previewsSplit). */
+    previewed?: boolean
+  }>(),
+  { previewed: true },
+)
 const emit = defineEmits<{ done: [out: WriteOutcome<ToolOut<'group.split'>>] }>()
 const { t } = useI18n()
 const course = useCourseStore()
@@ -70,12 +84,13 @@ const seedOk = computed(() => validSeed(form.seed))
 const nOk = computed(() => Number.isInteger(form.n) && form.n >= 1 && form.n <= 500)
 const prefixOk = computed(() => [...form.prefix].length <= 96 && !/[\u0000-\u001f\u007f]/.test(form.prefix))
 
-/** The deal, as the server will make it; or why it cannot be made. */
-const preview = computed<{ plan: SplitPlan } | { error: string }>(() => {
+/** The deal, as the server will make it; or why it cannot be made; or, where it cannot be worked out here, none. */
+const preview = computed<{ plan: SplitPlan } | { error: string } | { unseen: true }>(() => {
   void ui.locale
   if (!nOk.value) return { error: t('groups.split.nBad') }
   if (!seedOk.value) return { error: t('groups.split.seedBad') }
   if (!prefixOk.value) return { error: t('groups.add.prefixBad') }
+  if (!props.previewed) return { unseen: true }
   try {
     return {
       plan: planSplit(props.set, {
@@ -98,6 +113,8 @@ const shown = computed(() =>
 )
 /** Nothing would change: nobody to deal and no group to make. */
 const nothing = computed(() => !!plan.value && !plan.value.placements.length && !plan.value.made.length)
+/** It can be asked for: a deal shown with something in it, or, where none can be shown, a valid form. */
+const ready = computed(() => ('unseen' in preview.value ? true : !!plan.value && !nothing.value))
 const keptNames = computed(() => (ui.locale, formatList((plan.value?.kept ?? []).map((g) => g.name))))
 const madeNames = computed(() => (ui.locale, formatList((plan.value?.made ?? []).map((g) => g.name))))
 /** The groups students are dealt into. */
@@ -116,7 +133,7 @@ function reseed() {
 
 const busy = ref(false)
 async function split() {
-  if (!plan.value || nothing.value) return
+  if (!ready.value) return
   busy.value = true
   try {
     const out = await w.run(
@@ -193,13 +210,17 @@ async function split() {
             <span>{{ t('groups.split.reseed') }}</span>
           </el-button>
         </div>
-        <div class="app-form-hint">{{ t('groups.split.seedHint') }}</div>
+        <div class="app-form-hint">{{ previewed ? t('groups.split.seedHint') : t('groups.split.seedHintUnseen') }}</div>
       </el-form-item>
     </el-form>
 
     <section class="split-dialog__preview" aria-live="polite" :aria-label="t('groups.split.preview')">
       <h3 class="split-dialog__heading">{{ t('groups.split.preview') }}</h3>
       <el-alert v-if="'error' in preview" type="error" :title="preview.error" :closable="false" show-icon />
+      <AppNote v-else-if="'unseen' in preview" class="split-dialog__unseen">
+        <p class="split-dialog__unseen-line">{{ t('groups.split.unseen') }}</p>
+        <p class="split-dialog__unseen-line">{{ t('groups.split.unseenAfter') }}</p>
+      </AppNote>
       <template v-else-if="plan">
         <p class="split-dialog__summary">
           {{
@@ -250,7 +271,7 @@ async function split() {
       <div class="split-dialog__footer">
         <StatusTag v-if="course.needsApproval('assignment_write')" vocab="level" value="confirm_required" />
         <el-button @click="open = false">{{ t('common.actions.cancel') }}</el-button>
-        <el-button type="primary" :loading="busy" :disabled="!course.writable || !plan || nothing" @click="split">
+        <el-button type="primary" :loading="busy" :disabled="!course.writable || !ready" @click="split">
           {{ t('groups.split.submit') }}
         </el-button>
       </div>
@@ -300,6 +321,13 @@ async function split() {
 .split-dialog__preview {
   border-top: 1px solid var(--app-line);
   padding-top: var(--app-space-md);
+}
+.split-dialog__unseen-line {
+  margin: 0;
+  line-height: var(--app-lh-text);
+}
+.split-dialog__unseen-line + .split-dialog__unseen-line {
+  margin-top: var(--app-space-xs);
 }
 .split-dialog__heading {
   margin: 0 0 var(--app-space-sm);

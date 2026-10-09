@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // A course's group sets (分組), the Groups tab (group_set.list), for every
 // reader of the course. Each set holds groups that group assignments use,
-// one set serving many. Staff see each set's groups, how many of their
-// students are in none, whether students may sign themselves up and until
-// when, and the assignments using it; those who write assignments make a
-// new one. A student sees their own group in each set and whether they may
+// one set serving many. Staff see each set's groups, how many students are
+// in none (of those their seat reaches, and said so, where it is listed to
+// some), whether students may sign themselves up and until when, and the
+// assignments using it; those who write assignments make a new one. A student sees their own group in each set and whether they may
 // sign up to one: never another group's members, which the server does not
 // show them; so does a student's own agent, for its student. Staff who neither
 // read the member list nor form groups see the staff's page, read only.
@@ -26,7 +26,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import SetFormDialog from './components/SetFormDialog.vue'
 import SignupLine from './components/SignupLine.vue'
 import { forgetGroupNames } from './components/groupNames'
-import { byName, listParts, liveGroups, type GroupSetSummary } from './components/groupModel'
+import { byName, listParts, liveGroups, reachesEveryStudent, type GroupSetSummary } from './components/groupModel'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -43,6 +43,17 @@ const canForm = computed(() => course.can('assignment_write'))
  */
 const studentView = computed(
   () => course.role === 'student' || (course.isDelegate && !(canForm.value || course.can('member_read'))),
+)
+
+/**
+ * The reader's seat surely reaches every student: how many are in no group
+ * is of all of them. Else it is of those it reaches, and said so.
+ */
+const reachesAll = computed(() =>
+  reachesEveryStudent({
+    student_scope: (course.seat ?? course.membership)?.student_scope,
+    delegate: course.isDelegate,
+  }),
 )
 
 const showArchived = ref(false)
@@ -155,8 +166,12 @@ function onSaved(out: WriteOutcome<unknown>, id: string | null) {
                   >{{ t('common.sep')
                   }}<span :class="{ groups__unassigned: s.unassigned_count > 0 }">{{
                     s.unassigned_count > 0
-                      ? t('groups.list.unassigned', { n: s.unassigned_count }, s.unassigned_count)
-                      : t('groups.list.allPlaced')
+                      ? t(
+                          reachesAll ? 'groups.list.unassigned' : 'groups.list.unassignedReached',
+                          { n: s.unassigned_count },
+                          s.unassigned_count,
+                        )
+                      : t(reachesAll ? 'groups.list.allPlaced' : 'groups.list.allPlacedReached')
                   }}</span></template
                 >
               </template>

@@ -7,7 +7,13 @@
 // counted down. What the server refuses is said in words (groups.refusal):
 // a group that filled up meanwhile, sign-up closed, a group that has handed
 // work in. Nothing of another group but its name and its size is shown.
-import { computed, ref } from 'vue'
+//
+// While a sign-up is asked for, every button of the list is off, the one
+// pressed included, which takes the focus from it: once the set is read
+// again, the focus goes back to that group's button (Leave, now, after a
+// join), or, where it is off or gone, to "Your group", so that someone on
+// the keyboard or a screen reader goes on from where they were.
+import { computed, nextTick, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
 import AppEmpty from '@/components/AppEmpty.vue'
@@ -21,8 +27,14 @@ import SignupLine from './SignupLine.vue'
 import { groupRefusalScopes } from './groupEvents'
 import { byName, liveGroups, nameOf, signupBlocked, signupMove, type Group, type GroupSet } from './groupModel'
 
-const props = defineProps<{ courseId: string; set: GroupSet }>()
-const emit = defineEmits<{ changed: [proposedActionId: string | null] }>()
+const props = defineProps<{
+  courseId: string
+  set: GroupSet
+  /** Reads the set again; resolves once it has been read, whatever came of it. */
+  reload: () => Promise<void>
+}>()
+/** A sign-up was asked for: the request it waits on for approval, or null for none. */
+const emit = defineEmits<{ proposed: [actionId: string | null] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const ui = useUiStore()
@@ -49,6 +61,24 @@ function blockedWords(g: Group): string | null {
   return why ? t(`groups.refusal.${why}`) : null
 }
 
+const root = ref<HTMLElement | null>(null)
+/**
+ * Where the focus goes once the set is read again after asking for a group:
+ * its button, or "Your group" where that is off or gone. Only where the
+ * focus was lost meanwhile (the button pressed was off while it was asked
+ * for), never from wherever the person has gone since.
+ */
+async function focusAfterAsking(groupId: string) {
+  await nextTick()
+  const el = root.value
+  if (!el) return
+  const active = document.activeElement
+  if (active && active !== document.body && !el.contains(active)) return
+  const button = el.querySelector<HTMLButtonElement>(`.student-set__row[data-group="${groupId}"] button`)
+  if (button && !button.disabled) button.focus()
+  else el.querySelector<HTMLElement>('#student-set-mine')?.focus()
+}
+
 async function ask(g: Group) {
   const move = signupMove(props.set, g)
   if (move === 'leave') {
@@ -70,29 +100,35 @@ async function ask(g: Group) {
     )
     if (!out) {
       refusal.value = errorMessage(w.lastError.value, { reasons: groupRefusalScopes('group.sign_up') })
-      emit('changed', null)
-      return
+      emit('proposed', null)
+    } else {
+      announce(out, {
+        success:
+          move === 'leave'
+            ? t('groups.signup.done.leave', { name: g.name })
+            : move === 'switch'
+              ? t('groups.signup.done.switch', { name: g.name })
+              : t('groups.signup.done.join', { name: g.name }),
+      })
+      emit('proposed', out.status === 'proposed' ? out.actionId : null)
     }
-    announce(out, {
-      success:
-        move === 'leave'
-          ? t('groups.signup.done.leave', { name: g.name })
-          : move === 'switch'
-            ? t('groups.signup.done.switch', { name: g.name })
-            : t('groups.signup.done.join', { name: g.name }),
-    })
-    emit('changed', out.status === 'proposed' ? out.actionId : null)
+    await props.reload()
   } finally {
     asking.value = null
   }
+  await focusAfterAsking(g.id)
+}
+function onEnded() {
+  emit('proposed', null)
+  void props.reload()
 }
 </script>
 
 <template>
-  <div class="student-set app-column">
+  <div ref="root" class="student-set app-column">
     <AppNote v-if="set.description" plain class="student-set__about">{{ set.description }}</AppNote>
     <section class="app-card student-set__mine" aria-labelledby="student-set-mine">
-      <h2 id="student-set-mine" class="app-card__title">{{ t('groups.mine.title') }}</h2>
+      <h2 id="student-set-mine" class="app-card__title" tabindex="-1">{{ t('groups.mine.title') }}</h2>
       <template v-if="mine">
         <p class="student-set__group">{{ mine.name }}</p>
         <ul class="student-set__mates" :aria-label="t('groups.mine.members')">
@@ -117,12 +153,18 @@ async function ask(g: Group) {
     <section v-if="showSignup" class="app-card student-set__signup" aria-labelledby="student-set-signup">
       <h2 id="student-set-signup" class="app-card__title">{{ t('groups.signup.title') }}</h2>
       <p class="student-set__state">
-        <SignupLine :signup="set.signup" countdown @ended="emit('changed', null)" />
+        <SignupLine :signup="set.signup" countdown @ended="onEnded" />
       </p>
       <p v-if="set.signup.joinable" class="student-set__hint">{{ t('groups.signup.hint') }}</p>
       <el-alert v-if="refusal" type="error" :title="refusal" :closable="false" show-icon class="student-set__refusal" />
       <ul class="student-set__groups">
-        <li v-for="g in groups" :key="g.id" class="student-set__row" :class="{ 'is-mine': g.id === set.my_group_id }">
+        <li
+          v-for="g in groups"
+          :key="g.id"
+          class="student-set__row"
+          :class="{ 'is-mine': g.id === set.my_group_id }"
+          :data-group="g.id"
+        >
           <span class="student-set__name">{{ g.name }}</span>
           <span class="student-set__size" data-num>{{ sizeOf(g) }}</span>
           <AppTag v-if="g.id === set.my_group_id" tone="indigo">{{ t('groups.signup.yours') }}</AppTag>

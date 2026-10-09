@@ -12,6 +12,11 @@
 // (SplitDialog), the deal shown before it is made and the groups it left
 // alone said after; open and close sign-up and set its deadline; read who
 // was in which group when (HistoryDrawer); and download the groups as CSV.
+// A split deals every student of the course: a seat listed to some students
+// is not offered it, and one not shown every group's work, or who is in
+// each, is told the deal cannot be shown before it is made. A seat listed to
+// some students is shown, and counted, only those in no group it reaches,
+// and told so: never that everyone is in a group.
 //
 // A student sees their own group and its members, and sign-up while it is
 // open (StudentSet): never another group's members, nor any group's work.
@@ -62,8 +67,10 @@ import {
   groupOf,
   groupsCsv,
   listParts,
+  listedToSome,
   liveGroups,
   nameOf,
+  previewsSplit,
   reachesEveryStudent,
   saveText,
   studentsOf,
@@ -93,18 +100,34 @@ const readsMembers = computed(() => course.can('member_read'))
 const studentView = computed(
   () => course.role === 'student' || (course.isDelegate && !(canForm.value || readsMembers.value)),
 )
+/** The reader's seat: which students and assignments it reaches. */
+const scope = computed(() => {
+  const seat = course.seat ?? course.membership
+  return {
+    student_scope: seat?.student_scope,
+    assignment_scope: seat?.assignment_scope,
+    delegate: course.isDelegate,
+  }
+})
+/**
+ * The reader's seat surely reaches every student: the students in no group,
+ * and their count, are all of them. Else they are those it reaches, and the
+ * page says so, never that everyone is in a group.
+ */
+const reachesAll = computed(() => reachesEveryStudent(scope.value))
 /**
  * Every group's work is shown to the reader: their seat reaches every
  * student (the work of a group is shown to one who reaches a member of it, so
  * an empty group's to one who reaches all) and every assignment.
  */
-const seesAllWork = computed(() => {
-  const seat = course.seat ?? course.membership
-  return (
-    reachesEveryStudent({ student_scope: seat?.student_scope, delegate: course.isDelegate }) &&
-    seat?.assignment_scope === 'all'
-  )
-})
+const seesAllWork = computed(() => reachesAll.value && scope.value.assignment_scope === 'all')
+/**
+ * A random split deals every student of the course, and is refused to a seat
+ * listed to some of them (student_out_of_scope): it is not offered there.
+ */
+const maySplit = computed(() => !listedToSome(scope.value))
+/** The split's deal can be shown before it is made, as the server will make it (previewsSplit). */
+const splitPreviewed = computed(() => previewsSplit(scope.value, readsMembers.value))
 const archived = computed(() => !!set.value?.archived_at)
 /** Students can be placed, and groups changed, here and now. */
 const movable = computed(() => canForm.value && course.writable && !archived.value && !studentView.value)
@@ -396,7 +419,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
             <el-icon><Plus /></el-icon>
             <span>{{ t('groups.set.addGroups') }}</span>
           </el-button>
-          <el-button type="primary" :disabled="!course.writable" @click="splitOpen = true">
+          <el-button v-if="maySplit" type="primary" :disabled="!course.writable" @click="splitOpen = true">
             <el-icon><Operation /></el-icon>
             <span>{{ t('groups.set.split') }}</span>
           </el-button>
@@ -469,7 +492,8 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
           v-if="studentView"
           :course-id="courseId"
           :set="set"
-          @changed="(id) => ((proposed = id), reload())"
+          :reload="reload"
+          @proposed="(id) => (proposed = id)"
         />
         <template v-else>
           <section class="app-card set-view__signup" aria-labelledby="set-view-signup">
@@ -570,8 +594,12 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                 <h3 id="set-view-none" class="set-view__none-title" tabindex="-1">
                   {{
                     set.unassigned_count
-                      ? t('groups.set.none', { n: set.unassigned_count }, set.unassigned_count)
-                      : t('groups.set.allPlaced')
+                      ? t(
+                          reachesAll ? 'groups.set.none' : 'groups.set.noneReached',
+                          { n: set.unassigned_count },
+                          set.unassigned_count,
+                        )
+                      : t(reachesAll ? 'groups.set.allPlaced' : 'groups.set.allPlacedReached')
                   }}
                 </h3>
               </header>
@@ -613,7 +641,12 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                 @restore="archiveGroup(g, false)"
               />
             </div>
-            <AppEmpty v-else :text="movable ? t('groups.set.noGroupsForm') : t('groups.set.noGroups')" />
+            <AppEmpty
+              v-else
+              :text="
+                movable ? t(maySplit ? 'groups.set.noGroupsForm' : 'groups.set.noGroupsAdd') : t('groups.set.noGroups')
+              "
+            />
             <p v-if="!readsMembers && shownGroups.length" class="app-form-hint set-view__names-hidden">
               {{ t('groups.set.namesHidden') }}
             </p>
@@ -629,7 +662,14 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
       <SetFormDialog v-model="editOpen" :course-id="courseId" :set="set" @saved="onWritten" />
       <AddGroupsDialog v-model="addOpen" :course-id="courseId" :set="set" @saved="onWritten" />
       <GroupDialog v-model="groupOpen" :course-id="courseId" :group="editing" @saved="onWritten" />
-      <SplitDialog v-model="splitOpen" :course-id="courseId" :set="set" @done="onSplit" />
+      <SplitDialog
+        v-if="maySplit"
+        v-model="splitOpen"
+        :course-id="courseId"
+        :set="set"
+        :previewed="splitPreviewed"
+        @done="onSplit"
+      />
       <AffectsWorkDialog
         v-model="affectsOpen"
         :pending="placements.pending.value"
