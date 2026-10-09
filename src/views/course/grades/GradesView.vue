@@ -6,6 +6,9 @@
 // sees their own posted grades and nothing else. A seat that enters grades
 // without reading them (the built-in grader agent) is told where its work is.
 //
+// A grade given from a group's grade says so beside it, with its group, and
+// whether the member's score was set apart from the group's (GroupMark).
+//
 // Filters come from and go to the query: ?assignment=<id>&student=<memberId>.
 import { computed, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -29,6 +32,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import EnterComponentGradeDialog from './components/EnterComponentGradeDialog.vue'
+import GroupMark from './components/GroupMark.vue'
 import PostGradesDialog from './components/PostGradesDialog.vue'
 import ProposalNotice from './components/ProposalNotice.vue'
 import ScoreText from './components/ScoreText.vue'
@@ -467,6 +471,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               <div v-if="!mine" class="grades-list__line">
                 <MemberName :id="g.student_member_id" />
               </div>
+              <div v-if="g.group" class="grades-list__line"><GroupMark :group="g.group" /></div>
               <div class="grades-list__line">
                 <ScoreText :score="g.score" :out-of="lookups.outOf(g)" :as-percent="g.origin === 'computed'" />
                 <StatusTag v-if="g.origin === 'computed'" vocab="gradeOrigin" :value="g.origin" />
@@ -506,6 +511,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
                 :value="row.origin"
                 class="grades-view__origin"
               />
+              <div v-if="row.group"><GroupMark :group="row.group" /></div>
             </template>
           </el-table-column>
           <el-table-column :label="t('grades.columns.score')" min-width="150" align="right">
@@ -543,6 +549,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
             <template #default="{ row }">
               <span v-if="what(row)" class="grades-view__what">{{ what(row) }}</span>
               <IdText v-else :id="row.assignment_id ?? row.component_id" />
+              <div v-if="row.group"><GroupMark :group="row.group" /></div>
             </template>
           </el-table-column>
           <el-table-column :label="t('grades.columns.score')" min-width="156" align="right">

@@ -48,6 +48,7 @@ import {
   isAboutAction,
   isObject,
   reasonText,
+  reasonWords,
   routeFor,
   storedDecision,
   storedError,
@@ -258,6 +259,8 @@ function actionRoute(id: string | null | undefined) {
 
 const error = computed(() => (action.value ? storedError(action.value) : null))
 const errorWhy = computed(() => reasonText(error.value, action.value?.action_type))
+/** Said in the app's words alone: Core's message, written for agents, is then not shown beside them. */
+const errorWorded = computed(() => !!reasonWords(error.value, action.value?.action_type))
 const errorDetails = computed(() => {
   const d = error.value?.details
   if (!d) return null
@@ -351,7 +354,7 @@ const errorTitle = computed(() => {
           v-if="lastDone"
           :course-id="courseId"
           :done="lastDone"
-          :action-type="action?.action_type"
+          :action-type="action.action_type"
           closable
           class="action-view__notice"
           @close="lastDone = null"
@@ -533,7 +536,7 @@ const errorTitle = computed(() => {
               >
                 <div class="action-view__error">
                   <p v-if="errorWhy">{{ errorWhy }}</p>
-                  <p v-if="error">
+                  <p v-if="error && !errorWorded">
                     {{ t('common.pair', { label: t('actions.outcome.coreSays'), value: error.message }) }}
                     <code>{{ error.code }}</code>
                   </p>
@@ -581,7 +584,11 @@ const errorTitle = computed(() => {
               </el-alert>
 
               <template v-else-if="decisionResult">
-                <OutcomeAlert :course-id="courseId" :done="{ kind: 'decided', decision: 'approve', out: decisionResult }" />
+                <OutcomeAlert
+                  :course-id="courseId"
+                  :done="{ kind: 'decided', decision: 'approve', out: decisionResult }"
+                  :action-type="aboutAction?.action_type"
+                />
               </template>
 
               <template v-else-if="action.status === 'executed'">

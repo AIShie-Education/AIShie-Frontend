@@ -20,7 +20,7 @@ const props = defineProps<{
   courseId: string
   done: Done
   closable?: boolean
-  /** The kind of action decided, where known: its refusals are said in the words of the pages that do it. */
+  /** The kind of action decided (its action_type), where known: its refusals are said in the words of the pages that do it. */
   actionType?: string | null
 }>()
 const emit = defineEmits<{ close: [] }>()

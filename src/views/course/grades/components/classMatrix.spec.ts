@@ -6,6 +6,7 @@ import {
   cellOf,
   csvText,
   filterRows,
+  groupOfGrade,
   matrixCsv,
   mergeStudents,
   slimGrade,
@@ -93,6 +94,13 @@ describe('buildColumns', () => {
     expect(c[1]).toMatchObject({ kind: 'assignment', group: 'Assignments', outOf: 10, counted: true })
     expect(c[4]).toMatchObject({ kind: 'direct', title: 'Midterm', outOf: 100, group: null })
     expect(c[5]).toMatchObject({ counted: false, group: null })
+  })
+
+  it('marks a group assignment’s column, whose cells carry the group’s marks beside the score', () => {
+    const group = assignment('g1', 'Group project', { group_set_id: 'set1' })
+    const c = buildColumns([ROOT, HW], [HW1, group], { spansAssignments: true })
+    expect(c.find((x) => x.id === 'g1')).toMatchObject({ kind: 'assignment', groupWork: true })
+    expect(c.find((x) => x.id === 'a1')).toMatchObject({ kind: 'assignment', groupWork: false })
   })
 
   it('leaves out what is not published: nothing can be handed in or graded for it', () => {
@@ -641,5 +649,103 @@ describe('CSV', () => {
     expect(csvText('+1')).toBe("'+1")
     expect(csvText('@me')).toBe("'@me")
     expect(csvText('Plain')).toBe('Plain')
+  })
+})
+
+describe('a grade given from a group’s', () => {
+  const group = (adjustment: NonNullable<GradeSummary['group']>['adjustment'] = null) => ({
+    group_grade_id: 'gg',
+    group_id: 'gA',
+    group_name: 'Team A',
+    score: 80,
+    adjustment,
+  })
+
+  it('is kept with its group, and whether a grader or peer evaluation moved the member’s score', () => {
+    expect(groupOfGrade({ group: null })).toBeNull()
+    expect(groupOfGrade({ group: group() })).toEqual({ name: 'Team A', adjusted: null })
+    expect(groupOfGrade({ group: group({ kind: 'delta', points: -10, reason: 'r' }) })).toEqual({
+      name: 'Team A',
+      adjusted: 'grader',
+    })
+    expect(groupOfGrade({ group: group({ kind: 'peer', points: 1.6 }) })?.adjusted).toBe('peer')
+    const kept = slimGrade(
+      grade({
+        student_member_id: 'yuki',
+        assignment_id: 'a1',
+        score: 70,
+        group: group({ kind: 'replace', points: 70, reason: 'r' }),
+      }),
+    )!
+    expect(kept.fromGroup).toEqual({ name: 'Team A', adjusted: 'grader' })
+    expect(kept).not.toHaveProperty('group')
+  })
+
+  it('marks its cell, draft or posted, kept slim or read whole', () => {
+    const columns = buildColumns([ROOT, HW], [HW1], { spansAssignments: true })
+    const rows = buildMatrix({
+      students,
+      columns,
+      grades: [
+        slimGrade(
+          grade({
+            student_member_id: 'yuki',
+            assignment_id: 'a1',
+            score: 7,
+            group: group({ kind: 'delta', points: -1, reason: 'r' }),
+          }),
+        )!,
+        grade({ student_member_id: 'ken', assignment_id: 'a1', score: 8, state: 'draft', group: group() }),
+        grade({ student_member_id: 'mei', assignment_id: 'a1', score: 6 }),
+      ],
+    })
+    const cell = (id: string) =>
+      cellOf(
+        rows.find((r) => r.student.id === id)!,
+        columns.find((c) => c.key === 'a:a1')!,
+      )
+    expect(cell('yuki').group).toEqual({ name: 'Team A', adjusted: 'grader' })
+    expect(cell('ken')).toMatchObject({ state: 'draft', group: { name: 'Team A', adjusted: null } })
+    expect(cell('mei').group).toBeUndefined()
+  })
+
+  it('says in the CSV a member’s score set apart, and each student’s group in columns of their own', () => {
+    const columns = buildColumns([ROOT, HW], [HW1], { spansAssignments: false })
+    const rows = buildMatrix({
+      students: students.slice(0, 2),
+      columns,
+      grades: [
+        grade({
+          student_member_id: 'yuki',
+          assignment_id: 'a1',
+          score: 7,
+          group: group({ kind: 'delta', points: -1, reason: 'r' }),
+        }),
+        grade({ student_member_id: 'ken', assignment_id: 'a1', score: 8, group: group() }),
+      ],
+    })
+    const words: CsvWords = {
+      student: 'Student',
+      loginId: 'Login ID',
+      memberId: 'Member ID',
+      status: 'Status',
+      statusOf: () => '',
+      column: (c) => `${c.title} (${c.outOf})`,
+      draft: (x) => `${x} (draft)`,
+      overridden: (x) => `${x} (overridden)`,
+      waiting: (x) => `${x} (newer work to grade)`,
+      adjusted: (x) => `${x} (adjusted)`,
+      missing: 'Missing',
+      toGrade: 'To grade',
+      unnamed: (x) => x.id,
+    }
+    const groupOf: Record<string, string> = { yuki: 'Team A', ken: '=Team B' }
+    const csv = matrixCsv(columns, rows, words, [{ heading: 'Group: Projects', value: (x) => groupOf[x.id] ?? '' }])
+    expect(csv.slice(1).split('\r\n')).toEqual([
+      'Student,Login ID,Member ID,Status,Group: Projects,HW1 (10)',
+      'Yuki Tanaka,s1001,yuki,,Team A,7 (adjusted)',
+      "Ken Wong,s1002,ken,,'=Team B,8",
+      '',
+    ])
   })
 })

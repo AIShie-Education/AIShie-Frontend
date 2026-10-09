@@ -429,6 +429,41 @@ describe('DecidePanel, asking for changes', () => {
   })
 })
 
+describe('DecidePanel, a proposal that fails once approved', () => {
+  // A group's grade proposed before the group's drafts were posted: approving it is refused, in Core's words for
+  // agents, which name its tools.
+  const POSTED = {
+    code: 'failed_precondition',
+    message:
+      "the group's grade on this work is posted: regrade it with grade.regrade, which gives a member added to the work since a grade from it as well, or change one member's with grade.adjust",
+    details: { reason: 'group_grade_posted', grade_id: 'g9' },
+  }
+  it.each([
+    ['en', 'Approve', 'Approve now', 'A grade from this group’s grade has been posted'],
+    ['zh-Hant', '批准', '立即批准', '由這份小組成績而來的成績已經發佈'],
+  ] as const)('says why in the app’s words, never Core’s, in %s', async (locale, approve, now, why) => {
+    setLocale(locale)
+    mountAsTeacher()
+    await flushPromises()
+    button(approve)!.click()
+    await flushPromises()
+    write.mockResolvedValueOnce({
+      status: 'executed',
+      actionId: 'd1',
+      reviewState: 'none',
+      replayed: false,
+      result: { action_id: 'p1', outcome: 'failed', error: POSTED },
+    })
+    ;[...document.body.querySelectorAll<HTMLButtonElement>('.decide-panel__confirm button')]
+      .find((b) => b.textContent?.trim() === now)!
+      .click()
+    await flushPromises()
+    const toast = document.body.querySelector('.el-notification')!
+    expect(toast.textContent).toContain(why)
+    expect(toast.textContent).not.toContain('grade.regrade')
+  })
+})
+
 /** A teaching assistant's deletion of a quiz for good, waiting: what its proposer was shown, and confirmed. */
 const NONE = { submissions: 0, handed_in: 0, drafts: 0, missing: 0, grades: 0, posted: 0, files: 0, proposals: 0, totals: 0 }
 const DELETION = {

@@ -6,6 +6,9 @@
 // of hundreds has thousands of cells): the rows above and below are blank
 // space of their height, every row being the same height. A column's heading
 // sorts by it; a student's name opens their gradebook, a grade the grade.
+// A grade given from a group's has the group's mark before its score, and
+// one set apart from the group's score a ± after it, both said in words to a
+// screen reader and in the cell's tooltip.
 import { computed, onActivated, onBeforeUnmount, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -14,6 +17,7 @@ import { classFigure, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
 import { joinParts } from '@/utils/parts'
+import GroupGlyph from './GroupGlyph.vue'
 
 const props = defineProps<{
   courseId: string
@@ -35,7 +39,15 @@ const ROW = 44
 /** Rows drawn beyond the screen each way, so that a quick scroll does not show blank space. */
 const OVERSCAN = 8
 const NAME_WIDTH = 208
-const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : 104)
+/**
+ * A column's width. A group assignment's is wider: its grades have the
+ * group's mark before the score, a member's set apart from the group's a ±
+ * after it, and a draft its flag, which together take 119 px for a score of
+ * two places in the hundreds ("100.25 ± 草稿"), where another assignment's
+ * cell has room for 87; it has 123, a little to spare for another machine's
+ * fonts.
+ */
+const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : c.groupWork ? 140 : 104)
 const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s + widthOf(c), 0))
 
 // ---------------------------------------------------------------------------
@@ -190,17 +202,30 @@ function postedUnder(cell: MatrixCell): CellView['posted'] {
 }
 function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null }): string {
   const said: string[] = []
+  // A grade from a group's has its marks beside the figure: the figure is
+  // said whole here too, should the cell cut it short.
+  const sayFigure = !!shown.full || !!cell.group
   if (cell.state === 'draft') {
-    if (shown.full) said.push(shown.full)
+    if (sayFigure) said.push(shown.full ?? shown.text)
     said.push(
       cell.postedScore !== null && cell.postedScore !== undefined
         ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
         : t('classbook.draftOnly'),
     )
   } else if (cell.overridden) said.push(joinParts([shown.full ?? shown.text, t('classbook.state.overridden')]))
-  else if (shown.full) said.push(shown.full)
+  else if (sayFigure) said.push(shown.full ?? shown.text)
   if (cell.waiting) said.push(t('classbook.waiting'))
+  if (cell.group) said.push(groupWords(cell))
   return said.join(' ')
+}
+/** A grade given from a group's, in words: whose group, and how the member's score was set apart. */
+function groupWords(cell: MatrixCell): string {
+  const g = cell.group
+  if (!g) return ''
+  const of = g.name ? t('groupGrading.classbook.groupOf', { name: g.name }) : t('groupGrading.mark.group')
+  if (g.adjusted === 'grader') return t('groupGrading.classbook.adjusted', { group: of })
+  if (g.adjusted === 'peer') return t('groupGrading.classbook.peer', { group: of })
+  return t('groupGrading.classbook.sentence', { group: of })
 }
 /** Paused or removed, said beside the name; nothing for a student who is simply in the class. */
 function statusOf(s: MatrixStudent): string | null {
@@ -352,8 +377,11 @@ function meanHint(col: MatrixColumn): string {
                 class="matrix__value"
                 :title="v.title || t('classbook.openGrade')"
               >
+                <GroupGlyph v-if="v.cell.group" class="matrix__grp" />
                 <span class="matrix__score" :aria-hidden="v.full ? 'true' : undefined">{{ v.text }}</span>
                 <span v-if="v.full" class="matrix__sr">{{ v.full }}</span>
+                <span v-if="v.cell.group?.adjusted === 'grader'" class="matrix__adj" aria-hidden="true">±</span>
+                <span v-if="v.cell.group" class="matrix__sr">{{ groupWords(v.cell) }}</span>
                 <template v-if="v.cell.overridden">
                   <span class="matrix__star" aria-hidden="true">*</span>
                   <span class="matrix__sr">{{ t('classbook.state.overridden') }}</span>
@@ -642,6 +670,16 @@ function meanHint(col: MatrixColumn): string {
 }
 .matrix__star {
   color: var(--el-color-primary);
+  font-weight: var(--app-weight-strong);
+}
+/* A group's grade: its mark in the third ink before the score; set apart from the group's, a ± after it. */
+.matrix__grp {
+  flex-shrink: 0;
+  color: var(--app-ink-3);
+}
+.matrix__adj {
+  flex-shrink: 0;
+  color: var(--app-ink-2);
   font-weight: var(--app-weight-strong);
 }
 /* A draft is set apart in words and in its figure, never by colour alone. */

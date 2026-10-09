@@ -199,6 +199,42 @@ describe('course store', () => {
     expect(course.can('member_read')).toBe(false)
   })
 
+  it('knows whom the seat reaches where its scope says, and not where it cannot be read or is a delegate’s', async () => {
+    const open = async (seat: Record<string, unknown>, member: (() => Promise<unknown>) | null) => {
+      answers.set('me.memberships', async () => ({
+        memberships: [{ ...memberships[1], perms: { member_read: member ? 'autonomous' : 'denied' }, ...seat }],
+      }))
+      answers.set('member.get', member ?? (() => Promise.reject(forbidden())))
+      const session = useSessionStore()
+      await session.loadMemberships()
+      const course = useCourseStore()
+      course.close()
+      await course.open('c2')
+      return course
+    }
+    await useSessionStore().ensure()
+    // Every student.
+    let course = await open({}, async () => ({ id: 'm2', student_scope: 'all' }))
+    expect([course.reachesStudent('ana'), course.reachesStudent('cai')]).toEqual([true, true])
+    // Listed for Ana and Ben, as the seat itself says.
+    course = await open({ role: 'ta', student_scope: 'listed' }, async () => ({
+      id: 'm2',
+      student_scope: 'listed',
+      listed_students: ['ana', 'ben'],
+    }))
+    expect([course.reachesStudent('ana'), course.reachesStudent('cai')]).toEqual([true, false])
+    // Listed, and the seat cannot be read: not known.
+    course = await open({ role: 'ta', student_scope: 'listed' }, null)
+    expect(course.reachesStudent('ana')).toBeNull()
+    // A delegate reaches what its principal does too, which is not read: known only where its own scope falls short.
+    course = await open({ role: 'assistant', student_scope: 'listed', principal_member_id: 'p' }, async () => ({
+      id: 'm2',
+      student_scope: 'listed',
+      listed_students: ['ana'],
+    }))
+    expect([course.reachesStudent('ana'), course.reachesStudent('cai')]).toEqual([null, false])
+  })
+
   it('reads the memberships again when another course is opened, so changed levels show', async () => {
     let level = 'denied'
     answers.set('me.memberships', async () => ({

@@ -307,6 +307,7 @@ export default {
     'submission.submitted': '已繳交作業',
     'submission.lateness_changed': '更正遲交狀態',
     'submission.missing': '標記為缺交',
+    'submission.members_changed': '更正作業成員',
     'submission.file_added': '提交新增檔案',
     'submission.file_archived': '提交移除檔案',
     'submission.file_updated': '提交檔案改名',

@@ -8,6 +8,20 @@
 // name. Filled into the form from an agent's draft, what it wrote carries a
 // line at its left (--app-indigo) until the grader changes it, a note above
 // the form says so, and each such field's label says it to a screen reader.
+//
+// A group's work is graded once: the group's score, feedback, breakdown,
+// rubric and files, which every member of the work is given, and below them
+// each member's line (GroupAdjustments), set apart from the group's score
+// with a reason where the grader says so. Every member's line is sent, as it
+// is shown, with the work's members, so that a proposal is refused if they
+// change. Where a member's grade is not shown (the work's grades cannot be
+// read, or the seat is not known to reach them), their line is kept as
+// their grade has it, unseen and unsent, for Core to carry, until the
+// grader sets it: never shown as the group's score, which a grade the seat
+// was not given would read as. Once a grade from it is posted the group is
+// regraded instead. A seat that does not reach every member of the work is
+// not offered the form: a group's grade is every member's, and Core grades
+// it only for a seat that reaches them all.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox, type FormInstance, type FormItemRule } from 'element-plus'
@@ -24,6 +38,17 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { formatDecimal, isDecimal } from '@/utils/format'
 import BreakdownEditor, { type BreakdownRow } from './BreakdownEditor.vue'
+import GroupAdjustments from './GroupAdjustments.vue'
+import {
+  adjustmentsArg,
+  anyAbove,
+  liveByMember,
+  rowProblem,
+  rowsFor,
+  workMemberIds,
+  type AdjustRow,
+  type WorkReach,
+} from './groupGrading'
 import RubricPanel from './RubricPanel.vue'
 import { decimalAbove, isNonNegativeDecimal } from './decimal'
 import { proposalFate } from './proposals'
@@ -38,10 +63,14 @@ const props = defineProps<{
   liveDraft?: GradeSummary
   /** The live posted grade for this work, if one is known. */
   livePosted?: GradeSummary
-  /** The caller cannot read grades, so whether any exist is not known. */
+  /** The caller cannot read grades (or they could not be read), so whether any exist is not known. */
   gradesHidden?: boolean
   /** Grades proposed for this work and waiting for approval. */
   proposals?: ActionSummary[]
+  /** A group's work: every grade read for it, each member's own. */
+  workGrades?: GradeSummary[]
+  /** A group's work: whether the caller's seat reaches every member of it (groupGrading.workReach). */
+  reach?: WorkReach
 }>()
 const emit = defineEmits<{ graded: [] }>()
 const { t } = useI18n()
@@ -49,8 +78,18 @@ const course = useCourseStore()
 const { run, pending } = useWrite('grade.submit')
 onMounted(() => void course.ensureMembers())
 
-/** Whether the form is offered: the work is handed in (or missing) and has no posted grade. */
-const showForm = computed(() => course.writable && props.submission.state !== 'draft' && !props.livePosted)
+/** A group's work: one group grade, each member's grade given from it. */
+const isGroup = computed(() => !!props.submission.group_id)
+/** A group's work some of whose members the caller's seat does not reach: Core refuses grading it. */
+const unreached = computed(() => isGroup.value && props.reach === 'some')
+
+/**
+ * Whether the form is offered: the work is handed in (or missing), has no
+ * posted grade, and, a group's, every member of it is within reach.
+ */
+const showForm = computed(
+  () => course.writable && props.submission.state !== 'draft' && !props.livePosted && !unreached.value,
+)
 
 // The rubric is read only when there is a form to grade with beside it.
 const rubric = useAsync(
@@ -70,12 +109,41 @@ const form = reactive<Form>(blank())
 const formRef = ref<FormInstance>()
 
 /** gradeId: the grade written; null for a group's work, which gives each member a grade of their own. */
-type Outcome = { status: 'executed'; gradeId: string | null; review: boolean } | { status: 'proposed' }
+type Outcome =
+  { status: 'executed'; gradeId: string | null; review: boolean; members?: number | null } | { status: 'proposed' }
 const outcome = ref<Outcome | null>(null)
+
+// Each member's line, as their grade on the work has it now: what Core
+// would carry, shown, and sent as shown. Where a member's grade is not
+// known (the grades cannot be read, or the seat may not reach them, and so
+// was not given theirs), kept as it is, unseen, and not sent.
+const members = computed(() => (isGroup.value ? workMemberIds(props.submission) : []))
+const liveGrades = computed(() =>
+  props.gradesHidden ? null : liveByMember(props.workGrades ?? [], props.submission.id),
+)
+/** Whether the seat reaches a member of the work: every one where it reaches them all. */
+const reached = (id: string): boolean | null => (props.reach === 'all' ? true : course.reachesStudent(id))
+const carried = computed(() => rowsFor(members.value, liveGrades.value, reached))
+/** Some members' grades are not shown, though the work's grades were read: the seat may not reach them. */
+const someUnseen = computed(() => !props.gradesHidden && carried.value.some((r) => r.unseen))
+const adjustRows = ref<AdjustRow[]>([])
+/** What the lines are read from: read again (after saving), they start from it again. */
+const carriedKey = computed(() => JSON.stringify(carried.value))
+watch(carriedKey, () => (adjustRows.value = carried.value.map((r) => ({ ...r }))), { immediate: true })
 
 const points = computed(() => props.assignment?.points_possible)
 const pointsText = computed(() => (points.value === undefined ? '' : formatDecimal(points.value, 4)))
-const above = computed(() => points.value !== undefined && decimalAbove(form.score.trim(), points.value))
+/** The score typed is above the points possible. */
+const scoreAbove = computed(() => points.value !== undefined && decimalAbove(form.score.trim(), points.value))
+/** The score, or a member's score from it, is above the points possible: extra is offered. */
+const above = computed(
+  () =>
+    scoreAbove.value ||
+    (isGroup.value && points.value !== undefined && anyAbove(adjustRows.value, form.score, points.value)),
+)
+/** A member's line that is wrong: the form is not saved. */
+const rowsValid = () =>
+  adjustRows.value.every((r) => !rowProblem(r, form.score, points.value, above.value && form.allowExtra))
 const missing = computed(() => props.submission.state === 'missing')
 const needsApproval = computed(() => course.needsApproval('grade_submit'))
 
@@ -116,7 +184,7 @@ const rules: Record<string, FormItemRule[]> = {
         if (!s) return callback(new Error(t('common.errors.required')))
         if (!isDecimal(s)) return callback(new Error(t('common.errors.invalidDecimal')))
         if (!isNonNegativeDecimal(s)) return callback(new Error(t('submissions.grade.scoreNegative')))
-        if (above.value && !form.allowExtra) {
+        if (scoreAbove.value && !form.allowExtra) {
           return callback(new Error(t('submissions.grade.scoreAbove', { points: pointsText.value })))
         }
         callback()
@@ -127,6 +195,8 @@ const rules: Record<string, FormItemRule[]> = {
 // The breakdown is checked here rather than by a form rule: a failing form
 // item marks every input inside it, and the editor marks only the bad ones.
 const breakdownChecked = ref(false)
+/** The members' lines say what is missing too, once saving was tried. */
+const rowsChecked = ref(false)
 const breakdownError = computed(() => breakdownChecked.value && !breakdownValid())
 watch(
   () => form.allowExtra,
@@ -202,9 +272,11 @@ function startFromDraft() {
   const g = props.liveDraft
   if (!g) return
   void loadDraftFiles(g.id)
-  form.score = String(g.score)
+  // A member's grade from a group grade: the group's score, not the member's own.
+  const score = g.group?.score ?? g.score
+  form.score = String(score)
   form.feedback = g.feedback ?? ''
-  form.allowExtra = decimalAbove(g.score, points.value)
+  form.allowExtra = decimalAbove(score, points.value)
   const rows = Array.isArray(g.breakdown) ? (g.breakdown as Record<string, unknown>[]) : []
   let key = Date.now()
   form.breakdown = rows.map((r) => ({
@@ -234,6 +306,8 @@ function reset() {
   draftFilesSeq++
   draftFiles.value = null
   breakdownChecked.value = false
+  rowsChecked.value = false
+  adjustRows.value = carried.value.map((r) => ({ ...r }))
   uploaderKey.value++
   formRef.value?.clearValidate()
 }
@@ -241,13 +315,16 @@ function reset() {
 async function submit() {
   if (uploadingFiles.value) return
   breakdownChecked.value = true
+  rowsChecked.value = true
   const valid = await formRef.value?.validate().catch(() => false)
-  if (!valid || !breakdownValid()) return
+  if (!valid || !breakdownValid() || !rowsValid()) return
   const stops = wouldStop.value.length > 0
   const confirmText = props.liveDraft
     ? stops
       ? t('submissions.grade.replaceAndStopConfirm')
-      : t('submissions.grade.replaceConfirm')
+      : isGroup.value
+        ? t('groupGrading.panel.replaceConfirm')
+        : t('submissions.grade.replaceConfirm')
     : stops
       ? t('submissions.grade.stopConfirm')
       : null
@@ -286,13 +363,21 @@ async function submit() {
         ? form.files.map((f) => ({ title: f.fileName, upload_token: f.uploadToken, filename: f.fileName }))
         : undefined,
       ...rubricArgs(rubric.data.value),
+      // A group's work: every member's line as shown, and whose work it is as
+      // shown, which a proposal is refused on approval if it changes.
+      ...(isGroup.value ? { adjustments: adjustmentsArg(adjustRows.value), members: members.value } : {}),
     },
-    { success: t('submissions.grade.saved') },
+    { success: t('submissions.grade.saved'), reasons: isGroup.value ? 'groupGrading.refusal' : undefined },
   )
   if (!out) return
   outcome.value =
     out.status === 'executed'
-      ? { status: 'executed', gradeId: out.result.grade_id ?? null, review: out.reviewState === 'pending' }
+      ? {
+          status: 'executed',
+          gradeId: out.result.grade_id ?? null,
+          review: out.reviewState === 'pending',
+          members: out.result.member_grades?.length ?? null,
+        }
       : { status: 'proposed' }
   reset()
   emit('graded')
@@ -315,7 +400,11 @@ async function submit() {
       @close="outcome = null"
     >
       <p class="grade-panel__alert-text">
-        {{ t('submissions.grade.savedBody') }}
+        {{
+          outcome.members
+            ? t('groupGrading.panel.savedBody', { n: outcome.members }, outcome.members)
+            : t('submissions.grade.savedBody')
+        }}
         <template v-if="outcome.review">{{ t('submissions.grade.savedReview') }}</template>
       </p>
       <div class="grade-panel__links">
@@ -351,11 +440,16 @@ async function submit() {
     <p v-else-if="submission.state === 'draft'" class="app-muted grade-panel__note">
       {{ t('submissions.grade.notYet') }}
     </p>
+    <AppNote v-else-if="unreached">
+      {{ t('groupGrading.panel.unreached') }}
+    </AppNote>
     <AppNote v-else-if="livePosted">
-      <p class="grade-panel__alert-text">{{ t('submissions.grade.postedExists') }}</p>
+      <p class="grade-panel__alert-text">
+        {{ isGroup ? t('groupGrading.panel.postedExists') : t('submissions.grade.postedExists') }}
+      </p>
       <div class="grade-panel__links">
         <router-link :to="{ name: 'course-grade', params: { courseId, gradeId: livePosted.id } }">
-          {{ t('submissions.grade.openPosted') }}
+          {{ isGroup ? t('groupGrading.panel.openPosted') : t('submissions.grade.openPosted') }}
         </router-link>
       </div>
     </AppNote>
@@ -388,10 +482,10 @@ async function submit() {
         </p>
         <p class="grade-panel__alert-text">
           {{
-            t('submissions.grade.draftExists', {
+            t(isGroup ? 'groupGrading.panel.draftExists' : 'submissions.grade.draftExists', {
               score: pointsText
-                ? `${formatDecimal(liveDraft.score, 4)} / ${pointsText}`
-                : formatDecimal(liveDraft.score, 4),
+                ? `${formatDecimal(liveDraft.group?.score ?? liveDraft.score, 4)} / ${pointsText}`
+                : formatDecimal(liveDraft.group?.score ?? liveDraft.score, 4),
             })
           }}
         </p>
@@ -412,12 +506,17 @@ async function submit() {
           class="grade-panel__form"
           @submit.prevent="submit"
         >
+          <AppNote v-if="isGroup" plain class="grade-panel__group-intro">{{ t('groupGrading.panel.intro') }}</AppNote>
           <p v-if="anyUntouched && prefill" class="app-form-hint grade-panel__prefilled-note">
             {{ t('submissions.grade.prefilledBy', { name: prefill.name }) }}
           </p>
-          <el-form-item :label="t('submissions.grade.score')" prop="score" :class="{ 'is-prefilled': untouched.score }">
+          <el-form-item
+            :label="isGroup ? t('groupGrading.panel.score') : t('submissions.grade.score')"
+            prop="score"
+            :class="{ 'is-prefilled': untouched.score }"
+          >
             <template #label
-              >{{ t('submissions.grade.score')
+              >{{ isGroup ? t('groupGrading.panel.score') : t('submissions.grade.score')
               }}<span v-if="untouched.score" class="grade-panel__sr">{{
                 t('submissions.grade.prefilledMark')
               }}</span></template
@@ -436,6 +535,28 @@ async function submit() {
           </el-form-item>
           <el-form-item v-if="above || form.allowExtra">
             <el-checkbox v-model="form.allowExtra" :label="t('submissions.grade.allowExtra')" />
+          </el-form-item>
+
+          <el-form-item v-if="isGroup" :label="t('groupGrading.editor.title')">
+            <div class="grade-panel__block">
+              <div class="app-form-hint grade-panel__members-hint">
+                {{
+                  gradesHidden
+                    ? t('groupGrading.editor.hintUnseen')
+                    : someUnseen
+                      ? t('groupGrading.editor.hintSomeUnseen')
+                      : t('groupGrading.editor.hint')
+                }}
+              </div>
+              <GroupAdjustments
+                v-model="adjustRows"
+                :members="submission.members ?? []"
+                :group-score="form.score"
+                :points-possible="points"
+                :allow-extra="above && form.allowExtra"
+                :strict="rowsChecked"
+              />
+            </div>
           </el-form-item>
 
           <el-form-item :label="t('submissions.grade.breakdown')" :class="{ 'is-prefilled': untouched.breakdown }">
@@ -487,7 +608,9 @@ async function submit() {
                   </li>
                 </ul>
               </div>
-              <div class="app-form-hint">{{ t('submissions.grade.filesHint') }}</div>
+              <div class="app-form-hint">
+                {{ isGroup ? t('groupGrading.panel.filesHint') : t('submissions.grade.filesHint') }}
+              </div>
             </div>
           </el-form-item>
 
@@ -635,6 +758,12 @@ async function submit() {
 }
 .grade-panel__prefilled-note {
   margin: 0 0 12px;
+}
+.grade-panel__group-intro {
+  margin-bottom: var(--app-space-md);
+}
+.grade-panel__members-hint {
+  margin: 0 0 var(--app-space-sm);
 }
 /* Said to a screen reader with the field's label: the line at its left is seen alone. */
 .grade-panel__sr {

@@ -435,6 +435,16 @@ const facts = computed<Fact[]>(() => {
       })
     }
   }
+  // A member's grade given from their group's, and one set apart from the group's score alone.
+  if (type.startsWith('grade.') && payloadString(e, 'group_grade_id')) {
+    out.push({ kind: 'text', text: t('groupGrading.activity.group') })
+    if (payloadBool(e, 'adjusted')) out.push({ kind: 'text', text: t('groupGrading.activity.adjusted'), tone: 'info' })
+  }
+  if (type === 'submission.members_changed') {
+    const change = payloadString(e, 'change')
+    if (change === 'added' || change === 'removed')
+      out.push({ kind: 'text', text: t(`groupGrading.activity.members.${change}`) })
+  }
   if (type === 'grade.regraded') {
     // The grade it replaces is superseded now, and a superseded grade is
     // for those who grade (grade_submit or grade_post) to read.

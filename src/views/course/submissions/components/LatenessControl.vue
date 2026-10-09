@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // Correcting whether a handed-in attempt counts as late: an extension
 // granted, a clock that was wrong. It is the one change a handed-in attempt
-// allows, and it is for graders (grade_submit), not for the student.
+// allows, and it is for graders (grade_submit), not for the student. A
+// group's work is corrected for the group: for every member of it.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessageBox } from 'element-plus'
@@ -21,7 +22,11 @@ const to = computed(() => (props.submission.state === 'late' ? 'submitted' : 'la
 async function change() {
   try {
     await ElMessageBox.confirm(
-      to.value === 'late' ? t('submissions.lateness.confirmLate') : t('submissions.lateness.confirmOnTime'),
+      t(
+        `${props.submission.group_id ? 'groupGrading.lateness' : 'submissions.lateness'}.${
+          to.value === 'late' ? 'confirmLate' : 'confirmOnTime'
+        }`,
+      ),
       t('submissions.lateness.confirmTitle'),
       {
         type: 'warning',

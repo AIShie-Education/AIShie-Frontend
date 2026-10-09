@@ -883,6 +883,46 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`matrixCsv`) is what is shown, UTF-8 with a byte-order mark and CRLF lines, drafts, overrides,
   waiting work and paused or removed students marked, and no text a spreadsheet would run as a
   formula (`csvText`).
+- **Grading a group's work** (AIShie-Core #74): a group's submission (`group_id`, its `members`) is
+  graded once, in `GradePanel`'s group mode: the group's score, breakdown, feedback, rubric and
+  files, and a line for each member of the work (`GroupAdjustments`): the group's score, a score of
+  their own (`replace`) or plus or minus (`delta`), set apart with a reason of 1 to 500 characters
+  the member reads, each showing the score it comes to. Every line starts as the member's grade
+  has it now and is sent as shown, `none` where it has none, with the work's `members`, so that
+  nothing Core carries is written unseen; where the work's grades cannot be read (no `grade_read`,
+  or they failed to load), each line starts kept as it is (`keep`, "Kept as it is"), which is not
+  sent, so that Core carries it, and only a line the grader sets is written (the pure rules are
+  `groupGrading.ts` in `views/course/submissions/components`). Core shows a group's work to a
+  seat that reaches any of its members, but grades it, corrects its members and its lateness,
+  and regrades the group only for one that reaches every member, and gives a seat the grades, the
+  group's members and their history only of the students it reaches: `course.reachesStudent`
+  (the seat's student scope and list; null where it cannot be read, or for a delegate, whose
+  principal's scope is not read) and `workReach` say whether it reaches them all, and a seat that
+  does not (`'some'`) is told so, a member outside its reach said to be (never out of the group,
+  nor without a grade), and offered no grading form, correction, lateness or regrade (a member's
+  grade's page, `GradeView`, reads the work to know, and offers the regrade only once it does;
+  `RegradeDialog`, opened all the same, shows no member's line, since a grade it was not given
+  would read as none). Where that is not known (`'unknown'`), the form and the regrade are
+  offered, and Core decides; a member with no grade shown whom the seat is not known to reach
+  (`rowsFor`'s `reached` not true) has their line kept as their grade has it (`keep`, the row
+  `unseen`), unsent, and said so, never shown as the group's score. Once a grade from it is
+  posted the group is regraded (`RegradeDialog`, sending the members it writes and the grades it
+  replaces), and one member is adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a draft as
+  entering a grade is gated, a posted grade as a regrade). Whose work it is
+  (`GroupWorkMembers`) is marked against the group now for those who grade, who correct it
+  (`submission.set_members`). A member's grade says how it came
+  from the group's (`AdjustmentText`): its reason to the member too, who set it to those who grade
+  alone; a member reads their own grade, never another's. Lists and gradebooks mark a grade from a
+  group's and a member set apart from it (`GroupMark`; in the class's gradebook the group's two
+  figures before the score and ± after it, in words to a screen reader and the tooltip, which
+  gives the score too; a group assignment's column is 140 px, room for the mark, a score in the
+  hundreds to two places, the ± and a draft's flag in every language). Words are in
+  `groupGrading`, refusals under `groupGrading.refusal`; the action pages (`reasonText`,
+  `reasonWords` in `actionText.ts`) say a refusal of these tools in the same words, by the action's
+  kind, those met only when a proposal is carried out (`members_changed`, `grades_changed`) under
+  `groupGrading.actionRefusal`, the proposal beneath a decision about a decision by its own kind
+  (`OutcomeLines` looks it up, `action.get`, where it was refused), and show Core's own message
+  (written for agents, naming its tools) only where the app has no words for it.
 - **A course's groups** (分組: the Groups tab, `/groups`, `GroupsView`; a set, `/groups/:setId`,
   `GroupSetView`; their parts in `src/views/course/groups/`) are read by every reader of the course
   (`group_set.list`, `.get`, with `document_read`) and formed by whoever writes assignments
@@ -900,8 +940,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`,
   and where one kind of action means something of its own by a reason (`group_has_work` to a student
   signing up, to someone archiving a group, to a placement approved after work began) under
-  `groups.refusalOf`, first: `groupRefusalScopes(type)`, which `reasonText(e, type)` asks too, so that an
-  action's refusal reads the same in My actions, the approvals and its page. A student's page goes to a
+  `groups.refusalOf`, first: `groupRefusalScopes(type)`, which `reasonText(e, type)` and `reasonWords` ask
+  too, so that an action's refusal reads the same in My actions, the approvals and its page. A student's page goes to a
   student, and to a delegate that neither forms groups nor reads the member list (a student's own
   agent); other staff without either see the staff's page read only, nobody named. Once students are
   moved the focus goes where they went (`focusAfterMove`): the moved row's own "Move … to…", the group

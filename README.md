@@ -104,6 +104,16 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   why. Final grades are undone for one student or all. Material is renamed, reordered, archived and
   brought back; an administrator of the course purges a version or a whole document uploaded by
   mistake, which leaves a tombstone saying who purged it, when and why.
+- **Grading group work** — a group's work is graded once: the group's score, feedback, rubric and
+  files go to every member of the work, and a member's score is set apart where the grader says
+  why (a score of their own, or plus or minus the group's), before posting or after, one member at
+  a time; a regrade is the group's. Whoever grades sees who has joined or left the group since the
+  work was handed in, and corrects whose work it is; one whose seat does not reach every member is
+  told so, and offered no group grade, correction or regrade; where that is not known, a member
+  whose grade it is not shown keeps theirs as it is, never said to have the group's score. A member
+  reads their own grade, the group's score and the reason theirs differs, and no one else's; the
+  grade lists and the gradebooks mark a grade from a group's and a member set apart from it, and the
+  class's CSV has each student's group.
 - **Invite links** — whoever holds `member_invite` in a course makes a link to it on the members
   page, for showing a class as a QR code (full screen, to project): it works for ten minutes, for
   as many people and only for the email domains its maker says, and is counted down as it runs.

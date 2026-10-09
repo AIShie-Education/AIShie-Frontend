@@ -8,6 +8,13 @@
 // comment; whoever may regrade over the whole course overrides it, takes an
 // override off and comments on it here. A student sees the override and the
 // comment, never who made the override or why: Core does not say.
+//
+// A member's grade given from their group's says so (GroupGradeCard): the
+// group's score, the member's own, and how the one came from the other, with
+// its reason; those who grade adjust the member (grade.adjust), and a regrade
+// is the group's, every member's grade from it written again. Core regrades
+// a group only for a seat that reaches every member of its work, which is
+// read to know: a seat that does not is told so, and offered no regrade.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -28,6 +35,8 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import TotalMenu from './components/TotalMenu.vue'
+import AdjustGradeDialog from './components/AdjustGradeDialog.vue'
+import GroupGradeCard from './components/GroupGradeCard.vue'
 import BreakdownTable from './components/BreakdownTable.vue'
 import PostGradesDialog from './components/PostGradesDialog.vue'
 import ProposalNotice from './components/ProposalNotice.vue'
@@ -35,6 +44,7 @@ import RegradeDialog from './components/RegradeDialog.vue'
 import ScoreText from './components/ScoreText.vue'
 import WorkingTable from './components/WorkingTable.vue'
 import { formatDateTime } from '@/utils/format'
+import { workMemberIds, workReach, type WorkReach } from '@/views/course/submissions/components/groupGrading'
 import {
   formatPct,
   parseBreakdown,
@@ -86,7 +96,7 @@ function workingName(item: WorkingItem): string | null {
 // ---------------------------------------------------------------------------
 
 // Regrading takes grade_submit and grade_post, and runs at the lower of the two.
-const canRegrade = computed(
+const regradable = computed(
   () =>
     !!g.value &&
     !mine.value &&
@@ -95,6 +105,57 @@ const canRegrade = computed(
     course.canAll(['grade_submit', 'grade_post']),
 )
 const regradeNeedsApproval = computed(() => course.needsApprovalAll(['grade_submit', 'grade_post']))
+
+// A member's grade from their group's: adjusted alone, a draft as entering
+// one is gated, a posted grade as a regrade is.
+const fromGroup = computed(() => !!g.value?.group)
+
+// Regrading it is the group's, which Core does only for a seat that reaches
+// every member of the work: whose work it is is read to know. Not known (it
+// could not be read, or the seat's list cannot be), it is offered, and Core decides.
+const groupWork = useAsync(
+  async () => {
+    const x = g.value
+    if (!x?.group || !x.submission_id || !regradable.value) return null
+    return read('submission.get', { course_id: props.courseId, submission_id: x.submission_id })
+  },
+  { watch: [() => g.value?.id, regradable] },
+)
+const groupReach = computed<WorkReach>(() => {
+  const s = groupWork.data.value
+  return s ? workReach(workMemberIds(s), course.reachesStudent) : 'unknown'
+})
+/** Some member of the group's work is outside the seat's reach: the group's regrade is someone else's. */
+const regradeUnreached = computed(() => fromGroup.value && regradable.value && groupReach.value === 'some')
+const canRegrade = computed(
+  () => regradable.value && !(fromGroup.value && (groupWork.loading.value || groupReach.value === 'some')),
+)
+const canAdjust = computed(() => {
+  const x = g.value
+  if (!x?.group || mine.value || x.origin !== 'entered') return false
+  if (x.state === 'posted') return course.canAll(['grade_submit', 'grade_post'])
+  return x.state === 'draft' && course.can('grade_submit')
+})
+const adjustNeedsApproval = computed(() =>
+  g.value?.state === 'posted' ? regradeNeedsApproval.value : course.needsApproval('grade_submit'),
+)
+const adjustVisible = ref(false)
+async function onAdjusted(out: WriteOutcome<ToolOut<'grade.adjust'>>) {
+  if (out.status === 'proposed') {
+    proposal.value = { title: t('common.outcome.proposedTitle'), body: t('groupGrading.adjust.proposed') }
+    return
+  }
+  if (!out.result.changed) {
+    ElMessage({ type: 'info', message: t('groupGrading.adjust.unchanged') })
+    return
+  }
+  ElMessage({
+    type: 'success',
+    message:
+      t('groupGrading.adjust.done') + (out.reviewState === 'pending' ? ` ${t('common.outcome.pendingReview')}` : ''),
+  })
+  await router.push({ name: 'course-grade', params: { courseId: props.courseId, gradeId: out.result.grade_id } })
+}
 const canPostThis = computed(
   () =>
     !!g.value && !mine.value && g.value.state === 'draft' && g.value.origin === 'entered' && course.can('grade_post'),
@@ -261,7 +322,7 @@ const backLink = computed(() => ({
           />
           <el-button v-if="canRegrade" type="primary" :disabled="!course.writable" @click="regradeVisible = true">
             <el-icon><EditPen /></el-icon>
-            <span>{{ t('grades.regrade.button') }}</span>
+            <span>{{ fromGroup ? t('groupGrading.regrade.button') : t('grades.regrade.button') }}</span>
             <StatusTag
               v-if="regradeNeedsApproval"
               vocab="level"
@@ -333,6 +394,18 @@ const backLink = computed(() => ({
             </template>
           </p>
         </section>
+
+        <GroupGradeCard
+          v-if="g.group"
+          :grade="g"
+          :out-of="outOf"
+          :mine="mine"
+          :can-adjust="canAdjust"
+          :adjust-needs-approval="adjustNeedsApproval"
+          :regrade-unreached="regradeUnreached"
+          :disabled="!course.writable"
+          @adjust="adjustVisible = true"
+        />
 
         <section class="app-card">
           <h2 class="app-card__title">{{ t('grades.detail.facts') }}</h2>
@@ -534,6 +607,15 @@ const backLink = computed(() => ({
           :out-of="outOf"
           :what="what ?? ''"
           @done="onRegraded"
+        />
+        <AdjustGradeDialog
+          v-if="canAdjust && g.group"
+          v-model="adjustVisible"
+          :course-id="courseId"
+          :grade="g"
+          :name="course.memberName(g.student_member_id) ?? t('groupGrading.editor.thisMember')"
+          :points-possible="outOf"
+          @done="onAdjusted"
         />
         <PostGradesDialog
           v-if="canPostThis"
