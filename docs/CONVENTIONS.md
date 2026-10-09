@@ -278,7 +278,10 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   page (`PeerTaskPanel`, `peerSheet.ts`): exactly whom `task.to_evaluate` names, in the circle's order,
   themselves last; shares typed as whole numbers that must add up to 100, said as they are typed, or a
   rating of every member on every criterion; sent again until it closes, reading the page again keeping
-  what was typed; read only once it closes, with their own average where the form shares it. A person
+  what was typed; read only once it closes, with their own average where the form shares it. One alone
+  in their group, with self-evaluation off, has nobody to evaluate (`to_evaluate` is empty): they are
+  told so and shown no form, and the results neither count nor flag them as missing an evaluation,
+  whatever Core's flag says (`aloneInCircle`). A person
   writes it, never an agent (`people_only`). Those who grade read every group's results on
   `/assignments/:assignmentId/peer` (`PeerResultsView`, `PeerGroupResults`) and a group's on its work's
   page (`PeerSubmissionPanel`): each member's factor said in words, as what they received against an
@@ -343,7 +346,11 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   changed it last; a change by someone else under unsaved text, read or refused as `draft_changed`, is
   a conflict the student settles (`readDraft`, `keepMine`, `loadTheirs`): load the draft as it is now,
   or keep theirs, saved over the revision read; a read older than the revision held is no news. A
-  hand-in reads the draft again first and hands in nothing the student has not seen; it names whom it
+  hand-in reads the draft again first and hands in nothing the student has not seen: what they saw
+  when they pressed Hand in (`seenDraft`: its text and its files) is kept before anything is read again,
+  compared with the draft read (`draftChange`: its revision, which Core counts for the text alone, and
+  its files, which a groupmate attaches or removes without one) and sent, the 20-second read waiting
+  while a hand-in is under way, its confirmation open; it names whom it
   is for (`members`, which Core holds it to: `members_changed`), warns a student who is part of
   another group's work that it leaves them out, and says whom it left out (`left_out`). A draft that
   stops being the student's while it is open says so: handed in by someone else (read so, or a save
@@ -360,12 +367,15 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   where the app has one. A group assignment's roster (`GroupRoster`, `rosterByGroup.ts`) is by group:
   its members now and, where they differ, whom its work is for; the students in no group under the
   groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
-  missing for its members now (`submission.record_missing` with `group_id`), offered only to a seat
+  missing for its members now less those another group's work names already (`missingFor`,
+  `inOtherWork`, from the rows, as Core records it), named so in its confirmation, and not offered
+  on a group with nobody left to record it for, saying why; offered only to a seat
   that reaches every one of them, as Core requires: a seat listed to some students is shown only those
   of each group's members, and the group's size from its set (`group_set.get`) says how many more
   there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
-  says its group, and whose work it is where the student has moved since. Its words are in
-  `groupWork`.
+  says its group, and whose work it is where the student has moved since: the listed group whose
+  latest work it is, or, where none's is (that group has started again since), the work's own group,
+  read from the work (`workGroupIfOther`, `workGroupFrom`). Its words are in `groupWork`.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.
@@ -893,10 +903,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `el-dropdown`, which the keyboard opens and walks), a row's own "Move … to…", or by dragging one onto
   a group, never by dragging alone; `usePlacements` sends `group.set_members`, and a refusal of
   `group_has_work` opens `AffectsWorkDialog`, which says what becomes of each work before placing them
-  again with `affects_work`. A random split (`SplitDialog`) is previewed by the server's own deal,
-  `split.ts` (`planSplit` in `groupModel.ts` over the set as read), which must keep AIShie-Core's
-  `internal/groupsplit` golden values (`split.spec.ts`): the seed shown is sent, so the preview is what is
-  dealt. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
+  again with `affects_work`. A random split (`SplitDialog`) deals every student of the course, so it is
+  not offered to a seat listed to some students (`listedToSome`; Core refuses it, `student_out_of_scope`).
+  It is previewed by the server's own deal, `split.ts` (`planSplit` in `groupModel.ts` over the set as
+  read), which must keep AIShie-Core's `internal/groupsplit` golden values (`split.spec.ts`): the seed
+  shown is sent, so the preview is what is dealt, where the set as read is all the server deals over:
+  the member list read, and every group's work for every assignment of the set (`previewsSplit`: a seat
+  reaching every student and every assignment). To any other seat no deal is shown, since a group with
+  work it is not shown is kept by the server and dealt into here: the dialog says why, and the set's
+  page what was dealt once it is made. To a seat listed to some students, those in no group are counted
+  and named of the students it reaches, and said so ("Every student you reach is in a group"), on the
+  set's page and the Groups tab: never that everyone is. A student's sign-up gives the focus back, once
+  the set is read again, to the group's button (it is off while asked for), or to "Your group" where that
+  is off. Sign-up's time left is counted on the server's clock (`SignupLine`, `useCountdown`). A set's
   CSV is the class gradebook's rules (`groupsCsv`). Refusals are worded by reason under `groups.refusal`,
   and where one kind of action means something of its own by a reason (`group_has_work` to a student
   signing up, to someone archiving a group, to a placement approved after work began) under
