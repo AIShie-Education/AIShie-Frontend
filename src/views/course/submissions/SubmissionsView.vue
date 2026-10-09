@@ -9,12 +9,17 @@
 // (submission.roster): every student in scope, including those who have not
 // started, whom a list of submissions cannot show, and who can be recorded
 // there as having handed in nothing. A Core without the roster gets the list.
+// A group assignment's roster is by group (GroupRoster), with the students in
+// no group of its set under the groups; a group's work in the list names its
+// group and whose work it is.
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { SubmissionSummary } from '@/api/types'
+import GroupRoster from './components/GroupRoster.vue'
 import RosterTable from './components/RosterTable.vue'
+import type { RosterGroup } from './components/rosterByGroup'
 import { lacksRoster, type RosterEntry } from './components/roster'
 import AppNote from '@/components/AppNote.vue'
 import AssignmentSelect from '@/components/AssignmentSelect.vue'
@@ -31,6 +36,7 @@ import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useDeletedFilter } from '@/views/course/assignments/components/useDeletedFilter'
+import { useWorkNames } from '@/views/course/assignments/components/useWorkNames'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -88,6 +94,8 @@ const list = usePaged<SubmissionSummary>(
   { watch: [() => assignment.value, studentFilter, rosterMode] },
 )
 
+/** A group assignment's groups, which the roster's first page gives; null for an individual one, or while not read. */
+const rosterGroups = ref<RosterGroup[] | null>(null)
 // The roster pages by student, not by name; the student filter is applied to
 // it here, so it is read again only when the assignment changes.
 const roster = usePaged<RosterEntry>(
@@ -101,6 +109,7 @@ const roster = usePaged<RosterEntry>(
         limit: 200,
         after,
       })
+      if (!after && assignment.value === assignmentId) rosterGroups.value = o.groups ?? null
       return { items: o.students, next: o.next }
     } catch (e) {
       if (!lacksRoster(e)) throw e
@@ -117,7 +126,14 @@ const roster = usePaged<RosterEntry>(
 watch(assignment, () => {
   roster.items.value = []
   roster.hasMore.value = false
+  rosterGroups.value = null
 })
+/** The assignment chosen is group work: its roster is by group. */
+const groupSetId = computed(() => (assignment.value ? course.assignments.get(assignment.value)?.group_set_id : null))
+const groupRoster = computed(() => rosterGroups.value !== null || !!groupSetId.value)
+/** A group's work among the rows listed: the first column says whose work each is. */
+const anyGroupWork = computed(() => list.items.value.some((r) => !!r.group_id))
+const { namesOf } = useWorkNames()
 /** The list on show, for the refresh button. */
 const active = computed(() => (rosterMode.value ? roster : list))
 
@@ -198,7 +214,23 @@ function open(row: SubmissionSummary) {
     </p>
 
     <section v-if="rosterMode && assignment" class="app-card submissions-card">
+      <GroupRoster
+        v-if="groupRoster"
+        :course-id="courseId"
+        :assignment-id="assignment"
+        :set-id="groupSetId"
+        :groups="rosterGroups"
+        :student-id="studentFilter"
+        :rows="roster.items.value"
+        :loading="roster.loading.value"
+        :error="roster.error.value"
+        :has-more="roster.hasMore.value"
+        @more="roster.loadMore"
+        @retry="roster.reload"
+        @changed="roster.reload"
+      />
       <RosterTable
+        v-else
         :course-id="courseId"
         :assignment-id="assignment"
         :student-id="studentFilter"
@@ -239,7 +271,11 @@ function open(row: SubmissionSummary) {
                 <StatusTag vocab="submissionState" :value="row.state" />
               </div>
               <div class="submission-cards__meta">
-                <MemberName v-if="!isStudent" :id="row.student_member_id" />
+                <template v-if="row.group_id">
+                  <strong>{{ row.group_name }}</strong>
+                  <span v-if="!isStudent && row.members?.length">{{ namesOf(row.members) }}</span>
+                </template>
+                <MemberName v-else-if="!isStudent" :id="row.student_member_id" />
                 <span>{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
                 <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
                 <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
@@ -248,9 +284,17 @@ function open(row: SubmissionSummary) {
           </li>
         </ul>
         <el-table v-else :data="list.items.value" row-key="id" class="submissions-table" @row-click="open">
-          <el-table-column v-if="!isStudent" :label="t('submissions.columns.student')" min-width="160">
+          <el-table-column
+            v-if="!isStudent"
+            :label="anyGroupWork ? t('groupWork.list.whose') : t('submissions.columns.student')"
+            min-width="160"
+          >
             <template #default="{ row }">
-              <MemberName :id="row.student_member_id" />
+              <div v-if="row.group_id" class="submissions-table__group">
+                <strong>{{ row.group_name }}</strong>
+                <span v-if="row.members?.length" class="app-muted">{{ namesOf(row.members) }}</span>
+              </div>
+              <MemberName v-else :id="row.student_member_id" />
             </template>
           </el-table-column>
           <el-table-column :label="t('submissions.columns.assignment')" min-width="220">
@@ -259,6 +303,9 @@ function open(row: SubmissionSummary) {
                 {{ course.assignmentTitle(row.assignment_id) }}
               </span>
               <IdText v-else :id="row.assignment_id" />
+              <div v-if="isStudent && row.group_name" class="app-muted submissions-table__mine">
+                {{ row.group_name }}
+              </div>
             </template>
           </el-table-column>
           <el-table-column :label="t('submissions.columns.attempt')" width="90" align="center">
@@ -303,6 +350,16 @@ function open(row: SubmissionSummary) {
 }
 .submissions-table__title {
   word-break: break-word;
+}
+.submissions-table__group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  word-break: break-word;
+}
+.submissions-table__group .app-muted,
+.submissions-table__mine {
+  font-size: var(--app-text-xs);
 }
 .submissions-table__chevron {
   color: var(--el-text-color-secondary);

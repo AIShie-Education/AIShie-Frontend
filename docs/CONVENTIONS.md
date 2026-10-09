@@ -304,6 +304,40 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   action shows what it was confirmed with, beside what would go now while it waits
   (`DeletionProposal`, which warns that approving would fail where more would go); and a total's
   working says of its line only that it was an assignment since deleted.
+- **Group work (小組作業)** (AIShie-Core #74): an assignment its groups hand in names a group set
+  (`group_set_id`), chosen in its form (`AssignmentFormDialog`; the course's one set is chosen
+  already) only while nobody has started on it: a row of work found (`submission.list`), or Core's
+  `assignment_has_work`, locks the field and says why. Its page says "Group work", its set, and to a
+  student their group (`my_group`). A student's work is their group's (`MyWorkPanel`, with
+  `assignments/components/groupWork.ts`): one draft its members write together, each edit naming the
+  revision it was written over (`base_revision`). The draft is read again every 20 seconds while it is
+  open, beside the page's own reading (a read that fails leaves the editor as it was), and says who
+  changed it last; a change by someone else under unsaved text, read or refused as `draft_changed`, is
+  a conflict the student settles (`readDraft`, `keepMine`, `loadTheirs`): load the draft as it is now,
+  or keep theirs, saved over the revision read; a read older than the revision held is no news. A
+  hand-in reads the draft again first and hands in nothing the student has not seen; it names whom it
+  is for (`members`, which Core holds it to: `members_changed`), warns a student who is part of
+  another group's work that it leaves them out, and says whom it left out (`left_out`). A draft that
+  stops being the student's while it is open says so: handed in by someone else (read so, or a save
+  refused and the draft read again), or not their group's now (`student_out_of_scope` on reading,
+  saving or handing it in, `notInDraftsGroup`: moved, or out of the set), when the page reads their
+  group again (`groupChanged`). A refresh that finds it gone from their attempts before the draft's
+  own reading answers keeps what they typed before the editor goes, and reads the draft again to say
+  which (`draftGone`). Either way what they typed and had not saved stays on the page,
+  read-only with Copy, until they discard it. Its attempts say their group, whom each was handed in
+  or recorded missing for, and who handed it in. A student in
+  no group of the set (`no_group`) is told so, with sign-up's deadline where it is open, and has
+  nothing to start. Names are the work's own (`useWorkNames`: "you", and "someone in the course"
+  where nobody may name them). A set's page is linked by its address (`groupSetRoute`), and only
+  where the app has one. A group assignment's roster (`GroupRoster`, `rosterByGroup.ts`) is by group:
+  its members now and, where they differ, whom its work is for; the students in no group under the
+  groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
+  missing for its members now (`submission.record_missing` with `group_id`), offered only to a seat
+  that reaches every one of them, as Core requires: a seat listed to some students is shown only those
+  of each group's members, and the group's size from its set (`group_set.get`) says how many more
+  there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
+  says its group, and whose work it is where the student has moved since. Its words are in
+  `groupWork`.
 - **Lists page by cursor**: `{ limit, after }` in, `{ items, next }` out; `next` absent on the last
   page. `usePaged(after => read(...).then(o => ({ items: o.assignments, next: o.next })))` and
   `<LoadMore :has-more :loading @more="loadMore" />`.

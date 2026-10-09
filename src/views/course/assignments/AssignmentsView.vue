@@ -279,7 +279,10 @@ function refresh() {
                       {{ t('assignments.state.unpublished') }}
                     </AppTag>
                   </div>
-                  <div class="assignments-view__sub app-muted">{{ componentLabel(row) }}</div>
+                  <div class="assignments-view__sub app-muted">
+                    {{ componentLabel(row)
+                    }}<template v-if="row.group_set_id">{{ t('common.sep') }}{{ t('groupWork.tag') }}</template>
+                  </div>
                   <div v-if="narrow" class="assignments-view__meta">
                     <span class="app-muted">{{
                       t('assignments.list.pointsShort', { n: formatDecimal(row.points_possible) })

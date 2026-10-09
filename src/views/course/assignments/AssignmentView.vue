@@ -7,7 +7,8 @@
 // stands and go on to the submissions and grades pages. A student works on it
 // here: see MyWorkPanel. Those who write assignments delete one for good
 // from the header's ⋯ menu (DeleteAssignmentDialog), and come back to the
-// list; an assignment deleted since its link was given says so.
+// list; an assignment deleted since its link was given says so. Group work
+// says so, with its group set, and to a student their group (groupWork.ts).
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -33,6 +34,8 @@ import TimeText from '@/components/TimeText.vue'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AssignmentFormDialog from './components/AssignmentFormDialog.vue'
 import AssignmentMoreMenu from './components/AssignmentMoreMenu.vue'
+import GroupWorkIcon from './components/GroupWorkIcon.vue'
+import { groupSetRoute, type GroupSet } from './components/groupWork'
 import DeleteAssignmentDialog from './components/DeleteAssignmentDialog.vue'
 import MyWorkPanel from './components/MyWorkPanel.vue'
 import WorkSummary from './components/WorkSummary.vue'
@@ -62,6 +65,28 @@ const isStudent = computed(() => course.role === 'student' && !!course.myMemberI
 const seesWork = computed(() => !isStudent.value && course.can('submission_read'))
 // The grades page lists with grade.list and component.tree, which take grade_read alone.
 const seesGrades = computed(() => !isStudent.value && course.can('grade_read'))
+
+// --- Group work -------------------------------------------------------------------
+// Its group set, read by anyone who reads the course (document_read): its
+// name, and to a student the members of their own group.
+const groupSet = useAsync<GroupSet | null>(
+  async () => {
+    const id = assignment.value?.group_set_id
+    return id ? read('group_set.get', { course_id: props.courseId, set_id: id }) : null
+  },
+  { watch: [() => assignment.value?.group_set_id], keepData: true },
+)
+const set = computed(() =>
+  groupSet.data.value && groupSet.data.value.id === assignment.value?.group_set_id ? groupSet.data.value : null,
+)
+const setPage = computed(() =>
+  assignment.value?.group_set_id ? groupSetRoute(router, props.courseId, assignment.value.group_set_id) : null,
+)
+/** The student's group changed under the page (a hand-in or a start said so): read it again. */
+function onGroupChanged() {
+  void state.reload()
+  void groupSet.reload()
+}
 
 // --- Instructions ---------------------------------------------------------------
 const instructions = useAsync<DocumentFull | null>(
@@ -260,6 +285,7 @@ function refresh() {
   deleteProposed.value = false
   void state.reload()
   void instructions.reload()
+  void groupSet.reload()
   summary.value?.reload()
   work.value?.reload()
 }
@@ -276,6 +302,9 @@ function refresh() {
           {{ t('assignments.state.unpublished') }}
         </AppTag>
         <AppTag v-if="pastDue" size="default">{{ t('assignments.state.pastDue') }}</AppTag>
+        <AppTag v-if="assignment.group_set_id" variant="outline" :icon="GroupWorkIcon" size="default">
+          {{ t('groupWork.tag') }}
+        </AppTag>
       </template>
       <template v-if="assignment" #subtitle>
         <!-- A cut-off: the time with its zone, the exact UTC on hover. -->
@@ -462,7 +491,9 @@ function refresh() {
               :course-id="courseId"
               :assignment="assignment"
               :instructions-version-id="instructionsDoc?.published_version_id ?? null"
+              :group-set="set"
               @instructions-changed="onInstructionsChanged"
+              @group-changed="onGroupChanged"
             />
           </div>
 
@@ -491,6 +522,21 @@ function refresh() {
                     {{ t('assignments.detail.practiceHint') }}
                   </div>
                 </dd>
+                <template v-if="assignment.group_set_id">
+                  <dt>{{ t('groupWork.page.set') }}</dt>
+                  <dd class="assignment-view__set">
+                    <router-link v-if="set && setPage" :to="setPage">{{ set.name }}</router-link>
+                    <span v-else-if="set">{{ set.name }}</span>
+                    <span v-else class="app-muted">—</span>
+                  </dd>
+                  <template v-if="isStudent">
+                    <dt>{{ t('groupWork.page.myGroup') }}</dt>
+                    <dd class="assignment-view__my-group">
+                      <template v-if="assignment.my_group">{{ assignment.my_group.name }}</template>
+                      <span v-else class="app-muted">{{ t('groupWork.page.noGroup') }}</span>
+                    </dd>
+                  </template>
+                </template>
                 <template v-if="writer || assignment.published_at">
                   <dt>{{ t('assignments.detail.publishedAt') }}</dt>
                   <dd>
