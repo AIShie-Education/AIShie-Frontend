@@ -35,7 +35,9 @@ import {
 // anyone wrote of her; and, on a poster whose form has self-evaluation on,
 // Ada alone evaluates, herself above the others, and Sato reads that her
 // factor is her own evaluation alone, and no score once the form is for
-// reference only.
+// reference only. 張美玲, alone in 乙組 on another set's assignment with
+// self-evaluation off, is told she has nobody to evaluate and shown no form,
+// and Sato's results neither flag her nor count her as missing one.
 //
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
@@ -785,5 +787,64 @@ test.describe.serial('peer evaluation', () => {
     await expect(ada).toContainText('180% of an even share, from their own evaluation alone')
     await expect(ada).not.toContainText('Score')
     await expect(ada).not.toContainText('92.8')
+  })
+
+  test('a student alone in her group has nobody to evaluate: no form, and the results do not count her missing', async ({
+    page,
+  }) => {
+    const I = instructor().token
+    const who = await registerPerson(`張美玲 ${STAMP}`, { email: `meiling+${STAMP}@peer.test` })
+    const seat = await ok(I, 'POST', `/v1/courses/${courseId}/members`, { actor_id: who.actor_id, preset: 'student' })
+    const solo = await ok(I, 'POST', `/v1/courses/${courseId}/group-sets`, { name: `Solo groups ${STAMP}` })
+    const yi = (await ok(I, 'POST', `/v1/courses/${courseId}/group-sets/${solo.id}/groups`, { groups: [{ name: '乙組' }] }))
+      .group_ids[0] as string
+    await ok(I, 'POST', `/v1/courses/${courseId}/group-sets/${solo.id}/members`, {
+      placements: [{ student_member_id: seat.member_id, group_id: yi }],
+    })
+    const sketch = await ok(I, 'POST', `/v1/courses/${courseId}/assignments`, {
+      title: `Solo sketch ${STAMP}`,
+      points_possible: 100,
+      group_set_id: solo.id,
+    })
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${sketch.id}/publish`, {})
+    await ok(I, 'POST', `/v1/courses/${courseId}/assignments/${sketch.id}/peer-form`, {
+      kind: 'share',
+      opens: 'at',
+      opens_at: new Date(Date.now() - hour).toISOString(),
+      closes_at: new Date(Date.now() + 2 * hour).toISOString(),
+      weight: 20,
+      share_with_students: 'none',
+      version: 0,
+    })
+    // Core gives her a task naming nobody to evaluate.
+    const form = await ok(who.token, 'GET', `/v1/courses/${courseId}/assignments/${sketch.id}/peer-form`)
+    expect(form.task.to_evaluate).toEqual([])
+
+    await signIn(page, who)
+    await inTraditionalChinese(page)
+    await page.goto(`/courses/${courseId}/assignments/${sketch.id}`)
+    await expect(task(page).locator('[data-test="peer-nobody"]')).toHaveText(
+      '你是乙組唯一的組員，沒有需要評分的組員，因此無須交出互評。',
+    )
+    await expect(task(page)).not.toContainText('把100分分給他們')
+    await expect(task(page).locator('form')).toHaveCount(0)
+    await expect(task(page).getByRole('button', { name: '交出互評' })).toHaveCount(0)
+    await expect(task(page).getByRole('button', { name: '平均分配' })).toHaveCount(0)
+    await photograph(page, 'peer-task-alone')
+
+    await page.context().clearCookies()
+    await signIn(page, instructor())
+    await page.goto(`/courses/${courseId}/assignments/${sketch.id}/peer`)
+    const group = page.locator(`[data-test="peer-group-${yi}"]`)
+    const her = group.locator(`[data-test="peer-member-${seat.member_id}"]`)
+    await expect(her).toContainText('Nobody to evaluate')
+    await expect(her).not.toContainText('Not written')
+    await expect(her.locator('.app-tag', { hasText: 'No evaluation' })).toHaveCount(0)
+    await expect(group.locator('.peer-group__missing')).toHaveCount(0)
+    await expect(group).toContainText(`張美玲 ${STAMP} is alone in the group`)
+    await page.getByRole('radio', { name: /Evaluations missing/ }).click()
+    await expect(group).toHaveCount(0)
+    await page.getByRole('radio', { name: /Flagged/ }).click()
+    await expect(group).toHaveCount(0)
   })
 })

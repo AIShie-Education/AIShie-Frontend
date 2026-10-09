@@ -18,7 +18,10 @@ import {
   partOfOtherWork,
   readDraft,
   refusedAsChanged,
+  sameFiles,
   savedDraft,
+  seenDraft,
+  draftChange,
   type SharedDraft,
 } from './groupWork'
 
@@ -227,5 +230,34 @@ describe('a draft that is not the reader’s group’s now', () => {
     expect(notInDraftsGroup(refusal('conflict', 'draft_changed'))).toBe(false)
     expect(notInDraftsGroup(new Error('offline'))).toBe(false)
     expect(notInDraftsGroup(null)).toBe(false)
+  })
+})
+
+describe('what a hand-in names: the draft as the student saw it', () => {
+  const seen = seenDraft('Our text.', [{ document_id: 'd-1' }, { document_id: 'd-2' }], 5)
+
+  it('keeps its text, its files by id and its revision', () => {
+    expect(seen).toEqual({ body: 'Our text.', files: ['d-1', 'd-2'], revision: 5 })
+    expect(seenDraft('', null, null)).toEqual({ body: '', files: [], revision: null })
+  })
+
+  it('finds the draft read again unchanged where its revision and its files are the same, in any order', () => {
+    expect(draftChange(seen, { revision: 5, files: [{ document_id: 'd-2' }, { document_id: 'd-1' }] })).toBeNull()
+    expect(sameFiles(['a', 'b'], ['b', 'a'])).toBe(true)
+  })
+
+  it('finds its text changed by its revision, and its files changed though the revision is the same', () => {
+    expect(draftChange(seen, { revision: 6, files: [{ document_id: 'd-1' }, { document_id: 'd-2' }] })).toBe('text')
+    // A groupmate attached a file: Core counts no revision for it.
+    expect(
+      draftChange(seen, {
+        revision: 5,
+        files: [{ document_id: 'd-1' }, { document_id: 'd-2' }, { document_id: 'd-3' }],
+      }),
+    ).toBe('files')
+    // Or took one off.
+    expect(draftChange(seen, { revision: 5, files: [{ document_id: 'd-1' }] })).toBe('files')
+    expect(draftChange(seen, { revision: 5, files: null })).toBe('files')
+    expect(sameFiles(['a'], ['b'])).toBe(false)
   })
 })

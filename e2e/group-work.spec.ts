@@ -33,16 +33,27 @@ import {
 // the draft: when Yuki hands the next draft in, and when Mei is moved to
 // Gamma.
 //
+// On a third assignment, Gamma's (Fay and Mei): a hand-in names what Mei
+// saw, so a file Fay attached since, which changes no revision, is shown
+// first and nothing is handed in; and text Fay saved while Mei's
+// confirmation was open stays out of the editor behind it, and out of what
+// is handed in. Mei moves to Beta: recording Beta missing names Ken alone,
+// whom Core records it for, and says Mei is left out; Mei moves on to
+// Delta, alone, which is not offered; and once Gamma starts again, Mei's
+// row by student still says her work is Gamma's.
+//
 // With E2E_SHOTS set to a directory, the pages are photographed there.
 
 const STAMP = Date.now().toString(36)
 const SET = `Project groups ${STAMP}`
 const TITLE = `Group essay ${STAMP}`
 const SECOND = `Group plan ${STAMP}`
+const THIRD = `Group poster ${STAMP}`
 let courseId = ''
 let setId = ''
 let assignmentId = ''
 let secondId = ''
+let thirdId = ''
 let alphaWork = ''
 const groups: Record<'alpha' | 'beta' | 'gamma', string> = { alpha: '', beta: '', gamma: '' }
 type Student = DemoActor & { member_id: string }
@@ -119,6 +130,21 @@ async function alphaDraft(
   )
   const d = (list.submissions as { id: string; state: string }[]).find((s) => s.state === 'draft')!
   return ok(reader.token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
+}
+
+/** Uploads a small text file as `token`, for a draft's document; its upload token. */
+async function uploadText(token: string, name: string, text: string): Promise<string> {
+  const q = `kind=submission&content_type=text%2Fplain&filename=${encodeURIComponent(name)}`
+  const u = await call(token, 'GET', `/v1/courses/${courseId}/upload-url?${q}`)
+  expect(u.body.status, JSON.stringify(u.body.error)).toBe('executed')
+  const url = new URL(u.body.result.upload_url)
+  const put = await fetch(`${demo().core}${url.pathname}${url.search}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'text/plain', ...u.body.result.headers },
+    body: new TextEncoder().encode(text),
+  })
+  expect(put.ok).toBe(true)
+  return u.body.result.upload_token as string
 }
 
 /** How far the open dialog runs past the page's width: its overlay, its body, and the group work tick's label. */
@@ -657,5 +683,149 @@ test.describe.serial('group work', () => {
     await expect(work.locator('.my-work__kept-text')).toHaveText('Attempt three. Another line Mei has not saved.')
     await expect(work.locator('textarea')).toHaveCount(0)
     await expect(work.locator('.my-work__group')).toContainText('Gamma')
+  })
+
+  test('a hand-in names what Mei saw: a file Fay attached meanwhile is shown first, and nothing is handed in', async ({
+    page,
+  }) => {
+    const S = sato().token
+    thirdId = (
+      await ok(S, 'POST', `/v1/courses/${courseId}/assignments`, {
+        title: THIRD,
+        points_possible: 10,
+        group_set_id: setId,
+      })
+    ).id
+    await ok(S, 'POST', `/v1/courses/${courseId}/assignments/${thirdId}/publish`, {})
+    await keepToasts(page)
+    await as(page, students.mei)
+    await page.goto(coursePath(`assignments/${thirdId}`))
+    const work = myWork(page)
+    await expect(work.locator('.my-work__group')).toContainText('Gamma')
+    await work.getByRole('button', { name: 'Start your group’s draft' }).click()
+    await expectToasted(page, 'Draft started.')
+    await work.locator('textarea').fill('Our text.')
+    await work.getByRole('button', { name: 'Save draft' }).click()
+    await expectToasted(page, 'Draft saved.')
+    await expect(work).toContainText('No files attached.')
+
+    // Fay attaches a file from her own browser: the draft's revision stays as it was.
+    const before = await alphaDraft(thirdId, groups.gamma, students.fay)
+    const token = await uploadText(students.fay.token, 'fays-unrelated-notes.txt', 'Not for the poster.')
+    await ok(students.fay.token, 'POST', `/v1/courses/${courseId}/documents`, {
+      kind: 'submission',
+      submission_id: before.id,
+      title: 'fays-unrelated-notes.txt',
+      files: [{ upload_token: token, filename: 'fays-unrelated-notes.txt' }],
+    })
+    expect((await alphaDraft(thirdId, groups.gamma, students.fay)).revision).toBe(before.revision)
+
+    await work.getByRole('button', { name: 'Hand in' }).click()
+    await expect(work).toContainText(
+      'The draft’s files changed before it was handed in: someone in your group attached or removed one. Check them, then hand it in.',
+    )
+    await expect(page.getByRole('dialog', { name: 'Hand in attempt 1 for Gamma?' })).toHaveCount(0)
+    // The page shows it now, and nothing was handed in.
+    await expect(work).toContainText('fays-unrelated-notes.txt')
+    const still = await call(students.fay.token, 'GET', `/v1/courses/${courseId}/submissions/${before.id}`)
+    expect(still.body.result.state).toBe('draft')
+  })
+
+  test('text Fay saves while Mei’s confirmation is open stays out of the editor behind it and out of the hand-in', async ({
+    page,
+  }) => {
+    test.setTimeout(120_000)
+    await keepToasts(page)
+    await as(page, students.mei)
+    await page.goto(coursePath(`assignments/${thirdId}`))
+    const work = myWork(page)
+    await expect(work.locator('textarea')).toHaveValue('Our text.')
+    await expect(work).toContainText('fays-unrelated-notes.txt')
+    await work.getByRole('button', { name: 'Hand in' }).click()
+    const confirm = page.getByRole('dialog', { name: 'Hand in attempt 1 for Gamma?' })
+    await expect(confirm).toBeVisible()
+    const d = await alphaDraft(thirdId, groups.gamma, students.fay)
+    const fays = 'FAY CHANGED IT while Mei’s confirmation was open.'
+    await ok(students.fay.token, 'POST', `/v1/courses/${courseId}/submissions/${d.id}`, {
+      body: fays,
+      base_revision: d.revision,
+    })
+    // Past the 20-second read: what is behind the confirmation is what Mei saw.
+    await page.waitForTimeout(25_000)
+    await expect(work.locator('textarea')).toHaveValue('Our text.')
+    await confirm.getByRole('button', { name: 'Hand in' }).click()
+    await expect(work).toContainText(`The draft changed before it was handed in: Fay ${STAMP} changed it`)
+    await expect(work.locator('textarea')).toHaveValue(fays)
+    const kept = await call(students.fay.token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
+    expect(kept.body.result.state).toBe('draft')
+    expect(kept.body.result.body).toBe(fays)
+
+    // Read now, it is handed in as she sees it: Fay's text and Fay's file.
+    await work.getByRole('button', { name: 'Hand in' }).click()
+    await page.getByRole('dialog', { name: 'Hand in attempt 1 for Gamma?' }).getByRole('button', { name: 'Hand in' }).click()
+    await expectToasted(page, `Handed in for you and Fay ${STAMP}.`)
+    const done = await call(sato().token, 'GET', `/v1/courses/${courseId}/submissions/${d.id}`)
+    expect(done.body.result.state).toBe('submitted')
+    expect(done.body.result.body).toBe(fays)
+    expect((done.body.result.files as { title: string }[]).map((f) => f.title)).toEqual(['fays-unrelated-notes.txt'])
+  })
+
+  test('recording Beta missing names Ken alone, whom Core records it for; Delta, Mei alone, is not offered; and Mei’s row keeps Gamma’s work', async ({
+    page,
+  }) => {
+    const S = sato().token
+    // Mei, part of Gamma's work, moves to Beta, Ken's.
+    await ok(S, 'POST', `/v1/courses/${courseId}/group-sets/${setId}/members`, {
+      placements: [{ student_member_id: students.mei.member_id, group_id: groups.beta }],
+      affects_work: true,
+    })
+    await keepToasts(page)
+    await as(page, sato())
+    await page.goto(coursePath(`submissions?assignment=${thirdId}`))
+    const table = page.locator('.group-roster__table')
+    const row = (name: string) => table.locator('.el-table__row').filter({ hasText: name })
+    await expect(row('Beta')).toContainText('Ken Wong and Mei Chan')
+    await expect(row('Beta')).toContainText(
+      'Mei Chan is part of another group’s work for this assignment, so recording the group as missing leaves them out',
+    )
+    await row('Beta').getByRole('button', { name: 'Record missing' }).click()
+    const confirm = page.getByRole('dialog', { name: 'Record Beta as missing?' })
+    await expect(confirm).toContainText(`for “${THIRD}”, for Ken Wong.`)
+    await expect(confirm).toContainText('Mei Chan is left out: they are part of another group’s work for this assignment.')
+    await confirm.getByRole('button', { name: 'Record missing' }).click()
+    await expectToasted(page, 'Beta recorded as missing.')
+    await expect(row('Beta')).toContainText('Recorded as missing for Ken Wong')
+    const missing = await ok(
+      S,
+      'GET',
+      `/v1/courses/${courseId}/submissions?assignment_id=${thirdId}&group_id=${groups.beta}`,
+    )
+    expect((missing.submissions[0].members as { member_id: string }[]).map((m) => m.member_id)).toEqual([
+      students.ken.member_id,
+    ])
+
+    // Mei moves on to Delta, alone: every member of it is part of other work, and there is nobody to record.
+    const delta = (
+      await ok(S, 'POST', `/v1/courses/${courseId}/group-sets/${setId}/groups`, { groups: [{ name: 'Delta' }] })
+    ).group_ids[0] as string
+    await ok(S, 'POST', `/v1/courses/${courseId}/group-sets/${setId}/members`, {
+      placements: [{ student_member_id: students.mei.member_id, group_id: delta }],
+      affects_work: true,
+    })
+    // Gamma starts again: its latest is a draft now, not the work Mei is part of.
+    await ok(students.fay.token, 'POST', `/v1/courses/${courseId}/submissions`, { assignment_id: thirdId })
+    await page.getByRole('button', { name: 'Refresh' }).click()
+    await expect(row('Delta')).toContainText('Mei Chan')
+    await expect(row('Delta')).toContainText(
+      'Mei Chan is part of another group’s work for this assignment, so there is nobody here to record as missing',
+    )
+    await expect(row('Delta').getByRole('button', { name: 'Record missing' })).toHaveCount(0)
+    await expect(row('Gamma')).toContainText('Draft')
+
+    await page.locator('.group-roster__mode').getByText('By student').click()
+    const mei = page.locator('.roster-table .el-table__row').filter({ hasText: 'Mei Chan' })
+    await expect(mei).toContainText('Delta')
+    await expect(mei).toContainText('Gamma’s work')
+    await expect(mei).toContainText('Submitted')
   })
 })

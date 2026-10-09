@@ -231,3 +231,59 @@ export function keepMine(state: SharedDraft): SharedDraft {
   if (!c || c.body === null) return state
   return { text: state.text, serverBody: c.body, baseRevision: c.revision, conflict: null }
 }
+
+// --- Handing in what the student saw ---------------------------------------------------------
+//
+// A hand-in names what it hands in (the draft's text and its files), and
+// Core refuses it if the draft holds anything else by then. What it names is
+// what the student saw when they pressed Hand in, kept before anything is
+// read again: the draft read just before it is handed in, or a reading that
+// lands while its confirmation is open, may hold what a groupmate has done
+// since. Core counts a change of the text (revision), and not one of the
+// files, which a groupmate attaches or removes without one: the files are
+// compared too.
+
+/** What the student saw of the draft when they pressed Hand in. */
+export interface SeenDraft {
+  body: string
+  /** The draft's files, by document id. */
+  files: string[]
+  /** The revision of the text: null where it is not known. */
+  revision: number | null
+}
+
+export function seenDraft(
+  body: string,
+  files: readonly { document_id: string }[] | null | undefined,
+  revision: number | null,
+): SeenDraft {
+  return { body, files: (files ?? []).map((f) => f.document_id), revision }
+}
+
+/** The same files, in any order. */
+export function sameFiles(a: readonly string[], b: readonly string[]): boolean {
+  if (a.length !== b.length) return false
+  const x = [...a].sort()
+  const y = [...b].sort()
+  return x.every((id, i) => id === y[i])
+}
+
+/**
+ * How the draft read again differs from what the student saw: its text (a
+ * revision other than theirs), its files (others, though its revision is
+ * theirs), or not at all (null).
+ */
+export function draftChange(
+  seen: SeenDraft,
+  now: { revision: number; files?: readonly { document_id: string }[] | null },
+): 'text' | 'files' | null {
+  if (seen.revision !== null && now.revision !== seen.revision) return 'text'
+  if (
+    !sameFiles(
+      seen.files,
+      (now.files ?? []).map((f) => f.document_id),
+    )
+  )
+    return 'files'
+  return null
+}

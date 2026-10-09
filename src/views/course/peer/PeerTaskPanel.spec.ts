@@ -329,3 +329,52 @@ describe('PeerTaskPanel, in Chinese', () => {
     }
   })
 })
+
+describe('PeerTaskPanel, a student alone in their group', () => {
+  // As Core b5d6b43 answers a student alone in their group, self-evaluation off: a circle of one, and nobody to evaluate.
+  const alone = {
+    group_id: 'g2',
+    group_name: '乙組',
+    circle: [{ member_id: ME, display_name: 'Yuki Tanaka' }],
+    to_evaluate: [],
+    window: { state: 'open', opens: 'on_hand_in', closes_at: '2099-10-20T15:59:00Z' },
+  }
+
+  it('says there is nobody to evaluate, and shows no form, no total and nothing to send', async () => {
+    answer = { form: FORM, task: alone }
+    const w = await mountPanel()
+    expect(w.find('[data-test="peer-nobody"]').text()).toBe(
+      'You are the only member of 乙組, so there is nobody for you to evaluate and nothing to fill in.',
+    )
+    expect(w.text()).not.toContain('Split 100 points')
+    expect(w.text()).not.toContain('You have not submitted your evaluation yet.')
+    expect(w.find('form').exists()).toBe(false)
+    expect(w.find('[data-test="peer-total"]').exists()).toBe(false)
+    expect(w.find('[data-test="peer-submit"]').exists()).toBe(false)
+    expect(w.findAll('button').some((b) => b.text() === 'Split evenly')).toBe(false)
+    expect(writes).toEqual([])
+    w.unmount()
+  })
+
+  it('says so in Traditional Chinese, and once it has closed, says nothing of an evaluation or an average', async () => {
+    setLocale('zh-Hant')
+    answer = { form: FORM, task: { ...alone, window: { ...alone.window, state: 'closed' } } }
+    const w = await mountPanel()
+    expect(w.find('[data-test="peer-nobody"]').text()).toBe(
+      '你是乙組唯一的組員，沒有需要評分的組員，因此無須交出互評。',
+    )
+    expect(w.text()).not.toContain('你沒有交出互評。')
+    expect(w.text()).not.toContain('按乙組其他各組員')
+    expect(w.find('[data-test="peer-own-average"]').exists()).toBe(false)
+    expect(w.find('form').exists()).toBe(false)
+    w.unmount()
+  })
+
+  it('with self-evaluation on, evaluates themselves: the form is there', async () => {
+    answer = { form: { ...FORM, self_evaluation: true }, task: { ...alone, to_evaluate: [ME] } }
+    const w = await mountPanel()
+    expect(w.find('[data-test="peer-nobody"]').exists()).toBe(false)
+    expect(w.find('form').exists()).toBe(true)
+    w.unmount()
+  })
+})

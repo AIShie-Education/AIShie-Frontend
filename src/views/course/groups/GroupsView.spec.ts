@@ -37,14 +37,19 @@ afterEach(() => {
   document.body.innerHTML = ''
 })
 
-async function mountAs(role: 'instructor' | 'student', sets: unknown[]) {
+async function mountAs(role: 'instructor' | 'student' | 'ta', sets: unknown[], studentScope = 'all') {
   const pinia = createPinia()
   setActivePinia(pinia)
   const course = useCourseStore()
   course.$patch({
     courseId: COURSE,
     course: { id: COURSE, code: 'CS101', section: 'A', title: 'Programming', status: 'active' } as never,
-    membership: { member_id: role === 'student' ? 'm-ana' : 'm-chan', role } as never,
+    membership: {
+      member_id: role === 'student' ? 'm-ana' : 'm-chan',
+      role,
+      student_scope: studentScope,
+      assignment_scope: 'all',
+    } as never,
     perms:
       role === 'student'
         ? { document_read: 'autonomous' }
@@ -112,6 +117,26 @@ describe('the course’s groups, for staff', () => {
   it('says so where there is none yet', async () => {
     const w = await mountAs('instructor', [])
     expect(w.text()).toContain('No group sets yet.')
+  })
+
+  it('says everyone is in a group only where the seat reaches every student', async () => {
+    const w = await mountAs('instructor', [{ ...projects, unassigned_count: 0 }])
+    expect(w.find('.groups__facts').text()).toBe('2 groups · Everyone is in a group')
+  })
+
+  it('counts, to a seat listed to some students, those it reaches, and says so', async () => {
+    // Core counts only the students the seat reaches: none of them is in no group, whoever else is.
+    let w = await mountAs('ta', [{ ...projects, unassigned_count: 0 }], 'listed')
+    expect(w.find('.groups__facts').text()).toBe('2 groups · Every student you reach is in a group')
+    expect(w.text()).not.toContain('Everyone is in a group')
+    w.unmount()
+    w = await mountAs('ta', [projects], 'listed')
+    expect(w.find('.groups__facts').text()).toBe('2 groups · 3 students you reach in no group')
+    w.unmount()
+    setLocale('zh-Hant')
+    w = await mountAs('ta', [{ ...projects, unassigned_count: 0 }], 'listed')
+    expect(w.find('.groups__facts').text()).toContain('你權限範圍內的學生均已分組')
+    expect(w.text()).not.toContain('所有學生均已分組')
   })
 })
 

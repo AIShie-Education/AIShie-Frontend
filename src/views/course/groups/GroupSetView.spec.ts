@@ -126,7 +126,7 @@ afterEach(() => {
 async function mountAs(
   role: 'instructor' | 'student' | 'ta',
   view: unknown,
-  seatOver: { perms?: Record<string, string>; student_scope?: string } = {},
+  seatOver: { perms?: Record<string, string>; student_scope?: string; assignment_scope?: string } = {},
 ) {
   const pinia = createPinia()
   setActivePinia(pinia)
@@ -141,7 +141,7 @@ async function mountAs(
       member_id: role === 'student' ? seat(1) : 'm-teacher',
       role,
       student_scope: seatOver.student_scope ?? 'all',
-      assignment_scope: 'all',
+      assignment_scope: seatOver.assignment_scope ?? 'all',
     } as never,
     perms:
       seatOver.perms ??
@@ -182,6 +182,16 @@ async function mountAs(
   return w
 }
 const text = () => document.body.textContent ?? ''
+/**
+ * The focus falls back to the page, as a browser drops it from a button that
+ * is turned off (jsdom keeps it there): an element focused and taken away.
+ */
+function loseFocus() {
+  const gone = document.createElement('button')
+  document.body.appendChild(gone)
+  gone.focus()
+  gone.remove()
+}
 const buttonNamed = (name: string) =>
   [...document.body.querySelectorAll('button')].find((b) => b.textContent?.trim() === name) as HTMLButtonElement
 
@@ -294,6 +304,90 @@ describe('a set’s page, for those who form groups', () => {
       expect.anything(),
     )
     expect(text()).toContain(`Split at random, with the seed ${seed}`)
+  })
+})
+
+describe('a random split, where the seat is not shown all it deals over', () => {
+  const former = { perms: { document_read: 'autonomous', assignment_write: 'autonomous', member_read: 'autonomous' } }
+
+  it('is not offered to a seat listed to some students: it deals every student of the course', async () => {
+    const w = await mountAs('ta', staffSet(), { ...former, student_scope: 'listed' })
+    expect(buttonNamed('Split at random')).toBeUndefined()
+    expect(w.findComponent(SplitDialog).exists()).toBe(false)
+    // Placing by hand, and adding groups, are still offered.
+    expect(buttonNamed('Add groups')).toBeDefined()
+    expect(w.find('.student-item__check').exists()).toBe(true)
+  })
+
+  it('says to such a seat that the set has no groups yet, and not to split the class', async () => {
+    await mountAs('ta', staffSet({ groups: [] }), { ...former, student_scope: 'listed' })
+    expect(text()).toContain('This set has no groups yet: add some.')
+    expect(text()).not.toContain('split the class at random')
+  })
+
+  it('shows no deal to a seat not shown every assignment’s work, says why, and sends the seed it shows', async () => {
+    // Group 1 has a draft for an assignment this seat is not listed for: it is not shown, and the server keeps the group.
+    const view = staffSet()
+    delete (view.groups[0] as { work?: unknown }).work
+    const w = await mountAs('ta', view, { ...former, assignment_scope: 'listed' })
+    buttonNamed('Split at random').click()
+    await flushPromises()
+    const dialog = w.findComponent(SplitDialog)
+    expect(dialog.text()).toContain('What it deals cannot be shown before it is made')
+    expect(dialog.text()).toContain('you are not shown all of them')
+    expect(dialog.text()).not.toContain('what is shown below is what is dealt')
+    expect(dialog.text()).not.toContain('Places')
+    expect(document.body.querySelector('.split-dialog__group')).toBeNull()
+    const seed = (document.body.querySelector('.split-dialog__seed-input input') as HTMLInputElement).value
+    write.mockResolvedValue(
+      executed({ seed, created: [], placed: [], kept: [{ group_id: g1, reason: 'has_work' }], emptied: 0 }),
+    )
+    buttonNamed('Split').click()
+    await flushPromises()
+    expect(write).toHaveBeenCalledWith('group.split', expect.objectContaining({ set_id: SET, seed }), expect.anything())
+    // What was dealt is said once it is made.
+    expect(text()).toContain('Left Group 1 alone')
+  })
+
+  it('shows no deal to a seat that does not read the member list, which names nobody', async () => {
+    const view = staffSet({ unassigned: null, unassigned_count: null })
+    for (const g of view.groups) delete (g as { members?: unknown }).members
+    const w = await mountAs('ta', view, { perms: { document_read: 'autonomous', assignment_write: 'autonomous' } })
+    buttonNamed('Split at random').click()
+    await flushPromises()
+    expect(w.findComponent(SplitDialog).text()).toContain('What it deals cannot be shown before it is made')
+    expect((buttonNamed('Split') as HTMLButtonElement).disabled).toBe(false)
+  })
+})
+
+describe('those in no group, to a seat listed to some students', () => {
+  const former = { perms: { document_read: 'autonomous', assignment_write: 'autonomous', member_read: 'autonomous' } }
+
+  it('are counted as those the seat reaches, never as everyone', async () => {
+    // Core counts only the students the seat reaches: Ada, whom it lists, is in a group; whoever else is in none.
+    const w = await mountAs('ta', staffSet({ unassigned: [], unassigned_count: 0 }), {
+      ...former,
+      student_scope: 'listed',
+    })
+    expect(w.find('.set-view__none').text()).toBe('Every student you reach is in a group.')
+    expect(text()).not.toContain('Everyone is in a group')
+  })
+
+  it('says how many of those it reaches are in none, in Traditional Chinese too', async () => {
+    const w = await mountAs('ta', staffSet(), { ...former, student_scope: 'listed' })
+    expect(w.find('.set-view__none-title').text()).toBe('Students you reach in no group: 1')
+    w.unmount()
+    setLocale('zh-Hant')
+    const zh = await mountAs('ta', staffSet({ unassigned: [], unassigned_count: 0 }), {
+      ...former,
+      student_scope: 'listed',
+    })
+    expect(zh.find('.set-view__none').text()).toBe('你權限範圍內的學生均已分組。')
+  })
+
+  it('are all of them, to a seat that reaches every student', async () => {
+    const w = await mountAs('instructor', staffSet({ unassigned: [], unassigned_count: 0 }))
+    expect(w.find('.set-view__none').text()).toBe('Everyone is in a group.')
   })
 })
 
@@ -454,6 +548,62 @@ describe('a set’s page, for a student', () => {
     await w.findAll('.student-set__row')[2].find('button').trigger('click')
     await flushPromises()
     expect(text()).toContain('You switched to Group 3.')
+  })
+
+  it('gives the focus back to the group’s button once a sign-up is answered, which was off while it was asked for', async () => {
+    const w = await mountAs('student', studentSet())
+    const button = () => w.find(`.student-set__row[data-group="${seat(903)}"] button`)
+    // Ana switches to Group 3 from the keyboard; the set read again has her there.
+    const switched = studentSet({ my_group_id: seat(903) })
+    let answer = (_v: unknown) => {}
+    write.mockImplementation(() => new Promise((r) => (answer = r)))
+    read.mockImplementation(async () => structuredClone(switched))
+    ;(button().element as HTMLButtonElement).focus()
+    await button().trigger('click')
+    // While it is asked for, every button is off, and the browser takes the focus from the one pressed.
+    expect(button().attributes('disabled')).toBeDefined()
+    loseFocus()
+    expect(document.activeElement).toBe(document.body)
+    answer(executed({ group_id: seat(903), left_group_id: g1, changed: true }))
+    await flushPromises()
+    expect(text()).toContain('You switched to Group 3.')
+    expect(button().text()).toBe('Leave')
+    expect(document.activeElement).toBe(button().element)
+  })
+
+  it('gives the focus to “Your group” where the group’s button is off once the set is read again', async () => {
+    const w = await mountAs('student', studentSet())
+    const button = () => w.find(`.student-set__row[data-group="${seat(903)}"] button`)
+    // Group 3 filled up meanwhile: Core refuses, and the set read again says it is full.
+    const full = studentSet()
+    full.groups[2] = { ...full.groups[2], size: 3, capacity: 3, full: true } as never
+    read.mockImplementation(async () => structuredClone(full))
+    let refuse = (_e: unknown) => {}
+    write.mockImplementation(() => new Promise((_r, j) => (refuse = j)))
+    ;(button().element as HTMLButtonElement).focus()
+    await button().trigger('click')
+    loseFocus()
+    refuse(
+      new ApiError({ status: 422, code: 'failed_precondition', message: 'full', details: { reason: 'group_full' } }),
+    )
+    await flushPromises()
+    expect(w.find('.student-set__refusal').text()).toContain('That group is full.')
+    expect(button().attributes('disabled')).toBeDefined()
+    expect(document.activeElement?.id).toBe('student-set-mine')
+  })
+
+  it('leaves the focus where the student has gone meanwhile', async () => {
+    const w = await mountAs('student', studentSet())
+    const button = () => w.find(`.student-set__row[data-group="${seat(903)}"] button`)
+    let answer = (_v: unknown) => {}
+    write.mockImplementation(() => new Promise((r) => (answer = r)))
+    await button().trigger('click')
+    const elsewhere = document.createElement('input')
+    document.body.appendChild(elsewhere)
+    elsewhere.focus()
+    answer(executed({ group_id: seat(903), left_group_id: g1, changed: true }))
+    await flushPromises()
+    expect(document.activeElement).toBe(elsewhere)
   })
 
   it('says, to a student in no group with sign-up closed, that the teacher places them', async () => {

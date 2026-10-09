@@ -270,6 +270,57 @@ describe('PeerGroupResults', () => {
     expect(w.text()).toContain('peer evaluation cannot move their scores')
     w.unmount()
   })
+
+  // As Core b5d6b43 answers for 乙組, 張美玲 alone in it, self-evaluation off: no sheet, and the rater's flag missing.
+  const lone = {
+    ...GROUP,
+    group_id: 'g2',
+    name: '乙組',
+    flags: [],
+    members: [
+      {
+        member_id: 'm-mei',
+        display_name: '張美玲',
+        submitted: false,
+        rated_by: [],
+        factor: 1,
+        score: 80,
+        grade: { grade_id: 'gr-mei', score: 80, state: 'draft' },
+        flags: ['missing'],
+      },
+    ],
+    sheets: [],
+  } as unknown as PeerGroupResult
+
+  it('says a member alone in the group had nobody to evaluate, never that they wrote nothing', () => {
+    const w = mountIt(PeerGroupResults, { courseId: 'c1', form: FORM, group: lone })
+    const mei = member(w, 'm-mei').text()
+    expect(mei).toContain('Nobody to evaluate')
+    expect(mei).not.toContain('Not written')
+    expect(mei).not.toContain('No evaluation')
+    expect(w.find('.peer-group__missing').exists()).toBe(false)
+    expect(w.find('.peer-group__alone').text()).toContain('張美玲 is alone in the group')
+    expect(w.find('.peer-group__alone').text()).toContain('their score is the group’s')
+    expect(w.findAll('.app-tag').some((t) => t.text() === 'No evaluation')).toBe(false)
+    w.unmount()
+  })
+
+  it('says so in Traditional Chinese, with no 未交互評 in red', () => {
+    setLocale('zh-Hant')
+    const w = mountIt(PeerGroupResults, { courseId: 'c1', form: FORM, group: lone })
+    expect(member(w, 'm-mei').text()).toContain('無須互評')
+    expect(w.findAll('.app-tag').map((t) => t.text())).not.toContain('未交互評')
+    expect(w.find('.peer-member__none').exists()).toBe(false)
+    expect(w.text()).not.toContain('尚未交出互評')
+    w.unmount()
+  })
+
+  it('still marks a member alone who evaluates themselves, with self-evaluation on, and wrote nothing', () => {
+    const w = mountIt(PeerGroupResults, { courseId: 'c1', form: { ...FORM, self_evaluation: true }, group: lone })
+    expect(member(w, 'm-mei').text()).toContain('Not written')
+    expect(w.find('.peer-group__missing').text()).toContain('No evaluation yet from 張美玲')
+    w.unmount()
+  })
 })
 
 describe('FairShareExplainer', () => {

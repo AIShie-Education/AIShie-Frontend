@@ -85,6 +85,7 @@ export default {
     keptDiscardTitle: '要丢弃你未保存的内容吗？',
     keptDiscardBody: '这些内容没有保存在其他地方，丢弃后无法恢复。',
     changedBeforeHandIn: '提交前草稿已有变动：{name}于{when}修改了它。请重新阅读后再提交。',
+    filesChangedBeforeHandIn: '提交前草稿的文件已有变动：有组员附加或移除了文件。请先检查文件，再提交。',
     handInTitle: '要为{group}提交第{n}次作答吗？',
     handInFor: '这份作业会为{names}提交：提交后就是他们的作业，之后小组有任何变动也不会改变。',
     handInLeftOutMe: '你不会包括在内：你已是{group}这份作业的成员。',
@@ -111,6 +112,7 @@ export default {
     handedInFor: '为{names}提交',
     missingFor: '为{names}记录为缺交',
     workOf: '{group}的作业',
+    workOfAnother: '另一个小组的作业',
     nobody: '没有组员',
     handedInBy: '由{name}提交',
     empty: '这个分组还没有小组。',
@@ -127,6 +129,11 @@ export default {
     confirmTitle: '要把{group}记录为缺交吗？',
     confirmBody:
       '{group}会被记录为没有提交“{assignment}”，记录属于现在的组员：{names}。之后便可以评分。如小组之后提交作业，作业会替换这条记录。',
+    confirmBodyFor:
+      '{group}会被记录为没有提交“{assignment}”，记录属于{names}。之后便可以评分。如小组之后提交作业，作业会替换这条记录。',
+    confirmLeftOut: '{names}不包括在内：他们已是另一个小组这份作业的成员。',
+    otherWorkSome: '{names}已是另一个小组这份作业的成员，因此把小组记录为缺交时不包括他们',
+    otherWorkAll: '{names}已是另一个小组这份作业的成员，因此此小组没有组员可记录为缺交',
     done: '已把{group}记录为缺交。',
     noGroupCell: '无',
   },

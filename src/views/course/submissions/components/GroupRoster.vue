@@ -6,7 +6,11 @@
 // group_id), for its members now, by someone whose seat reaches every one of
 // them: a seat listed to some students is shown only those of each group's
 // members, and is told how many more there are (the group's size, from its
-// set). Under the groups, the students in no
+// set). Core records it for its members now less those another group's work
+// names already (moved since that group handed in): the page names whom it
+// is for, and whom it leaves out, from the rows, and offers it on no group
+// whose members are all part of other work, saying why. Under the groups,
+// the students in no
 // group of the set, who hand nothing in and are not recorded as missing:
 // the teacher places them in a group, on the set's page. By student, the
 // roster's own table, each student with their group. The page loads the
@@ -39,7 +43,9 @@ import {
   byGroupName,
   groupProposalKey,
   groupRosterView,
+  inOtherWork,
   mayMarkGroupMissing,
+  missingFor,
   NO_GROUP,
   unreachedMembers,
   workMembersIfOthers,
@@ -134,13 +140,28 @@ function markContext(g: RosterGroup) {
     proposed: isProposed(g),
   }
 }
-const markable = (g: RosterGroup) => mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value })
+const markable = (g: RosterGroup) => mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value, rows: props.rows })
 /** A group that would be recorded missing from here but for members the seat does not reach. */
 const outOfReach = (g: RosterGroup) => unreached(g) > 0 && mayMarkGroupMissing(g, { ...markContext(g), reach: null })
 /** How many members the seat does not reach, and, where that is why, that the group is not recorded missing from here. */
 function unreachedLine(g: RosterGroup): string {
   const n = unreached(g)
   return t(outOfReach(g) ? 'groupWork.roster.unreachedMissing' : 'groupWork.roster.unreached', { n }, n)
+}
+/**
+ * Where the group would be recorded missing from here: those of its members
+ * another group's work names already, whom recording it leaves out, and
+ * whether that is all of them (then it is not offered).
+ */
+function otherWorkLine(g: RosterGroup): string | null {
+  const others = inOtherWork(g, props.rows)
+  if (!others.length || !mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value })) return null
+  const all = !missingFor(g, props.rows).length
+  return t(
+    all ? 'groupWork.roster.otherWorkAll' : 'groupWork.roster.otherWorkSome',
+    { names: namesOf(others) },
+    others.length,
+  )
 }
 
 const { run, lastError } = useWrite('submission.record_missing')
@@ -149,7 +170,17 @@ const busy = ref<string | null>(null)
 async function markMissing(g: RosterGroup) {
   const assignmentId = props.assignmentId
   const title = course.assignmentTitle(assignmentId) ?? t('submissions.roster.confirm.thisAssignment')
-  const lines = [t('groupWork.roster.confirmBody', { group: g.name, assignment: title, names: namesOf(g.members) })]
+  // For its members now, less those another group's work names: as Core records it.
+  const forWhom = missingFor(g, props.rows)
+  const leftOut = inOtherWork(g, props.rows)
+  const lines = [
+    t(leftOut.length ? 'groupWork.roster.confirmBodyFor' : 'groupWork.roster.confirmBody', {
+      group: g.name,
+      assignment: title,
+      names: namesOf(forWhom),
+    }),
+  ]
+  if (leftOut.length) lines.push(t('groupWork.roster.confirmLeftOut', { names: namesOf(leftOut) }, leftOut.length))
   const due = assignment.value?.due_at
   if (due && dayjs(due).isAfter(dayjs())) lines.push(t('submissions.roster.confirm.notDue', { due: zonedText(due) }))
   if (needsApproval.value) lines.push(t('submissions.roster.confirm.needsApproval'))
@@ -272,6 +303,9 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
                 <div v-if="unreached(g)" class="group-roster__work-of group-roster__unreached">
                   {{ unreachedLine(g) }}
                 </div>
+                <div v-if="otherWorkLine(g)" class="group-roster__work-of group-roster__other-work">
+                  {{ otherWorkLine(g) }}
+                </div>
                 <div v-if="workLine(g)" class="group-roster__work-of">{{ workLine(g) }}</div>
               </div>
               <div class="group-cards__meta">
@@ -321,6 +355,9 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
               <span v-else class="app-muted">{{ t('groupWork.roster.nobody') }}</span>
               <div v-if="unreached(row)" class="group-roster__work-of group-roster__unreached">
                 {{ unreachedLine(row) }}
+              </div>
+              <div v-if="otherWorkLine(row)" class="group-roster__work-of group-roster__other-work">
+                {{ otherWorkLine(row) }}
               </div>
               <div v-if="workLine(row)" class="group-roster__work-of">{{ workLine(row) }}</div>
             </template>

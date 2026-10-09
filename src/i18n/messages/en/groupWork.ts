@@ -95,6 +95,9 @@ export default {
     keptDiscardBody: 'It is kept nowhere else, so it cannot be brought back.',
     changedBeforeHandIn:
       'The draft changed before it was handed in: {name} changed it {when}. Read it again, then hand it in.',
+    // A file attached to the draft, or taken off it, since the student last read it: Core names nobody for it.
+    filesChangedBeforeHandIn:
+      'The draft’s files changed before it was handed in: someone in your group attached or removed one. Check them, then hand it in.',
     handInTitle: 'Hand in attempt {n} for {group}?',
     handInFor: 'It is handed in for {names}: from then on it is their work, whatever changes in the group afterwards.',
     handInLeftOutMe: 'You will be left out of it: you are part of {group}’s work for this assignment already.',
@@ -123,6 +126,8 @@ export default {
     handedInFor: 'Handed in for {names}',
     missingFor: 'Recorded as missing for {names}',
     workOf: '{group}’s work',
+    // A student's row whose work is another group's, where the work does not say which (it cannot be read just now).
+    workOfAnother: 'Another group’s work',
     nobody: 'Nobody in it',
     handedInBy: 'by {name}',
     empty: 'The group set has no groups yet.',
@@ -141,6 +146,17 @@ export default {
     confirmTitle: 'Record {group} as missing?',
     confirmBody:
       '{group} will be recorded as having handed in nothing for “{assignment}”, for its members now: {names}. It can then be graded. If the group hands work in later, that takes the record’s place.',
+    // The same, where some of its members are part of another group's work, which leaves them out (confirmLeftOut).
+    confirmBodyFor:
+      '{group} will be recorded as having handed in nothing for “{assignment}”, for {names}. It can then be graded. If the group hands work in later, that takes the record’s place.',
+    confirmLeftOut:
+      '{names} is left out: they are part of another group’s work for this assignment. | {names} are left out: they are part of another group’s work for this assignment.',
+    // Under a group with no work, its members another group's work names: recording it missing leaves them out.
+    otherWorkSome:
+      '{names} is part of another group’s work for this assignment, so recording the group as missing leaves them out | {names} are part of another group’s work for this assignment, so recording the group as missing leaves them out',
+    // The same, where that is every member: there is nobody to record it for, and it is not offered.
+    otherWorkAll:
+      '{names} is part of another group’s work for this assignment, so there is nobody here to record as missing | {names} are part of another group’s work for this assignment, so there is nobody here to record as missing',
     done: '{group} recorded as missing.',
     noGroupCell: 'None',
   },

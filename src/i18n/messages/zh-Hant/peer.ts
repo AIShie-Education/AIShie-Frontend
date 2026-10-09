@@ -126,6 +126,7 @@ export default {
     private: '只有你的老師會看到你的互評和你的名字。其他學生都看不到，也看不到別人對他們的評語。',
     counts: '互評會計入每位組員的成績，比重為{weight}。',
     reference: '你的老師會以此作參考。',
+    nobody: '你是{group}唯一的組員，沒有需要評分的組員，因此無須交出互評。',
     agent: '組員互評是你本人對同學的判斷：只能由你親自填寫，代理不能代勞。',
     proposed: '你的互評正等待批准，批准後才算交出。',
     average: '組員給你的評價',
@@ -210,6 +211,9 @@ export default {
     wrote: '他的互評',
     wroteAt: '於{at}交出',
     notWritten: '未交',
+    alone: '無須互評',
+    aloneNote:
+      '{name}是小組唯一的組員，而且組員不自評：他沒有需要評分的組員，因此不算未交互評，他的分數就是小組的分數。',
     received: '得到',
     nobodyRated: '未有人評他',
     noPeerRated: '未有組員評他',
@@ -333,5 +337,6 @@ export default {
     grade_posted: '{score}',
     gradeOwn: '{score}（你的調整）',
     flags: '標記',
+    alone: '無須互評',
   },
 }

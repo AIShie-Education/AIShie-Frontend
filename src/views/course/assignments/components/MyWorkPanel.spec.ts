@@ -290,6 +290,68 @@ describe('a draft its group writes together', () => {
     expect(w.text()).toContain('The draft changed before it was handed in: Ken Wong changed it')
     w.unmount()
   })
+
+  it('hands nothing in that the reader has not seen: a file a groupmate attached meanwhile is shown first', async () => {
+    const w = await mountPanel()
+    // Ken attaches a file: Core counts no new revision for it.
+    draft = { ...draft!, files: [{ document_id: 'doc-ken', title: 'kens-notes.txt' }] as never[] }
+    await button(w, 'Hand in').trigger('click')
+    await flushPromises()
+    expect(confirm).not.toHaveBeenCalled()
+    expect(writes).toEqual([])
+    expect(w.text()).toContain('The draft’s files changed before it was handed in')
+    // The page shows it now; handed in again, it is in what is named.
+    answers['submission.submit'] = () => ({
+      state: 'submitted',
+      submitted_at: '2026-10-05T12:10:00Z',
+      members: [ME, 'm-ken'],
+    })
+    await button(w, 'Hand in').trigger('click')
+    await flushPromises()
+    expect(writes[0]).toEqual({
+      tool: 'submission.submit',
+      args: expect.objectContaining({ body: 'Our first lines.', files: ['doc-ken'] }),
+    })
+    w.unmount()
+  })
+
+  it('hands in what the reader saw, the 20-second read waiting while the confirmation is open', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      let release = () => {}
+      confirm.mockImplementationOnce(() => new Promise((r) => (release = () => r('confirm'))))
+      // Core hands in only what the draft holds.
+      answers['submission.submit'] = (args) =>
+        args.body === draft!.body
+          ? { state: 'submitted', submitted_at: '2026-10-05T12:10:00Z', members: [ME, 'm-ken'] }
+          : new ApiError({
+              status: 422,
+              code: 'failed_precondition',
+              message: 'the draft does not hold what this call says it hands in',
+            })
+      const w = await mountPanel()
+      await button(w, 'Hand in').trigger('click')
+      await flushPromises()
+      expect(confirm).toHaveBeenCalledTimes(1)
+      // Ken saves new text while Yuki's confirmation is open; the 20-second read does not put it behind it.
+      draft = { ...draft!, body: 'Ken changed it while the confirmation was open.', revision: 4 }
+      await vi.advanceTimersByTimeAsync(25_000)
+      await flushPromises()
+      expect((editor(w).element as HTMLTextAreaElement).value).toBe('Our first lines.')
+      release()
+      await flushPromises()
+      expect(writes).toEqual([
+        { tool: 'submission.submit', args: expect.objectContaining({ body: 'Our first lines.', files: [] }) },
+      ])
+      // Refused, the draft is read again and shown, and the reader is told why.
+      expect((editor(w).element as HTMLTextAreaElement).value).toBe('Ken changed it while the confirmation was open.')
+      expect(w.text()).toContain('The draft changed before it was handed in: Ken Wong changed it')
+      expect(messages()).not.toContain('Handed in for you and Ken Wong.')
+      w.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 /** Core's refusal of the draft to someone who is not one of its group now. */
