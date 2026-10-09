@@ -13,8 +13,10 @@
 // The members it writes and the grades it replaces are sent as read, so that
 // a proposal is refused on approval if they have changed. Core regrades a
 // group only for a seat that reaches every member of its work, and shows a
-// seat the grades only of those it reaches: one that does not reach them all
-// is told so, and offered nothing to save.
+// seat the grades only of those it reaches: the grade's page offers such a
+// seat no regrade, and one that opens it all the same (its reach read only
+// as it opens) is told so, shown no member's line (a grade it was not given
+// would read as none) and offered nothing to save.
 import { computed, reactive, ref, watch } from 'vue'
 import { read } from '@/api/http'
 import { useI18n } from 'vue-i18n'
@@ -132,6 +134,8 @@ watch(
   (w) => (adjustRows.value = w ? w.rows.map((r) => ({ ...r })) : []),
 )
 const rowsChecked = ref(false)
+/** Some member of the work is outside the seat's reach: nothing is offered but to close. */
+const unreached = computed(() => isGroup.value && !!groupWork.data.value?.unreached)
 const groupBlocked = computed(
   () =>
     isGroup.value &&
@@ -261,11 +265,11 @@ async function submit() {
       }}</span>
       <ScoreText :score="grade.group?.score ?? grade.score" :out-of="outOf" />
     </div>
-    <p class="app-form-hint regrade__intro">
+    <p v-if="!unreached" class="app-form-hint regrade__intro">
       {{ isGroup ? t('groupGrading.regrade.intro') : t('grades.regrade.intro') }}
     </p>
     <el-alert
-      v-if="isGroup && groupWork.data.value?.unreached"
+      v-if="unreached"
       type="warning"
       :closable="false"
       show-icon
@@ -281,7 +285,7 @@ async function submit() {
       :title="t('groupGrading.regrade.partlyPosted')"
     />
 
-    <div v-if="grade.assignment_id" class="regrade__rubric">
+    <div v-if="grade.assignment_id && !unreached" class="regrade__rubric">
       <RubricPanel
         :course-id="courseId"
         :state="rubric.data.value"
@@ -290,7 +294,7 @@ async function submit() {
       />
     </div>
 
-    <el-form ref="formRef" :model="form" :rules="rules" label-position="top" :disabled="pending">
+    <el-form v-if="!unreached" ref="formRef" :model="form" :rules="rules" label-position="top" :disabled="pending">
       <el-form-item :label="isGroup ? t('groupGrading.regrade.score') : t('grades.form.newScore')" prop="score">
         <div class="regrade__score">
           <el-input v-model="form.score" inputmode="decimal" class="regrade__score-input" />
@@ -365,8 +369,11 @@ async function submit() {
 
     <template #footer>
       <span v-if="uploadingFiles" class="regrade__why">{{ t('common.upload.waitToSave') }}</span>
-      <el-button @click="visible = false">{{ t('common.actions.cancel') }}</el-button>
+      <el-button @click="visible = false">
+        {{ unreached ? t('common.actions.close') : t('common.actions.cancel') }}
+      </el-button>
       <el-button
+        v-if="!unreached"
         type="primary"
         :loading="pending"
         :disabled="!course.writable || rubric.loading.value || uploadingFiles || groupBlocked"

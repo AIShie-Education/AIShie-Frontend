@@ -899,9 +899,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (the seat's student scope and list; null where it cannot be read, or for a delegate, whose
   principal's scope is not read) and `workReach` say whether it reaches them all, and a seat that
   does not (`'some'`) is told so, a member outside its reach said to be (never out of the group,
-  nor without a grade), and offered no grading form, correction, lateness or regrade. Once a grade
-  from it is posted the group is regraded (`RegradeDialog`, sending the members it writes and the
-  grades it replaces), and one member is adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a
+  nor without a grade), and offered no grading form, correction, lateness or regrade (a member's
+  grade's page, `GradeView`, reads the work to know, and offers the regrade only once it does;
+  `RegradeDialog`, opened all the same, shows no member's line, since a grade it was not given
+  would read as none). Once a grade from it is posted the group is regraded (`RegradeDialog`,
+  sending the members it writes and the grades it replaces), and one member is adjusted alone (`AdjustGradeDialog`, `grade.adjust`: a
   draft as entering a grade is gated, a posted grade as a regrade). Whose work it is
   (`GroupWorkMembers`) is marked against the group now for those who grade, who correct it
   (`submission.set_members`). A member's grade says how it came
@@ -914,8 +916,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `groupGrading`, refusals under `groupGrading.refusal`; the action pages (`reasonText`,
   `reasonWords` in `actionText.ts`) say a refusal of these tools in the same words, by the action's
   kind, those met only when a proposal is carried out (`members_changed`, `grades_changed`) under
-  `groupGrading.actionRefusal`, and show Core's own message (written for agents, naming its
-  tools) only where the app has no words for it.
+  `groupGrading.actionRefusal`, the proposal beneath a decision about a decision by its own kind
+  (`OutcomeLines` looks it up, `action.get`, where it was refused), and show Core's own message
+  (written for agents, naming its tools) only where the app has no words for it.
 - **A course's groups** (分組: the Groups tab, `/groups`, `GroupsView`; a set, `/groups/:setId`,
   `GroupSetView`; their parts in `src/views/course/groups/`) are read by every reader of the course
   (`group_set.list`, `.get`, with `document_read`) and formed by whoever writes assignments

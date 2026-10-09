@@ -225,6 +225,25 @@ test.describe.serial('grading group work', () => {
     await expect(grades(page)).toContainText('Team A’s score')
   })
 
+  test('the TA whose seat reaches Ana and Ben alone is offered no regrade of the group, and told why', async ({
+    page,
+  }) => {
+    // Ivy posts grades, and so regrades them; but Core regrades a group only for a seat that reaches every member of
+    // its work, and lists her Ana's and Ben's grades alone (Cai's 74 among those left out).
+    await as(page, w.people.ivy)
+    await page.goto(path(`submissions/${w.submissions.a}`))
+    await memberLine(page, 'Ana Chan').getByRole('link', { name: 'Open Ana Chan’s grade' }).click()
+    const card = page.locator('.group-grade')
+    await expect(card).toContainText(
+      'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
+    )
+    await expect(page.getByRole('button', { name: 'Regrade the group' })).toHaveCount(0)
+    // Adjusting Ana alone is within her reach.
+    await expect(card.getByRole('button', { name: 'Adjust' })).toBeVisible()
+    await card.scrollIntoViewIfNeeded()
+    await photograph(page, 'group-grading-regrade-partial-reach')
+  })
+
   test('the class’s gradebook marks group grades and adjusted members, and its CSV says so', async ({ page }) => {
     await as(page, w.people.teacher)
     await page.setViewportSize({ width: 1280, height: 800 })
@@ -469,6 +488,19 @@ test.describe.serial('grading group work', () => {
       score: 72,
     })
     expect(proposed.status, JSON.stringify(proposed)).toBe('proposed')
+    // And once more, which a second agent proposes approving: that decision waits for the teacher.
+    const again = await call(w.people.grader.token, 'grade.submit', {
+      course_id: w.course.id,
+      submission_id: w.submissions.b,
+      score: 74,
+    })
+    expect(again.status, JSON.stringify(again)).toBe('proposed')
+    const decision = await call(w.people.approver.token, 'action.decide', {
+      course_id: w.course.id,
+      action_id: again.action_id,
+      decision: 'approve',
+    })
+    expect(decision.status, JSON.stringify(decision)).toBe('proposed')
     const drafts = (
       await call(w.people.teacher.token, 'grade.list', { course_id: w.course.id, assignment_id: w.assignment.id })
     ).result.grades
@@ -493,6 +525,20 @@ test.describe.serial('grading group work', () => {
     await expect(result).toContainText('由這份小組成績而來的成績已經發佈')
     await expect(result).not.toContainText('grade.regrade')
     await expect(page.locator('.outcome-alert')).not.toContainText('grade.regrade')
+
+    // Approving the second agent's decision on the approvals page: the grade beneath it is refused, said the same way.
+    await page.goto(path('approvals'))
+    const card = page.locator('.action-card').filter({ hasText: w.people.approver.display_name })
+    await card.getByRole('button', { name: '批准', exact: true }).click()
+    await card.getByRole('button', { name: '立即批准' }).click()
+    const outcome = page.locator('.approvals__recent .outcome-alert')
+    await expect(outcome).toContainText('其所決定的提案：已批准，但未能執行')
+    await expect(outcome).toContainText('由這份小組成績而來的成績已經發佈')
+    await expect(outcome).not.toContainText('group_grade_posted')
+    await expect(outcome).not.toContainText('grade.regrade')
+    await expect(outcome).not.toContainText('伺服器的訊息')
+    await outcome.scrollIntoViewIfNeeded()
+    await photograph(page, 'group-grading-refusal-beneath-decision')
 
     // Adding Ben, part of Team A's work, to Team B's: refused, and listed among the teacher's actions in words.
     await page.goto(path(`submissions/${w.submissions.b}`))

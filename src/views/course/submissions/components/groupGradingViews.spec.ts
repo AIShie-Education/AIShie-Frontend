@@ -9,6 +9,7 @@ import type { Assignment, Grade, GradeSummary, Submission } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import AdjustGradeDialog from '@/views/course/grades/components/AdjustGradeDialog.vue'
 import RegradeDialog from '@/views/course/grades/components/RegradeDialog.vue'
+import GradeView from '@/views/course/grades/GradeView.vue'
 import CorrectMembersDialog from './CorrectMembersDialog.vue'
 import GradePanel from './GradePanel.vue'
 import GroupGrades from './GroupGrades.vue'
@@ -324,10 +325,12 @@ describe('a grader whose seat does not reach every member of the work', () => {
     expect(wrapper.findAll('button').some((b) => b.text().includes('Correct members'))).toBe(false)
   })
 
-  it('is told the group is regraded by someone who reaches them all, and has nothing to save', async () => {
-    const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben'])
+  /** Team A's grades posted, as Core lists them to the TA: Ana's and Ben's alone (Cai's, 70 after -10, left out). */
+  function answerPosted() {
     vi.mocked(read).mockImplementation(async (tool: string) => {
       if (tool === 'submission.get') return SUB as never
+      if (tool === 'grade.get') return grade({ id: 'p-ana', state: 'posted' }) as never
+      if (tool === 'component.tree') return { components: [] } as never
       if (tool === 'grade.list') {
         return {
           grades: [
@@ -338,6 +341,42 @@ describe('a grader whose seat does not reach every member of the work', () => {
       }
       throw new Error(`no answer for ${tool}`)
     })
+  }
+
+  it('is offered no regrade of the group on a member’s posted grade, and told why; adjusting the member stays', async () => {
+    const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben'])
+    answerPosted()
+    const wrapper = mount(GradeView, {
+      props: { courseId: COURSE, gradeId: 'p-ana' },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    expect(wrapper.find('.group-grade').exists()).toBe(true)
+    const buttons = wrapper.findAll('button').map((b) => b.text())
+    expect(buttons).not.toContain('Regrade the group')
+    expect(buttons).toContain('Adjust')
+    expect(wrapper.find('.group-grade').text()).toContain(
+      'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
+    )
+  })
+
+  it('is offered the group’s regrade where its seat reaches every member', async () => {
+    const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben', 'cai'])
+    answerPosted()
+    const wrapper = mount(GradeView, {
+      props: { courseId: COURSE, gradeId: 'p-ana' },
+      ...mounting,
+      global: { plugins: [pinia, i18n, ElementPlus], components: icons, stubs },
+    })
+    await flushPromises()
+    expect(wrapper.findAll('button').map((b) => b.text())).toContain('Regrade the group')
+    expect(wrapper.text()).not.toContain('outside the students your seat reaches')
+  })
+
+  it('is told the group is regraded by someone who reaches them all, shown no member’s line, and has nothing to save', async () => {
+    const { pinia } = setUp({ ...PERMS, grade_post: 'autonomous' }, 't', ['ana', 'ben'])
+    answerPosted()
     const wrapper = mount(RegradeDialog, {
       props: {
         courseId: COURSE,
@@ -356,8 +395,14 @@ describe('a grader whose seat does not reach every member of the work', () => {
     expect(dialog.textContent).toContain(
       'Some members of this work are outside the students your seat reaches. The group is regraded by someone whose seat reaches them all.',
     )
-    const save = Array.from(dialog.querySelectorAll('.el-dialog__footer button')).at(-1) as HTMLButtonElement
-    expect(save.disabled).toBe(true)
+    // Cai's grade was not read: no line for him, nor any, as though his were the group's score.
+    expect(dialog.querySelectorAll('.group-adjust__item')).toHaveLength(0)
+    expect(dialog.textContent).not.toContain('Cai Lam')
+    expect(dialog.textContent).not.toContain('The group’s score')
+    expect(dialog.textContent).not.toContain('Each member’s line is as their grade is now')
+    expect(dialog.querySelector('form')).toBeNull()
+    const footer = Array.from(dialog.querySelectorAll('.el-dialog__footer button')).map((b) => b.textContent?.trim())
+    expect(footer).toEqual(['Close'])
   })
 })
 

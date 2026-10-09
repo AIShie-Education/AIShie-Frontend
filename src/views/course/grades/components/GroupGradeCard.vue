@@ -4,7 +4,9 @@
 // score, a score of their own, plus or minus, or moved by peer evaluation),
 // with the grader's reason, which the member reads too, and who set it,
 // which Core gives those who grade alone. The feedback and files are the
-// group's, every member's to read. Those who grade adjust the member here.
+// group's, every member's to read. Those who grade adjust the member here;
+// one whose seat does not reach every member of the work is told that the
+// group is regraded by someone else.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Decimal, Grade } from '@/api/types'
@@ -20,6 +22,8 @@ const props = defineProps<{
   mine?: boolean
   canAdjust?: boolean
   adjustNeedsApproval?: boolean
+  /** Some member of the work is outside the caller's reach: the group's regrade is not theirs. */
+  regradeUnreached?: boolean
   disabled?: boolean
 }>()
 const emit = defineEmits<{ adjust: [] }>()
@@ -68,6 +72,9 @@ const adjusted = computed(() => isGraderAdjustment(group.value.adjustment))
     <p class="app-form-hint group-grade__shared">
       {{ mine ? t('groupGrading.card.sharedMine') : t('groupGrading.card.shared') }}
     </p>
+    <p v-if="regradeUnreached" class="app-form-hint group-grade__unreached">
+      {{ t('groupGrading.regrade.unreached') }}
+    </p>
   </section>
 </template>
 
@@ -99,5 +106,8 @@ const adjusted = computed(() => isGraderAdjustment(group.value.adjustment))
 }
 .group-grade__shared {
   margin: var(--app-space-md) 0 0;
+}
+.group-grade__unreached {
+  margin: var(--app-space-sm) 0 0;
 }
 </style>

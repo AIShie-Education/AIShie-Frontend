@@ -12,7 +12,9 @@
 // A member's grade given from their group's says so (GroupGradeCard): the
 // group's score, the member's own, and how the one came from the other, with
 // its reason; those who grade adjust the member (grade.adjust), and a regrade
-// is the group's, every member's grade from it written again.
+// is the group's, every member's grade from it written again. Core regrades
+// a group only for a seat that reaches every member of its work, which is
+// read to know: a seat that does not is told so, and offered no regrade.
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -42,6 +44,7 @@ import RegradeDialog from './components/RegradeDialog.vue'
 import ScoreText from './components/ScoreText.vue'
 import WorkingTable from './components/WorkingTable.vue'
 import { formatDateTime } from '@/utils/format'
+import { workMemberIds, workReach, type WorkReach } from '@/views/course/submissions/components/groupGrading'
 import {
   formatPct,
   parseBreakdown,
@@ -93,7 +96,7 @@ function workingName(item: WorkingItem): string | null {
 // ---------------------------------------------------------------------------
 
 // Regrading takes grade_submit and grade_post, and runs at the lower of the two.
-const canRegrade = computed(
+const regradable = computed(
   () =>
     !!g.value &&
     !mine.value &&
@@ -106,6 +109,27 @@ const regradeNeedsApproval = computed(() => course.needsApprovalAll(['grade_subm
 // A member's grade from their group's: adjusted alone, a draft as entering
 // one is gated, a posted grade as a regrade is.
 const fromGroup = computed(() => !!g.value?.group)
+
+// Regrading it is the group's, which Core does only for a seat that reaches
+// every member of the work: whose work it is is read to know. Not known (it
+// could not be read, or the seat's list cannot be), it is offered, and Core decides.
+const groupWork = useAsync(
+  async () => {
+    const x = g.value
+    if (!x?.group || !x.submission_id || !regradable.value) return null
+    return read('submission.get', { course_id: props.courseId, submission_id: x.submission_id })
+  },
+  { watch: [() => g.value?.id, regradable] },
+)
+const groupReach = computed<WorkReach>(() => {
+  const s = groupWork.data.value
+  return s ? workReach(workMemberIds(s), course.reachesStudent) : 'unknown'
+})
+/** Some member of the group's work is outside the seat's reach: the group's regrade is someone else's. */
+const regradeUnreached = computed(() => fromGroup.value && regradable.value && groupReach.value === 'some')
+const canRegrade = computed(
+  () => regradable.value && !(fromGroup.value && (groupWork.loading.value || groupReach.value === 'some')),
+)
 const canAdjust = computed(() => {
   const x = g.value
   if (!x?.group || mine.value || x.origin !== 'entered') return false
@@ -378,6 +402,7 @@ const backLink = computed(() => ({
           :mine="mine"
           :can-adjust="canAdjust"
           :adjust-needs-approval="adjustNeedsApproval"
+          :regrade-unreached="regradeUnreached"
           :disabled="!course.writable"
           @adjust="adjustVisible = true"
         />

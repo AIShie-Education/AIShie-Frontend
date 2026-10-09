@@ -3,7 +3,8 @@
 //
 //   Projects (a group set):  Team A — Ana, Ben, Cai     Team B — Dev, Eva
 //   Fay, a student in no group; Tom, a TA; Ivy, a TA listed for Ana and Ben
-//   alone; Kit, a TA who may not read grades; grader-g, a grading agent.
+//   alone, who posts grades; Kit, a TA who may not read grades; grader-g, a
+//   grading agent; approver-a, an agent whose decisions wait for approval.
 //
 // "Group project" (100 points, in the course's one component) is a group
 // assignment of Projects, published: Ben hands Team A's report in, Dev Team
@@ -28,7 +29,7 @@ export interface GroupGradingWorld {
   assignment: { id: string; title: string }
   submissions: { a: string; b: string }
   people: Record<
-    'teacher' | 'ta' | 'ivy' | 'kit' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader',
+    'teacher' | 'ta' | 'ivy' | 'kit' | 'ana' | 'ben' | 'cai' | 'dev' | 'eva' | 'fay' | 'grader' | 'approver',
     WorldPerson
   >
 }
@@ -143,16 +144,23 @@ export async function buildGroupGradingWorld(
     eva: await person('eva', 'Eva Ng'),
     fay: await person('fay', 'Fay Yip'),
     grader: { actor_id: '', display_name: `grader-g-${tag}`, kind: 'agent' as const, token: '', member_id: '' },
+    approver: { actor_id: '', display_name: `approver-a-${tag}`, kind: 'agent' as const, token: '', member_id: '' },
   }
-  const agent = await call(rootToken, 'actor.register', {
-    kind: 'agent',
-    display_name: people.grader.display_name,
-    hosting: 'mcp',
-  })
-  people.grader.actor_id = agent.actor_id
-  people.grader.token = (
-    await call(rootToken, 'actor.issue_token', { actor_id: agent.actor_id, label: `groups ${tag}`, expires_in_days: 2 })
-  ).token
+  for (const key of ['grader', 'approver'] as const) {
+    const agent = await call(rootToken, 'actor.register', {
+      kind: 'agent',
+      display_name: people[key].display_name,
+      hosting: 'mcp',
+    })
+    people[key].actor_id = agent.actor_id
+    people[key].token = (
+      await call(rootToken, 'actor.issue_token', {
+        actor_id: agent.actor_id,
+        label: `groups ${tag}`,
+        expires_in_days: 2,
+      })
+    ).token
+  }
 
   people.teacher.member_id = (
     await call(rootToken, 'course.seat_instructor', { course_id: C, actor_id: people.teacher.actor_id })
@@ -165,10 +173,12 @@ export async function buildGroupGradingWorld(
   }
   await seat('ta', 'ta')
   for (const k of ['ana', 'ben', 'cai', 'dev', 'eva', 'fay'] as const) await seat(k, 'student')
-  // A TA whose seat reaches Ana and Ben alone, of Team A; and one who grades without reading grades.
+  // A TA whose seat reaches Ana and Ben alone, of Team A, and who posts (and so regrades) grades; and one who grades
+  // without reading grades.
   await seat('ivy', 'ta', {
     student_scope: 'listed',
     listed_students: [people.ana.member_id, people.ben.member_id],
+    perms: { grade_post: 'autonomous' },
   })
   await seat('kit', 'ta', { perms: { grade_read: 'denied' } })
 
@@ -205,6 +215,12 @@ export async function buildGroupGradingWorld(
   })
   await call(T, 'assignment.publish', { course_id: C, assignment_id: assignment.id })
   await seat('grader', 'grader', { assignment_scope: 'listed', listed_assignments: [assignment.id] })
+  // An agent that decides proposals, its every decision itself a proposal for someone to approve.
+  await seat('approver', 'grader', {
+    assignment_scope: 'listed',
+    listed_assignments: [assignment.id],
+    perms: { action_decide: 'confirm_required' },
+  })
 
   const subA = await call(people.ana.token, 'submission.create', {
     course_id: C,

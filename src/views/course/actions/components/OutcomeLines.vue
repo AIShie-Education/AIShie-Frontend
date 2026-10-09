@@ -3,9 +3,11 @@
 // caller decided as the owner of the agent that proposed it, that it was
 // their own doing (by_owner); why it failed or was cancelled, in the app's
 // words for the kind of action decided, and Core's where it has none; the
-// proposal a decision about a decision decided, and what became of it; what
-// was made; and, of a decision that itself waits for approval, where to
-// follow it.
+// proposal a decision about a decision decided, and what became of it (why
+// it failed in the words for its own kind, which the result does not say:
+// it is looked up, as the line naming what the decision is about looks it
+// up); what was made; and, of a decision that itself waits for approval,
+// where to follow it.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import IdText from '@/components/IdText.vue'
@@ -14,6 +16,7 @@ import MaybeLink from './MaybeLink.vue'
 import ResultIds from './ResultIds.vue'
 import { reasonText, reasonWords, routeFor } from './actionText'
 import type { DecideResult, Done } from './decide'
+import { useLookup, useSpecs } from './lookups'
 
 const props = defineProps<{
   courseId: string
@@ -24,13 +27,20 @@ const props = defineProps<{
   actionType?: string | null
 }>()
 const { t } = useI18n()
+const specs = useSpecs()
 
 const error = computed(() => (props.done.kind === 'decided' ? (props.done.out.error ?? null) : null))
 const why = computed(() => reasonText(error.value, props.actionType))
 /** Said in the app's words alone: Core's message, written for agents, is then not shown beside them. */
 const worded = computed(() => !!reasonWords(error.value, props.actionType))
-const innerWhy = computed(() => reasonText(props.inner?.error ?? null))
-const innerWorded = computed(() => !!reasonWords(props.inner?.error ?? null))
+/**
+ * The kind of the proposal beneath, where it was refused: its refusal is said
+ * in the words of the page that makes one of its kind. Asked only then.
+ */
+const innerAction = useLookup(() => (props.inner?.error ? specs.action(props.courseId, props.inner.action_id) : null))
+const innerType = computed(() => innerAction.value?.value?.action_type ?? null)
+const innerWhy = computed(() => reasonText(props.inner?.error ?? null, innerType.value))
+const innerWorded = computed(() => !!reasonWords(props.inner?.error ?? null, innerType.value))
 /** Decided, reviewed or taken back as the owner of the agent that did it. */
 const asOwner = computed(() => {
   const d = props.done
