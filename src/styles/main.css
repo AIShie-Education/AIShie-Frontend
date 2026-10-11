@@ -371,7 +371,10 @@ tr.app-row-unpublished > td:first-child {
 
 /* A level of autonomy (StatusTag, LevelIcon): told by its mark and its
    weight, lightest for the level that leaves an agent least to itself and
-   heaviest for the one that leaves it most, never by red and green. */
+   heaviest for the one that leaves it most, never by red and green; a
+   rectangle with the app's 2 px corners, as every tag is (element.css):
+   denied on the neutral ground, confirm_required on the indigo's tint,
+   pending_review a 1 px line in the ink, autonomous solid ink. */
 .el-tag.app-level-tag {
   --el-tag-border-color: transparent;
   font-weight: 500;
@@ -391,7 +394,7 @@ tr.app-row-unpublished > td:first-child {
 }
 .el-tag.app-level-tag.is-pending_review {
   --el-tag-bg-color: transparent;
-  --el-tag-border-color: var(--app-ink-2);
+  --el-tag-border-color: var(--app-ink);
   --el-tag-text-color: var(--app-ink);
   font-weight: var(--app-weight-strong);
 }

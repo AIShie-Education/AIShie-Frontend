@@ -445,31 +445,62 @@ html.dark .el-card {
   }
 }
 
-/* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page:
+/* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page.
+   None has an outline, and none but the one main action and a
+   confirmation's last step has a ground:
    - primary: solid indigo, at most one to a view or a dialog: approve,
-     publish, save. It darkens on hover. A plain primary one is the ghost,
-     an indigo outline.
-   - secondary, a button without a type: outlined in a control's edge (3:1
-     on a card and on the ground) with the ink's text, taking the indigo's
-     tint on hover: reject, cancel, everything else.
-   - danger on a page (plain): an outline in the danger colour on no ground,
-     as the ghost is: archive, remove, revoke. It asks before it does
-     anything, in a confirmation, whose last step alone is solid red.
+     publish, save. It darkens on hover.
+   - a button without a type: a text button, the ink's words on no ground
+     and no edge, its icon a step quieter; the indigo's words on its tint on
+     hover, a step darker pressed: reject, request changes, cancel, refresh,
+     everything else. It is as tall as the others (36 px; 44 large, 28
+     small; a finger's on a touch screen), so that it is as easy to hit.
+   - primary as text or as a link (or, until the screens are swept, plain):
+     the indigo's words as a text button: a list item's own main action
+     (approve in a queue after its first, open), one that reads as a link.
+   - danger as text or a link (or plain, until the sweep): the danger's
+     words and icon, no outline, its ground on hover: archive, remove,
+     revoke. It asks before it does anything, in a confirmation, whose last
+     step alone is solid red.
    - solid danger: only the last step of a confirmation, in a dialog or a
      message box: delete, undo the final grade.
-   - disabled, of any rank: the ground's second shade, the disabled ink and
-     the line, with no hue: nothing about it says it can be pressed.
-   A link turns darker, never paler, on hover, so that it keeps its
-   contrast; so do the others' fills. Success, warning and info are no
-   button's: their colours are outcomes', in tags. */
+   - disabled, of any rank: the disabled ink, with no hue, no ground and no
+     edge; a solid one keeps the ground's second shade, so that the place of
+     the main action still reads.
+   An icon alone is a square of its height with the app's 2 px corners, even
+   one asked to be round (Element Plus's circle). A link turns darker, never
+   paler, on hover, so that it keeps its contrast; so do the others' fills.
+   Success, warning and info are no button's: their colours are outcomes',
+   in tags. */
 .el-button:not(.el-button--primary, .el-button--success, .el-button--warning, .el-button--danger, .el-button--info) {
-  --el-button-border-color: var(--app-control-border);
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
   --el-button-text-color: var(--app-ink);
   --el-button-hover-text-color: var(--app-indigo);
   --el-button-hover-bg-color: var(--app-indigo-tint);
-  --el-button-hover-border-color: var(--app-indigo-line);
-  --el-button-active-border-color: var(--app-indigo);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-text-color: var(--app-indigo-dark);
+  --el-button-active-bg-color: var(--el-color-primary-light-8);
+  --el-button-active-border-color: transparent;
   --el-button-hover-link-text-color: var(--app-ink);
+}
+/* At rest, a text button's icon is a step quieter than its words (the second ink beside the ink), whatever
+   colour a page gives the words; hovered, pressed or focused, the words' own. */
+:where(
+    .el-button:not(
+      .el-button--primary,
+      .el-button--success,
+      .el-button--warning,
+      .el-button--danger,
+      .el-button--info,
+      .is-disabled,
+      :hover,
+      :active,
+      :focus-visible
+    )
+  )
+  .el-icon {
+  color: color-mix(in srgb, currentColor 80%, transparent);
 }
 .el-button--primary {
   --el-button-hover-bg-color: var(--app-indigo-dark);
@@ -478,29 +509,50 @@ html.dark .el-card {
   --el-button-active-border-color: var(--app-indigo-dark);
   --el-button-hover-link-text-color: var(--app-indigo-dark);
 }
-.el-button--primary.is-plain {
-  --el-button-bg-color: transparent;
-  --el-button-border-color: var(--app-indigo);
+.el-button--primary:is(.is-text, .is-link, .is-plain) {
   --el-button-text-color: var(--app-indigo);
-  --el-button-hover-bg-color: var(--app-indigo-tint);
-  --el-button-hover-border-color: var(--app-indigo);
-  --el-button-hover-text-color: var(--app-indigo);
-  --el-button-active-bg-color: var(--app-indigo-tint);
-  --el-button-active-border-color: var(--app-indigo-dark);
-  --el-button-active-text-color: var(--app-indigo-dark);
-  border-width: 1.5px;
-}
-.el-button--danger.is-plain {
   --el-button-bg-color: transparent;
-  --el-button-border-color: var(--app-danger-fg);
+  --el-button-border-color: transparent;
+  --el-button-hover-text-color: var(--app-indigo);
+  --el-button-hover-bg-color: var(--app-indigo-tint);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-text-color: var(--app-indigo-dark);
+  --el-button-active-bg-color: var(--el-color-primary-light-8);
+  --el-button-active-border-color: transparent;
+}
+.el-button--danger:is(.is-text, .is-link, .is-plain) {
   --el-button-text-color: var(--app-danger-fg);
-  --el-button-hover-bg-color: var(--app-danger-bg);
-  --el-button-hover-border-color: var(--app-danger-fg);
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
   --el-button-hover-text-color: var(--app-danger-fg);
-  --el-button-active-bg-color: var(--app-danger-bg);
-  --el-button-active-border-color: var(--el-color-danger-dark-2);
+  --el-button-hover-bg-color: var(--app-danger-bg);
+  --el-button-hover-border-color: transparent;
   --el-button-active-text-color: var(--el-color-danger-dark-2);
-  border-width: 1.5px;
+  --el-button-active-bg-color: var(--el-color-danger-light-8);
+  --el-button-active-border-color: transparent;
+}
+/* A text button has no edge at all, so that nothing of one shows: a link keeps Element Plus's, transparent, which
+   its padding is measured with. */
+.el-button:not(
+  .el-button--primary,
+  .el-button--success,
+  .el-button--warning,
+  .el-button--danger,
+  .el-button--info,
+  .is-link
+),
+.el-button:is(.el-button--primary, .el-button--danger):is(.is-text, .is-plain) {
+  border-style: none;
+}
+/* Element Plus hovers and presses a text button in its own greys: here, in the rank's own. */
+.el-button.is-text:not(.is-disabled):hover {
+  background-color: var(--el-button-hover-bg-color);
+}
+.el-button.is-text:not(.is-disabled):active {
+  background-color: var(--el-button-active-bg-color);
+}
+.el-button.is-circle {
+  border-radius: var(--app-radius);
 }
 .el-button--success {
   --el-button-hover-bg-color: var(--el-color-success-dark-2);
@@ -527,17 +579,57 @@ html.dark .el-card {
   --el-button-hover-border-color: var(--el-color-info-dark-2);
   --el-button-hover-link-text-color: var(--el-color-info-dark-2);
 }
-/* Disabled, whatever its rank or type: no hue. Element Plus gives each type
-   a pale step of its own colour, which still reads as pressable. */
-.el-button.is-disabled:not(.is-link, .is-text),
-.el-button.is-disabled:not(.is-link, .is-text):is(:hover, :focus, :active) {
+/* Disabled, whatever its rank or type: the disabled ink, no hue, no ground and no edge. Element Plus gives each
+   type a pale step of its own colour, which still reads as pressable. A solid one keeps the ground's second
+   shade under its words. */
+.el-button.is-disabled,
+.el-button.is-disabled:is(:hover, :focus, :active),
+.el-button.is-disabled:is(.is-text, .is-link, .is-plain),
+.el-button.is-disabled:is(.is-text, .is-link, .is-plain):is(:hover, :focus, :active) {
   color: var(--app-ink-disabled);
-  background-color: var(--app-ground-2);
-  border-color: var(--app-line);
+  background-color: transparent;
+  border-color: transparent;
 }
-.el-button.is-disabled:is(.is-link, .is-text),
-.el-button.is-disabled:is(.is-link, .is-text):is(:hover, :focus, :active) {
-  color: var(--app-ink-disabled);
+.el-button.is-disabled:is(
+    .el-button--primary,
+    .el-button--success,
+    .el-button--warning,
+    .el-button--danger,
+    .el-button--info
+  ):not(.is-text, .is-link, .is-plain),
+.el-button.is-disabled:is(
+    .el-button--primary,
+    .el-button--success,
+    .el-button--warning,
+    .el-button--danger,
+    .el-button--info
+  ):not(.is-text, .is-link, .is-plain):is(:hover, :focus, :active) {
+  background-color: var(--app-ground-2);
+}
+
+/* Segmented controls and badges. A segmented control (an el-radio-group of
+   buttons, for a view's mode, never a filter) is one frame in a control's
+   edge, 2 px at its ends, a rule between its parts and no ground; the
+   chosen part is not a second solid button on the screen but the indigo's
+   words on its tint, inside an indigo line. A badge (a count on a tab or a
+   button) is a rectangle with the app's corners; a badge that is a dot
+   alone stays round, a mark. */
+.el-radio-button {
+  --el-radio-button-checked-bg-color: var(--app-indigo-tint);
+  --el-radio-button-checked-text-color: var(--app-indigo);
+  --el-radio-button-checked-border-color: var(--app-indigo);
+  --el-button-disabled-bg-color: transparent;
+}
+.el-radio-button__inner {
+  background: transparent;
+}
+/* An inset line, not Element Plus's shadow cast to its left; important over its own, which takes every shadow
+   off the first part. */
+.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner {
+  box-shadow: inset 0 0 0 1px var(--el-radio-button-checked-border-color) !important;
+}
+.el-badge {
+  --el-badge-radius: var(--app-radius);
 }
 
 /* Focus: a ring in the focus colour (the indigo), clear of the control, on
@@ -558,20 +650,41 @@ html.dark .el-card {
     0 0 0 3px rgba(var(--el-color-primary-rgb), 0.18);
 }
 
-/* Tags are pills: rounded full, in the pills' colours (each type's colour on
-   its light-9, above), without an outline unless they are plain. */
+/* Tags are rectangles with the app's 2 px corners, never pills: a state on
+   its tone's tint without an edge (each type's colour on its light-9,
+   above), an identity on an outline (AppTag). A small one is 20 px tall in
+   the smallest step, a default one 24 px in the next. A filter's chip
+   (el-check-tag, FilterChips) is a rectangle too: on no ground, the ink's
+   words inside a 1 px line, hovered on the lightest fill; chosen, the
+   indigo's words on its tint inside the indigo's line. */
 .el-tag {
-  --el-tag-border-radius: var(--app-radius-pill);
+  --el-tag-border-radius: var(--app-radius);
+  --el-tag-border-radius-rounded: var(--app-radius);
   font-weight: 500;
 }
 .el-tag:not(.el-tag--plain) {
   --el-tag-border-color: transparent;
 }
 .el-tag--small {
-  padding: 0 8px;
+  padding: 0 6px;
+}
+.el-tag--default {
+  --el-tag-font-size: var(--app-text-sm);
 }
 .el-check-tag {
-  border-radius: var(--app-radius-pill);
+  border-radius: var(--app-radius);
+  background-color: transparent;
+  color: var(--app-ink);
+  box-shadow: inset 0 0 0 1px var(--app-line-strong);
+}
+.el-check-tag:hover {
+  background-color: var(--el-fill-color-light);
+}
+.el-check-tag.el-check-tag--primary.is-checked,
+.el-check-tag.el-check-tag--primary.is-checked:hover {
+  background-color: var(--app-indigo-tint);
+  color: var(--app-indigo);
+  box-shadow: inset 0 0 0 1px var(--app-indigo-line);
 }
 
 /* Surfaces: alerts and popovers are items, 12px; menus and tooltips, 8px,
