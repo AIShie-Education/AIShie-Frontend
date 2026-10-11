@@ -261,7 +261,7 @@ function reloadAll() {
   color: var(--app-wait-fg);
 }
 .attention__go {
-  color: var(--app-ink-3);
+  color: var(--el-text-color-placeholder);
   flex-shrink: 0;
 }
 </style>

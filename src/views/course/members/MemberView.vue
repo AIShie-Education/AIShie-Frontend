@@ -55,10 +55,10 @@ const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
 // The seat's facts in one column, each label above its value, where the page is
-// narrower than 720 px (the seat card's title 669 px or less), by its own
+// narrower than 720 px (the seat section's title 719 px or less), by its own
 // width, not the window's: the side bar takes from it. Wider, two columns.
 const seatTitle = useTemplateRef<HTMLElement>('seatTitle')
-const narrow = useContainerNarrow(seatTitle, 669)
+const narrow = useContainerNarrow(seatTitle, 719)
 const presets = usePresets()
 
 const state = useAsync<Member>(() => read('member.get', { course_id: props.courseId, member_id: props.memberId }), {
@@ -946,10 +946,5 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   margin-top: 12px;
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
-}
-@media (max-width: 600px) {
-  .app-card {
-    padding: 14px;
-  }
 }
 </style>

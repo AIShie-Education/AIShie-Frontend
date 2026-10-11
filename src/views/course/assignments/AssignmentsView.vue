@@ -54,14 +54,14 @@ const narrow = useContainerNarrow(headerEl, 592)
 /**
  * Where each row's ⋯ is, for whoever writes assignments: in a column of its
  * own at the row's end where the table has room for it beside the rest (the
- * wide layout's 630 px of columns at their least and its 96, in a card whose
- * padding takes 50 px of the page's width: 776 px of page), and at the
- * title's right where it has not, a phone's width among them. A column fixed
+ * wide layout's 630 px of columns at their least and its 96, in a section
+ * as wide as the page: 726 px of page), and at the title's right where it
+ * has not, a phone's width among them. A column fixed
  * at the table's right that does not fit makes the table scroll sideways on
  * its own, under the column, which then covers what is beneath it: the due
  * date, on a phone.
  */
-const menuInTitle = useContainerNarrow(headerEl, 775)
+const menuInTitle = useContainerNarrow(headerEl, 725)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, [narrow, menuInTitle])
 
@@ -244,7 +244,8 @@ function refresh() {
         @retry="list.reload"
       >
         <template #empty>
-          <el-button v-if="writer" type="primary" :disabled="!course.writable" @click="formOpen = true">
+          <!-- The header's New assignment is the page's one solid button; this is the same action, as words. -->
+          <el-button v-if="writer" type="primary" text :disabled="!course.writable" @click="formOpen = true">
             {{ t('assignments.list.new') }}
           </el-button>
         </template>
@@ -455,9 +456,6 @@ function refresh() {
   flex-wrap: wrap;
 }
 @media (max-width: 640px) {
-  .app-card {
-    padding: 12px;
-  }
   .assignments-view__search {
     width: 100%;
   }

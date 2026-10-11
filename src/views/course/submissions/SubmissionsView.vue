@@ -342,9 +342,6 @@ function open(row: SubmissionSummary) {
   width: 260px;
   max-width: 100%;
 }
-.submissions-card {
-  padding: 8px 12px;
-}
 .submissions-table :deep(.el-table__row) {
   cursor: pointer;
 }

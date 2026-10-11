@@ -41,11 +41,11 @@ const course = useCourseStore()
 const session = useSessionStore()
 // Role and status go under the name, and the preset and dates are left out
 // (they are on the member's page), where the page is narrower than 720 px (the
-// list's toolbar 669 px or less), by its own width, not the window's: the side
+// list's toolbar 719 px or less), by its own width, not the window's: the side
 // bar takes from it. Wider, every column, the table scrolling sideways where
 // they do not all fit.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 669)
+const narrow = useContainerNarrow(toolbar, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 const presets = usePresets()
@@ -477,9 +477,6 @@ function rowClass({ row }: { row: MemberSummary }) {
 @media (max-width: 600px) {
   .members__role {
     width: 100%;
-  }
-  .app-card {
-    padding: 12px;
   }
 }
 </style>

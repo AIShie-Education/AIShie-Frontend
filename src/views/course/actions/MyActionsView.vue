@@ -32,11 +32,11 @@ const { t } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
 // Status and when go under the action, and who decided is left out (it is on
-// the action's page), where the page is narrower than 720 px (the card's help
-// 669 px or less), by its own width, not the window's: the side bar takes from
-// it.
+// the action's page), where the page is narrower than 720 px (the section's
+// help 719 px or less), by its own width, not the window's: the side bar takes
+// from it.
 const help = useTemplateRef<HTMLElement>('help')
-const narrow = useContainerNarrow(help, 669)
+const narrow = useContainerNarrow(help, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 

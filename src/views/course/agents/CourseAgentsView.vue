@@ -266,9 +266,4 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
   padding-top: 12px;
   border-top: 1px solid var(--el-border-color-lighter);
 }
-@media (max-width: 600px) {
-  .app-card {
-    padding: 14px;
-  }
-}
 </style>

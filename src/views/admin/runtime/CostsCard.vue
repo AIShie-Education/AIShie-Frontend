@@ -27,11 +27,11 @@ import { joinParts } from '@/utils/parts'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
-// totals above have them), where the card is as narrow as on a phone: its title
-// 542 px or less, the width it has in a window of 640 px without the side bar.
+// totals above have them), where the section is as narrow as on a phone: its
+// title 592 px or less, the width it has in a window of 640 px without the side bar.
 // By the card's own width, not the window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
-const narrow = useContainerNarrow(cardTitle, 542)
+const narrow = useContainerNarrow(cardTitle, 592)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 

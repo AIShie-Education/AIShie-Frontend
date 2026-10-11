@@ -64,11 +64,11 @@ const { t, te } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
 // A card per student where the roster is as narrow as on a phone: its summary
-// 566 px or less, the width it has in a window of 640 px without the side bar
-// (the page's 592 px, less the card's edges). By its own width, not the
-// window's: the side bar takes from it.
+// 592 px or less, the width it has in a window of 640 px without the side bar
+// (the page's, a section having no padding of its own). By its own width, not
+// the window's: the side bar takes from it.
 const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
-const narrow = useContainerNarrow(summaryLine, 566)
+const narrow = useContainerNarrow(summaryLine, 592)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
 // The counts are a filter too: one state's students at a time, or all of them.

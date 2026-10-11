@@ -38,10 +38,10 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 // A card per actor where the page is narrower than 720 px (its list's toolbar
-// 669 px or less), by its own width, not the window's: the side bar takes from
+// 719 px or less), by its own width, not the window's: the side bar takes from
 // it. Wider, the table, which scrolls sideways where its columns do not all fit.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 669)
+const narrow = useContainerNarrow(toolbar, 719)
 
 const PAGE = 50
 const KINDS = ['human', 'agent'] as const

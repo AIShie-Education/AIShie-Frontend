@@ -46,12 +46,12 @@ const route = useRoute()
 const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
-// A card per grade, with its own checkbox, where the card is as narrow as on a
-// phone: its toolbar 542 px or less, the width it has in a window of 640 px
-// without the side bar. By the card's own width, not the window's: the side bar
+// A card per grade, with its own checkbox, where the section is as narrow as on
+// a phone: its toolbar 592 px or less, the width it has in a window of 640 px
+// without the side bar (a section has no padding of its own). By the card's own width, not the window's: the side bar
 // takes from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 542)
+const narrow = useContainerNarrow(toolbar, 592)
 
 /** A student sees their own posted grades: "My grades". */
 const mine = computed(() => course.role === 'student')

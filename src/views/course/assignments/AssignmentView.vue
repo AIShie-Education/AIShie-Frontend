@@ -723,9 +723,4 @@ function refresh() {
 .assignment-view__gone-at {
   margin: 0 0 12px;
 }
-@media (max-width: 640px) {
-  .app-card {
-    padding: 14px;
-  }
-}
 </style>

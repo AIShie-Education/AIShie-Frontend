@@ -288,7 +288,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   flex-shrink: 0;
 }
 .material-row__chevron {
-  color: var(--app-ink-3);
+  color: var(--el-text-color-placeholder);
   flex-shrink: 0;
 }
 @media (max-width: 480px) {

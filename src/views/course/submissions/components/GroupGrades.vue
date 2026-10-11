@@ -346,8 +346,8 @@ function onAdjusted(out: WriteOutcome<ToolOut<'grade.adjust'>>) {
   gap: var(--app-space-sm);
   flex-wrap: wrap;
 }
-/* As narrow as a phone's card: each member's line stacks. */
-@container (max-width: 542px) {
+/* As narrow as a phone's section (592 px, a window of 640): each member's line stacks. */
+@container (max-width: 592px) {
   .group-grades__item {
     grid-template-columns: minmax(0, 1fr) auto;
   }

@@ -267,9 +267,4 @@ function exportCsv() {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-@media (max-width: 640px) {
-  .app-card {
-    padding: 14px;
-  }
-}
 </style>

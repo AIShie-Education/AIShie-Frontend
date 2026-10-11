@@ -80,7 +80,7 @@ const mode = ref<'group' | 'student'>('group')
 
 // A card per group where the roster is as narrow as on a phone, as RosterTable's.
 const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
-const narrow = useContainerNarrow(summaryLine, 566)
+const narrow = useContainerNarrow(summaryLine, 592)
 
 const stateFilter = ref('')
 const view = computed(() =>
