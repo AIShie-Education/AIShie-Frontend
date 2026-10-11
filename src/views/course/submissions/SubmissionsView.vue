@@ -400,14 +400,15 @@ function open(row: SubmissionSummary) {
   margin-top: 3px;
 }
 /* On a phone, a row each between rules, not a box each, opening the work as
-   the table's rows do, with the › at its end that says so. */
+   the table's rows do, with the › at its end that says so. The list is the
+   section's first thing: the section's own rule is above its first row, which
+   has no second one of its own. */
 .submission-cards {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  border-top: var(--app-rule);
 }
 .submission-cards > li {
   border-bottom: var(--app-rule);
