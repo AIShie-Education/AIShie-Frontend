@@ -716,8 +716,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   empty place is a template's, and the amber light is the wordmark's alone (design wave 3; it was an
   open book with the light over it, centred). A state that is not a fault (no agent service beside the
   server, an administrator with no seat in a course) is one too; an `el-result` is left for what went
-  wrong, and AsyncState draws its own at the section's left too, with no icon on a filled circle over
-  it and Retry as a text button.
+  wrong, and AsyncState draws its own at the section's left too: its title after a glyph of what it is
+  in the refused colour, on the title's line as an alert's icon is (a lock for a refusal, a warning for
+  what is not there, a cross for a failure), never Element Plus's large icon on a filled circle over
+  it; after a failure, Retry, the indigo's words after Refresh's icon, that icon in the glyph's column,
+  never a second solid button. Without the glyph and its red, a failure read as nothing to show, and
+  Retry, the ink's words alone, as a label (design wave 3 first drew them so).
   So is a text with nothing written in it: `<MarkdownView :source :empty>` says its `empty` as an
   `AppEmpty`, never in a paragraph of its own.
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`

@@ -11,8 +11,9 @@ import { coursePath, demo, signIn, signInAsRoot } from './support'
 // avatar carries no light of the brand's; a note and where data goes have no ground and no box, a rule at
 // their left; an empty place draws no picture (an action in its slot keeps its icon). Element Plus's own
 // round marks (a radio, a dot) are not these components, and are left to the audit of every element.
-// A filter's chip has a control's edge, never a tag's outline; and what is chosen, a chip or a segmented
-// control's part, has a bar at its foot, which says so without its hue.
+// A filter's chip has a control's edge, never a tag's outline; what is chosen, a chip or a segmented
+// control's part, has a bar at its foot, which says so without its hue; and what failed to load says so in
+// red, with Retry's icon in its column.
 
 /** What breaks the look, by element; an empty list where nothing does. */
 function offences(page: Page): Promise<string[]> {
@@ -280,3 +281,50 @@ for (const theme of ['light', 'dark'] as const)
       await context.close()
     }
   })
+
+test('a list that failed to load says so in red, at its left, and offers Retry with its icon in the same column', async ({
+  page,
+}) => {
+  await signIn(page, demo().actors.instructor)
+  const list = /\/v1\/courses\/[^/]+\/members(\?|$)/
+  await page.route(list, (r) =>
+    r.request().method() === 'GET'
+      ? r.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ status: 'error', error: { code: 'internal', message: 'Down' } }),
+        })
+      : r.continue(),
+  )
+  await page.goto(coursePath('members'))
+  const failed = page.locator('.async-state__result')
+  await expect(failed).toContainText('Something went wrong')
+  await expect(failed.locator('.async-state__title .async-state__glyph')).toBeVisible()
+  await expect(failed.locator('.async-state__retry svg')).toBeVisible()
+  await page.mouse.move(0, 0)
+  const look = await failed.evaluate((el) => {
+    const glyph = el.querySelector('.async-state__glyph')!
+    const retry = el.querySelector('.async-state__retry')!
+    const icon = retry.querySelector('svg')!
+    const red = getComputedStyle(document.documentElement).getPropertyValue('--app-danger-fg').trim()
+    const probe = document.createElement('span')
+    probe.style.color = red
+    document.body.append(probe)
+    const redRgb = getComputedStyle(probe).color
+    probe.remove()
+    return {
+      glyphColour: getComputedStyle(glyph).color,
+      red: redRgb,
+      glyphLeft: Math.round(glyph.getBoundingClientRect().left),
+      iconLeft: Math.round(icon.getBoundingClientRect().left),
+      retryGround: getComputedStyle(retry).backgroundColor,
+    }
+  })
+  // A glyph of what went wrong, in the refused colour, never Element Plus's filled circle (hidden).
+  expect(look.glyphColour).toBe(look.red)
+  await expect(failed.locator('.el-result__icon')).toBeHidden()
+  // Retry: words after their icon, the icon in the glyph's column, and no ground: not a second solid button.
+  expect(Math.abs(look.iconLeft - look.glyphLeft)).toBeLessThanOrEqual(1)
+  expect(look.retryGround).toBe('rgba(0, 0, 0, 0)')
+  await expect(failed.getByRole('button', { name: 'Retry' })).toBeVisible()
+})

@@ -49,7 +49,7 @@ describe('AppEmpty', () => {
     expect(style).not.toMatch(/--app-light/)
   })
 
-  it('is what AsyncState shows when there is nothing, never Element Plus’s grey box; a failure offers Retry as a text button', () => {
+  it('is what AsyncState shows when there is nothing, never Element Plus’s grey box', () => {
     setLocale('en')
     const w = mount(AsyncState, { props: { empty: true, emptyText: 'No links yet.' }, global })
     expect(w.find('.el-empty').exists()).toBe(false)
@@ -62,17 +62,57 @@ describe('AppEmpty', () => {
     })
     expect(page.find('.app-empty--page .app-empty__text').text()).toBe('Nothing here yet')
     expect(page.find('.app-empty__more a').text()).toBe('Administration')
-    // Not a second solid button beside the page's own.
-    const failed = mount(AsyncState, {
-      props: { error: new ApiError({ status: 500, code: 'internal', message: 'Down' }) },
-      global,
-    })
-    // Said at the left with no icon on a filled circle over it (AsyncState's own style).
-    expect(failed.find('.el-result').classes()).toContain('async-state__result')
+  })
+})
+
+describe('AsyncState', () => {
+  const failing = (status: number, code: string) =>
+    mount(AsyncState, { props: { error: new ApiError({ status, code, message: 'Down' }) }, global })
+
+  it('says what went wrong at the left, its title after a glyph of what it is in the refused colour', () => {
+    setLocale('en')
+    // A lock for a refusal, a warning for what is not there, a cross for a failure: each its own glyph.
+    const glyphs = new Set<string>()
+    for (const [status, code, title] of [
+      [403, 'forbidden', 'You do not have permission to see this.'],
+      [404, 'not_found', 'Not found. It may have been removed, or it is outside what you can see.'],
+      [500, 'internal', 'Something went wrong'],
+    ] as const) {
+      const w = failing(status, code)
+      expect(w.find('.el-result').classes()).toContain('async-state__result')
+      expect(w.find('.async-state__title').text()).toBe(title)
+      // On the title's line, before its words, never Element Plus's icon on a filled circle over it.
+      const glyph = w.find('.async-state__title > .async-state__glyph')
+      expect(glyph.exists()).toBe(true)
+      expect(glyph.attributes('aria-hidden')).toBe('true')
+      glyphs.add(glyph.html())
+    }
+    expect(glyphs.size).toBe(3)
+    // AsyncState's own style: Element Plus's icon hidden, the words at the left, the glyph in the refused colour.
     expect(asyncStyle).toMatch(/\.async-state__result :deep\(\.el-result__icon\) \{\s*display: none;/)
     expect(asyncStyle).toMatch(/\.el-result\.async-state__result \{[^}]*text-align: start;/)
+    expect(asyncStyle).toMatch(/\.async-state__glyph \{[^}]*color: var\(--app-danger-fg\);/)
+    expect(asyncStyle).not.toMatch(/__glyph \{[^}]*background/)
+  })
+
+  it('offers Retry after a failure alone: the indigo’s words after their icon, never a second solid button', async () => {
+    setLocale('en')
+    for (const [status, code] of [
+      [403, 'forbidden'],
+      [404, 'not_found'],
+    ] as const)
+      expect(failing(status, code).find('.async-state__retry').exists()).toBe(false)
+    const failed = failing(500, 'internal')
     const retry = failed.find('.async-state__retry')
     expect(retry.text()).toBe('Retry')
-    expect(retry.classes().filter((c) => /^el-button--(primary|success|warning|danger|info)$/.test(c))).toEqual([])
+    // A text button of the indigo's rank, with an icon: pressable at a glance, on a phone too, with no ground.
+    expect(retry.classes()).toEqual(expect.arrayContaining(['el-button--primary', 'is-text']))
+    expect(retry.find('svg').exists()).toBe(true)
+    // Its icon in the glyph's column: the room at its left taken back by as much outside it.
+    expect(asyncStyle).toMatch(
+      /\.el-button\.async-state__retry \{\s*padding-inline: var\(--app-space-sm\);\s*margin-inline-start: calc\(-1 \* var\(--app-space-sm\)\);/,
+    )
+    await retry.trigger('click')
+    expect(failed.emitted('retry')).toHaveLength(1)
   })
 })
