@@ -294,7 +294,9 @@ of the demo's people, or root, and screenshots a page, listing console errors an
 `scripts/style-audit.mjs` shoots the main screens at a laptop's and a phone's size, light and dark,
 with what `e2e/styleAudit.ts` finds on each of the shapes the app does not draw (a corner over 4 px,
 a shadow, a gradient) and its solid buttons, for a change's before and after; with `--setup` it first
-adds a group set, two more proposed grades and a hosted agent's answer to the demo course.
+adds a group set, two more proposed grades and a hosted agent's answer to the demo course. It imports
+that TypeScript file as it is, which Node reads by stripping its types (22.18 or 23.6 and later, not
+the 20.19 the app builds with): run it with Node 24, the version in `.nvmrc`.
 
 ### Checks
 
