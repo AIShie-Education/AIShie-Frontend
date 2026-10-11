@@ -125,7 +125,8 @@ test('Chinese takes the two smallest sizes a step larger and strong text at 500;
   })
   expect(chinese).toEqual(['14px', '500'])
   // Element Plus's small text too: a tag's words, and its tooltips'. (The course's line shows no tag for an active
-  // course and a reader of one role: a tag of the page's.)
+  // course and a reader of one role: a member's role on the members' page.)
+  await page.goto(coursePath('members'))
   const tag = page.locator('.app-main .el-tag:visible').first()
   await expect(tag).toBeVisible()
   expect(await tag.evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px')
