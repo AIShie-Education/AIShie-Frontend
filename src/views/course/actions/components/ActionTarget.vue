@@ -462,13 +462,12 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
 .action-target__name {
   font-weight: 500;
 }
+/* The score proposed, in bold tabular figures on no ground of its own: a chip would be a box in the proposal's
+   box. */
 .action-target__score {
   font-weight: var(--app-weight-strong);
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
-  background: var(--el-fill-color);
-  border-radius: var(--app-radius);
-  padding: 0 6px;
 }
 .action-target__muted {
   color: var(--el-text-color-secondary);
