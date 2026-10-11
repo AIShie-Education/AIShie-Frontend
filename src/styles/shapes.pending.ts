@@ -14,21 +14,7 @@ export const PENDING = {
   components: [] as string[],
 
   /** The screens (cards to rules, no card in a card). */
-  screens: [
-    '/src/views/course/activity/ActivityView.vue',
-    '/src/views/course/activity/components/EventItem.vue',
-    '/src/views/course/groups/components/SplitDialog.vue',
-    '/src/views/course/groups/components/StudentItem.vue',
-    '/src/views/course/materials/components/TextFilePicker.vue',
-    '/src/views/course/members/components/JoinLinkForm.vue',
-    '/src/views/course/members/components/JoinLinkFullscreen.vue',
-    '/src/views/course/members/components/JoinLinkReveal.vue',
-    '/src/views/course/overview/components/AboutCard.vue',
-    '/src/views/course/overview/components/AttentionCard.vue',
-    '/src/views/course/peer/PeerTaskPanel.vue',
-    '/src/views/course/scheme/SchemeView.vue',
-    '/src/views/home/HomeView.vue',
-  ] as string[],
+  screens: [] as string[],
 
   /** The chrome (sign-in, the header, the side bar, the phone's menu, dialogs and drawers, the chat, the file viewer). */
   chrome: [

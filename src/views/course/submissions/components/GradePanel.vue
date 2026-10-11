@@ -736,8 +736,6 @@ async function submit() {
 .grade-panel__drafter {
   display: flex;
   align-items: center;
-  /* The light at the avatar's corner is ringed in the note's ground. */
-  --agent-avatar-ring: var(--el-color-info-light-9);
 }
 .grade-panel__drafter-name {
   vertical-align: middle;

@@ -86,14 +86,11 @@ const SCREENS: Screen[] = [
 
 /**
  * What another part of design wave 3 takes away, and this spec lets be until
- * it has (rendered Markdown's code listing is the Markdown block's of
- * styles/main.css, the tokens' part): each is checked to offend still, on
- * some screen, so that the list only shrinks.
+ * it has: each is checked to offend still, on some screen, so that the list
+ * only shrinks. Empty since the tokens' part squared rendered Markdown's
+ * listing and the components' part redrew a segmented control's edge.
  */
-const PENDING: Record<string, string> = {
-  '.markdown-body pre': 'rendered Markdown’s listing, 6 px, which the Markdown block of main.css squares',
-  '.el-radio-button__inner': 'a segmented control’s edge, drawn as a shadow, which the components’ segmented block redraws',
-}
+const PENDING: Record<string, string> = {}
 
 /** What a screen draws against the rules above, each named by where it is. */
 interface Audit {
