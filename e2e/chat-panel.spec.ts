@@ -202,7 +202,8 @@ async function expectWindow(page: Page, pageWidth?: number) {
     }
   })
   expect(look).toMatchObject({ position: 'fixed', role: 'dialog', modal: 'false' })
-  expect(look.shadow).not.toBe('none')
+  // Nothing casts a shadow (docs/CONVENTIONS.md, "Shapes"): its edge parts it from the page.
+  expect(look.shadow).toBe('none')
   if (pageWidth !== undefined) {
     expect(Math.round((await box_(page.locator('.app-main'))).width)).toBe(Math.round(pageWidth))
   }
@@ -864,6 +865,15 @@ test.describe.serial('the chat panel', () => {
       expect(sendAt.x).toBeGreaterThan(boxAt.x + boxAt.width / 2)
       await page.mouse.move(0, 400)
       await photograph(page, `chat-new-offline-${lang}`)
+      // Focused, the box shows it, and the field within it draws nothing of its own: no field's
+      // outline across the box, between the words and the bar.
+      await box.locator('textarea').focus()
+      expect(
+        await box.locator('textarea').evaluate((el) => {
+          const cs = getComputedStyle(el)
+          return `${cs.outlineStyle} ${cs.boxShadow}`
+        }),
+      ).toBe('none none')
 
       // Asked: waiting for it is one quiet line in the messages, the agent at work (its conversation
       // says it was seen just now), counting the seconds; nothing above the composer.

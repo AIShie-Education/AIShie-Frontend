@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // "AI", after an agent's name, wherever the name is shown: the same two
 // letters in every language (common.agent.ai), small and quiet (11 px on the
-// indigo tint), so that nobody takes an agent for a person, whatever its
+// indigo tint, a rectangle with the app's 2 px corners, never a pill), so
+// that nobody takes an agent for a person, whatever its
 // name. It is text, so a screen reader says it with the name; its tooltip,
 // on hover, says it in words. It takes no focus of its own: it sits in rows
 // that are buttons and links, and the two letters say what the tooltip does.
@@ -25,7 +26,7 @@ const { t } = useI18n()
   flex-shrink: 0;
   height: 16px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
   font-family: 'IBM Plex Sans', var(--app-font-sans);

@@ -1,18 +1,21 @@
 <script setup lang="ts">
 // The app's one tag (docs/CONVENTIONS.md, "Tags"). Element Plus's el-tag is
-// drawn by what the tag says, never by an effect chosen page by page:
-// - `pill` (the default), a state: a tinted solid pill in the pills' colours
-//   of its tone (styles/tokens.css): done green, danger red, wait amber,
-//   neutral, or indigo for what is new or the reader's to decide.
+// drawn by what the tag says, never by an effect chosen page by page, and
+// every one is a rectangle with the app's 2 px corners, never a pill:
+// - `state` (the default), a state: its tone's tinted ground, no edge: done
+//   green, danger red, wait amber, neutral, or indigo for what is new or the
+//   reader's to decide. (`pill`, its name before design wave 3, draws the
+//   same, until the wave's cleanup.)
 // - `outline`, an identity or an attribute (a kind, a role, how something
-//   runs, "this browser"): ink on an outline and no ground, with its icon,
-//   its corners square (radius 4) as AgentBadge's owner is, so that it is
-//   never read as a state. It has no tone: an attribute is not an outcome.
-// - `count`, a count badge: solid, the only dark tag.
+//   runs, "this browser"): ink on a 1 px line and no ground, with its icon,
+//   so that it is never read as a state. It has no tone: an attribute is not
+//   an outcome.
+// - `count`, a count: solid indigo, its figures in what is written on it,
+//   the only solid tag.
 // - `quiet`, the usual state of a row (published, submitted, posted,
-//   active): plain text in the third ink, no pill, so that only what departs
+//   active): plain text in the third ink, no tag, so that only what departs
 //   from it is coloured.
-import type { Component } from 'vue'
+import { computed, type Component } from 'vue'
 import type { TagTone, TagVariant } from './tags'
 
 const props = withDefaults(
@@ -24,27 +27,33 @@ const props = withDefaults(
     icon?: Component
     closable?: boolean
   }>(),
-  { tone: 'neutral', variant: 'pill', size: 'small', icon: undefined },
+  { tone: 'neutral', variant: 'state', size: 'small', icon: undefined },
 )
 const emit = defineEmits<{ close: [event: MouseEvent] }>()
 
 const EL_TYPE = { neutral: 'info', done: 'success', wait: 'warning', danger: 'danger', indigo: 'primary' } as const
-const EFFECT = { pill: 'light', outline: 'plain', count: 'dark' } as const
+const EFFECT = { state: 'light', outline: 'plain', count: 'dark' } as const
+/** What it is drawn as: `pill` is a state. */
+const variant = computed(() => (props.variant === 'pill' ? 'state' : props.variant))
+/** Element Plus's colours for it: an outline has none of a tone's, and a count is always the indigo. */
+const type = computed(() =>
+  variant.value === 'outline' ? 'info' : variant.value === 'count' ? 'primary' : EL_TYPE[props.tone],
+)
 </script>
 
 <template>
-  <span v-if="props.variant === 'quiet'" class="app-tag app-tag--quiet">
+  <span v-if="variant === 'quiet'" class="app-tag app-tag--quiet">
     <el-icon v-if="icon" class="app-tag__icon" aria-hidden="true"><component :is="icon" /></el-icon>
     <slot />
   </span>
   <el-tag
     v-else
-    :type="props.variant === 'outline' ? 'info' : EL_TYPE[props.tone]"
-    :effect="EFFECT[props.variant]"
+    :type="type"
+    :effect="EFFECT[variant]"
     :size="size"
     :closable="closable"
     disable-transitions
-    :class="['app-tag', `app-tag--${props.variant}`, props.variant === 'outline' ? null : `is-${props.tone}`]"
+    :class="['app-tag', `app-tag--${variant}`, variant === 'state' ? `is-${props.tone}` : null]"
     @close="emit('close', $event)"
   >
     <el-icon v-if="icon" class="app-tag__icon" aria-hidden="true"><component :is="icon" /></el-icon>
@@ -63,7 +72,7 @@ const EFFECT = { pill: 'light', outline: 'plain', count: 'dark' } as const
   flex-shrink: 0;
 }
 /* A state on the indigo: the brand's tint, as a level that waits on someone's approval is. */
-.el-tag.app-tag--pill.is-indigo {
+.el-tag.app-tag--state.is-indigo {
   --el-tag-bg-color: var(--app-indigo-tint);
   --el-tag-text-color: var(--app-indigo);
 }
@@ -73,14 +82,16 @@ const EFFECT = { pill: 'light', outline: 'plain', count: 'dark' } as const
   --el-tag-border-color: var(--app-line-strong);
   --el-tag-text-color: var(--app-ink-2);
   --el-tag-hover-color: var(--app-ink);
-  --el-tag-border-radius: 4px;
   font-weight: normal;
 }
 .el-tag.app-tag--outline .app-tag__icon {
   color: var(--app-ink-3);
 }
-/* A count: its figures line up, and it stays a pill. */
+/* A count: solid indigo, whatever tone it is given, its figures in what is written on the indigo, lined up. */
 .el-tag.app-tag--count {
+  --el-tag-bg-color: var(--app-indigo);
+  --el-tag-border-color: transparent;
+  --el-tag-text-color: var(--app-on-indigo);
   font-variant-numeric: tabular-nums;
 }
 /* The usual state: words in the third ink, a step smaller than the text around them, as a tag's are. */

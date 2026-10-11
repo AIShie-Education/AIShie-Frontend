@@ -688,10 +688,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (207 and 216 px in Chinese), whose subtitle takes a second line; in
-  English, whose subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a
-  pixel or so (201 px); do not add to them. Chinese's smaller steps are a size larger than English's,
-  so measure a page's header in both.
+  page (207 px in Chinese, 201 in English), whose subtitle takes a second line; in English, whose
+  subtitles are longer, the Grades tab's three pages too (214 px), whose own tabs and subtitle take a
+  line each; do not add to them. Chinese's smaller steps are a size larger than English's, so measure
+  a page's header in both: `e2e/course-header.spec.ts` measures each tab's page in English and
+  Traditional Chinese, and fails on one that starts later than this says. A page's subtitle takes
+  the width its actions leave it, never the measure (Type, below).
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
@@ -707,30 +709,48 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - **Empty places** say so with `<AppEmpty :text>` (AsyncState's `empty-text` is one), never Element
-  Plus's grey box: inside a card, one line in the second ink, with what to do about it in its slot (an
-  action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), the
-  brand's line icon (an open book with the light over it, 48 px, stroke 1.75) over the words and a
-  title where it has one. A state that is not a fault (no agent service beside the server, an
-  administrator with no seat in a course) is one too; an `el-result` is left for what went wrong.
+  Plus's grey box: inside a section, one line in the second ink, with what to do about it in its slot
+  (an action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), its
+  title, where it has one, in the ink over its words, at the page's left as the rest of its text is,
+  24 px of room above and below, the words at the measure, and no picture: an illustration over an
+  empty place is a template's, and the amber light is the wordmark's alone (design wave 3; it was an
+  open book with the light over it, centred). A state that is not a fault (no agent service beside the
+  server, an administrator with no seat in a course) is one too; an `el-result` is left for what went
+  wrong, and AsyncState draws its own at the section's left too: its title after a glyph of what it is
+  in the refused colour, on the title's line as an alert's icon is (a lock for a refusal, a warning for
+  what is not there, a cross for a failure), never Element Plus's large icon on a filled circle over
+  it; after a failure, Retry, the indigo's words after Refresh's icon, that icon in the glyph's column,
+  never a second solid button. Without the glyph and its red, a failure read as nothing to show, and
+  Retry, the ink's words alone, as a label (design wave 3 first drew them so).
   So is a text with nothing written in it: `<MarkdownView :source :empty>` says its `empty` as an
   `AppEmpty`, never in a paragraph of its own.
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
   for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
-  drawn by what they say and never by an effect chosen on the page:
-  - a **state** is a pill (`variant="pill"`, the default), tinted in its tone's pill colours: `done`,
-    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
+  drawn by what they say and never by an effect chosen on the page. Every one is a rectangle with the
+  app's 2 px corners, never a pill (design wave 3: the pill was the commonest mark of a generated app,
+  336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
+  the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
+  - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below).
+    `pill`, its name before wave 3, draws the same until the wave's cleanup takes it out;
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
-    a line and no ground, square-cornered as `AgentBadge`'s owner is, with its icon (`:icon`) unless
-    its row shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose
-    rows start with a person's icon or an agent's avatar); it has no tone;
-  - only a **count** is solid (`variant="count"`);
+    a faint 1 px line (`--app-line-strong`) and no ground, as `AgentBadge`'s owner is, never in a
+    control's edge, which is a filter's chip's (Filters, below), with its icon (`:icon`) unless its row
+    shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose rows
+    start with a person's icon or an agent's avatar); it has no tone;
+  - only a **count** is solid (`variant="count"`), and always in the indigo, its figures in what is
+    written on it; a count on a tab or a button (`el-badge`) is a rectangle too, and only a badge
+    that is a dot alone is round;
   - the **usual state** of a row (an active seat, course or actor, work submitted, a grade posted, a
     material published, a conversation open or answered) is quiet (`variant="quiet"`, as StatusTag
-    draws those values): words in the third ink, no pill, or nothing where the row says it otherwise,
-    so that only what departs from it is coloured. A row that is not published (a material, an
-    assignment) also has the 3 px amber line at its left (`.app-row-unpublished`; on a table, its
-    `row-class-name`).
+    draws those values): words in the third ink, no tag, or nothing where the row says it otherwise,
+    so that only what departs from it is coloured. A column or a tag whose value is the same on every
+    row is not shown at all (a list of active seats has no Status column; a list of published
+    materials, no "Published"): the usual state is words only among a page's own facts, and a list
+    shows a state only where its rows differ, by a `v-if` of the screen's own. A row that is not
+    published (a material, an assignment) also has the 3 px amber line at its left
+    (`.app-row-unpublished`; on a table, its `row-class-name`).
 
   A row holds two chips at most. Whether an agent can be asked is a dot before its name
   (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
@@ -738,9 +758,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
   (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
 - **Notes and alerts.** What explains (what a page does, what will happen, that a change waits for
-  approval, a proposal just made) is `<AppNote>`: no icon, a 3 px indigo line at its left, the
-  indigo's tint at half strength under it (`plain`: none), its words in the second ink under a title
-  in the ink where it has one, `closable` where it says what was just done. An `el-alert` is a
+  approval, a proposal just made) is `<AppNote>`, as aishie.app's notes are: no icon, no ground and
+  no corners, a 2 px rule in the indigo's line at its left and 16 px of room after it, its words in the
+  second ink at a paragraph's leading, stopping at the measure, under a title in the ink where it has
+  one; `closable` where it says what was just done, its close button a square of 28 px (44 on a touch
+  screen). `plain` was a note without the tint it had until design wave 3; every note is one now, and
+  `plain` is kept for the places that ask for it. An `el-alert` is a
   warning or an error, or an outcome reported in green, and says which in its template, where lint
   reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
   'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
@@ -748,24 +771,36 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   proposal taken back: `OutcomeAlert`) and what a version's readers read are notes. It has Element Plus's small icon on its title's line, never the large one
   beside a title and a description (`styles/element.css`). Where data leaves the site (to a model's
   provider, under the school's key or an owner's own; into files someone downloads) is said by
-  `<DataFlowNotice>`, a shield on an outline in the indigo's line, the same to administrators,
-  owners and those who ask: in the chat, the first time's points, "Where it goes to be answered" in
-  the whole notice, and, `compact`, the one line under the composer, the shield before it and no
-  outline (`DataFlowNotice.spec.ts` checks each place that says so).
+  `<DataFlowNotice>`, a shield before its words and the note's rule at its left, with no box around
+  it (an outline in the indigo's line until design wave 3), its words at the measure, the same to
+  administrators, owners and those who ask: in the chat, the first time's points, "Where it goes to
+  be answered" in the whole notice, and, `compact`, the one line under the composer, the shield
+  before it and no rule (`DataFlowNotice.spec.ts` checks each place that says so).
 - **Refresh** is `<RefreshButton :loading @click>`, at the right end of the toolbar of the card that
-  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has
-  none): a secondary button with "Refresh", on a phone's screen (600 px or narrower) a round icon
-  button with its words in its tooltip. A page's header holds what creates or goes elsewhere, never
-  Refresh.
+  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has none):
+  a text button with "Refresh", on a phone's screen (600 px or narrower) a square of its icon alone, as
+  tall and as wide as a button is high, with its words in its tooltip and its name. A page's header holds
+  what creates or goes elsewhere, never Refresh.
 - **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
-  tags, "All N" first, then each choice with its count (a lower bound, "12+", while there is more to
-  load), one at a time, radios to the keyboard and a screen reader; counts a list shows by state are
-  these chips too, never a row of tags that cannot be pressed. A chip counts the rows it filters, no
-  others: where a select has already narrowed the list to one (a student on the submissions page),
-  there is nothing left to filter and there are no chips. A count is in the chip's own ink, set apart
-  by its weight, never faded below the contrast text keeps. A choice of many (an assignment, a
-  student, a type) stays a select. A segmented control (`el-radio-group` of buttons) is for a view's
-  mode, newest or oldest first, by owner or by model, never a filter.
+  tags, drawn as rectangles with the app's corners (`styles/element.css`): on no ground, the ink's words
+  inside a control's edge (`--app-control-border`, 3:1 as a field's is), never a tag's faint outline,
+  so that a row of chips over a list of role tags reads as controls over labels; the chosen one in the
+  indigo's words on its tint, with a 2 px bar in the indigo at its foot, as a course's chosen tab has;
+  one with nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
+  count (a lower bound, "12+", while there is more to load), one at a time, radios to the keyboard and a
+  screen reader; counts a list shows by state are these chips too, never a row of tags that cannot be
+  pressed. A chip counts the rows it filters, no others: where a select has already narrowed the list to
+  one (a student on the submissions page), there is nothing left to filter and there are no chips. A
+  count is in the chip's own ink, set apart by its weight, never faded below the contrast text keeps. A
+  choice of many (an assignment, a student, a type) stays a select. A segmented control (`el-radio-group`
+  of buttons) is for a view's mode, newest or oldest first, by owner or by model, never a filter: one
+  frame in a control's edge, 2 px at its ends, a rule between its parts and no ground, the chosen part
+  marked as a chosen chip is, by the bar at its foot, with the indigo's words on its tint, never a
+  second solid button on the screen. What is chosen is said by a mark that is not its hue: the indigo's
+  words and its tint are 1.3:1 or less from the ink's and the page, in either theme, which a reader
+  who sees colours poorly, or a phone in daylight, does not tell apart; the bar is 6:1 or more on the
+  tint, and the others have none (design wave 3 first drew the chosen part and chip inside an indigo
+  line, and the chips in a tag's outline). `e2e/components-style.spec.ts` measures both, in both themes.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
@@ -782,9 +817,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
-- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
-  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
-  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+- **Ink** comes in three steps, aishie.app's three in the light theme: `--app-ink` (#1c1c1c, the site's
+  `--ink`) for headings, names and the interface's words; `--app-ink-2` (#3a3a3a, `--ink-body`) for
+  running text, a note's, rendered Markdown's, a chat's answer's, a description's, and what is
+  secondary to the ink; `--app-ink-3` (#5a5d68, `--ink-3`) for the meta beside them (a time, a
+  column's heading, a hint, a permission's key). The first two are 1.4:1 or more apart, the second and
+  third 1.5:1 (the dark theme keeps its own third, #a19f98: the site's is 1.41:1 from its second). The
+  placeholder's ink is quieter still, for a field's placeholder. The three
   inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
   fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
   fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
@@ -794,6 +833,42 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
   (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
   colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
+  It also writes out what the app shares with aishie.app's `:root` (navy, amber, paper, line, the
+  field's edge, the inks, the state colours, the corner, the rule, the leading, the measure), by the
+  site's names, and fails when one side changes alone; a value the app keeps of its own is listed there
+  with why. The page column (its header and its page) is read on `--app-page`, the ivory, and the paper
+  (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
+  paper, would add to the warm paper, the serif and the amber dot, which the app is not to add to. The
+  brand is the navy; the amber (`--app-light`) is the logo's dot alone, never an avatar's, an empty
+  place's or the chat's (the wait colour is a state's, not the amber).
+- **Shapes** are aishie.app's, an academic publication's: straight corners and thin rules, never the
+  rounded cards on shadows and the pills that read as a generated app beside the site. Every box has
+  2 px corners (`var(--app-radius)`): a control, a field, a tag, a chip, a badge, a dialog, a menu, a
+  tooltip, a box around one thing the reader operates as a whole; a section of a page, a drawer, a
+  phone's sheet and the docked chat have none (`--app-radius-card`). Nothing is rounder than 4 px but a
+  mark as wide as it is tall: a person's avatar, a dot (`AskableDot`, the activity's live dot, an unread
+  dot), a radio's circle, a timeline's point. Sections are parted by a rule (`var(--app-rule)`, the
+  site's 1 px line) and room, not by cards; a box (a 1 px line, 2 px corners, no ground of its own)
+  is kept for one thing operated as a whole (a proposal with its decision, a course on the home page, a
+  file, a group in the groups' editor, the chat's composer), a list of such things is rows between
+  rules, and nothing is a box in a box. Nothing casts a shadow and nothing is frosted: what floated on
+  a shadow is docked, or parted from the page by its edge. A line may be drawn as a shadow (blur 0: a
+  field's inset edge, a one-sided rule as the unpublished row's, a ring of 2 px or less). No gradient
+  fills anything; the two that say something are the course tabs' fade at an end with more tabs (a
+  mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
+  (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
+  doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
+  anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
+  for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
+  the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
+  outside `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two
+  named; in `tokens.css` every corner is 4 px or less and every shadow none. While design wave 3 is
+  under way, `src/styles/shapes.pending.ts` lists what its parts still convert, a file or a file's one
+  rule, and fails on an entry that no longer offends, so that it only shrinks. `e2e/styleAudit.ts`
+  measures the same as the browser draws it (`shapeOffences`), with `soloPrimary`, the solid buttons of
+  a page and of each dialog over it, and `e2e/shapes.spec.ts` holds Element Plus's overlays to it in
+  both themes; `scripts/style-audit.mjs` photographs the main screens with what it finds, for a
+  change's before and after.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
@@ -803,21 +878,46 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `-lg` (16: an item's title; a field's text on a touch screen), `-xl` (18: a card's, a dialog's, the
   course's title), `-2xl` (24: a page's title, a figure that stands for a card), `-3xl` and `-4xl`
   (32, 40: a figure that stands for a page, a score, a total, a countdown); `-prose` (15) for what is
-  read at length (rendered Markdown, a chat's messages), and `-mark` (11) for Latin letters and
+  read at length (rendered Markdown, a chat's messages), `-prose-h1` (20) for an author's `#` in
+  rendered Markdown and nothing else, and `-mark` (11) for Latin letters and
   figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
   Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
   blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
   a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
   line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
-  2em (a heading in rendered Markdown), never smaller: the text around may be Chinese at 13 px. Strong
+  2em, never smaller: the text around may be Chinese at 13 px. Strong
   text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
   Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
   no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
   rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
   is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
-  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (an empty place's line), `--app-lh-text`
-  (1.6; 1.75) for a paragraph (a note, where data goes) and `--app-lh-prose` (1.7; 1.85) for rendered
-  Markdown. A token read is a token set: `src/styles/customProperties.spec.ts` fails on a
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (a label, a cell, a button, an empty
+  place's line); `--app-lh-text` for a paragraph (a note, where data goes) and `--app-lh-prose` for
+  rendered Markdown and a chat's answers, both 1.7 in every language, the site's (its spec found
+  Chinese at about 1.9 too loose: design wave 2 had 1.75 and 1.85 in Chinese, 1.6 and 1.7 in
+  English); and `--app-lh-heading`, 1.25, the site's too, for a page's, a section's, a dialog's and a
+  drawer's title and the headings of rendered Markdown. Running text stops at `var(--app-measure)`,
+  34em of its own size, as every paragraph of the site does: rendered Markdown's paragraphs, items and
+  quotations, a note, where data goes, an empty page's words; a line of 70 Han characters across a
+  laptop's page is hard to read. What is not running text runs the column's width, and so does the
+  paragraph, item or quotation that holds it: an image (a student's screenshot at 510 px is too small
+  to read), a table, a listing, a displayed formula. A page's subtitle is not running text but a lede
+  beside its actions, and takes the width they leave it: stopped at the measure (442 px, at its own
+  13 px), it took a second line on nearly every course page, and their content started past 200 px (A
+  course's pages, above). An author's headings in rendered Markdown are a step under the page's
+  title, whatever level they were written at, and all in the ink and a heading's weight; its
+  sections in the serif, a step apart, `#` 20 px (`-prose-h1`), `##` 18 (`-xl`), `###` 16 (`-lg`),
+  so that the page's own `h1` stays its largest heading (`#` was 1.6em, 24 px, as large as the
+  title); `####` the text's 15 in the sans, as the site's `h4`. An author's bold words keep a
+  heading's weight, in the text's ink: a `###`, larger and in the serif, never reads as a bold line,
+  nor a `####`, in the sans, as a `###`; a `####` is told from bold words by its ink and the room
+  above it, as the site's `h4` is from its strong words. With `###` at the text's 15 in the sans,
+  the three were alike but for the ink; it could be no larger under a `##` of 16, nor `##` under a
+  `#` of 18 with no step between 18 and the title's 24, which `-prose-h1` is. Under a section's
+  title (18: an assignment's instructions, a submission's work, feedback), an author's `#` is a
+  step larger than that title, as it was at 24 before; the page's title stays the largest. A token
+  read is a token set:
+  `src/styles/customProperties.spec.ts` fails on a
   `var(--app-…)` that no style sheet, component or script sets, which a browser would take for
   nothing and leave the element to inherit. Element Plus's sizes are mapped
   onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
@@ -842,16 +942,28 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
-- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
-  (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
-  no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
-  cancelling among them, rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
-  destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
-  the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
-  button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,
-  never a button's. A disabled button has no hue, whatever its rank. What cannot be taken back is
-  not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
-  end, as undoing final grades is beside posting them.
+- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else, with the app's
+  2 px corners and no outline on any (design wave 3: a solid button beside an outlined one is the
+  template's pair, and the site has none). `type="primary"` (solid indigo) for the one main action of
+  a view or a dialog, approving and publishing among them: never two of them on one screen. No type
+  is a **text button**, the ink's words on no ground and no edge, its icon a step quieter, the
+  indigo's words on its tint on hover, as tall as any other button (36 px, 44 on a touch screen), for
+  everything beside it, rejecting, requesting changes and cancelling among them, rejecting being the
+  safe choice, not a destructive one. `type="primary" text` (or `link`) is the indigo's words, for a
+  list item's own main action (open, approve in a queue whose first proposal holds the one solid
+  Approve, the queue being oldest first) or an action that reads as a link. `type="danger" text` (or
+  `link`) is the danger's words and icon, no outline, its tint on hover, for a destructive action on
+  a page (archive, remove, revoke), never beside the primary (at the toolbar's far end, or in ⋯), which
+  asks first; and solid red alone for the last step of that confirmation (`confirmButtonClass:
+  'el-button--danger'`, or a dialog's button that does it at once). `plain` draws as `text` until the
+  screens are swept of it (the ghost, an indigo or red outline, is gone), and an icon alone is a square
+  of its height, even one asked for as `circle`. `success`, `warning` and `info` are outcomes'
+  colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
+  a solid one keeps the ground's second shade under its words, so that the main action's place still
+  reads. What cannot be taken back is not put beside what is done every day: it goes in the toolbar's
+  ⋯ menu (`MoreFilled`), at its far end, as undoing final grades is beside posting them.
+  `e2e/components-style.spec.ts` reads every button, tag, chip, badge, avatar, note and empty place on
+  the pages that hold most of them, at a laptop's size and a phone's, in both themes.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
   it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
@@ -1078,20 +1190,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
 - **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
   hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
-  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a rounded square
-    (radius 8 at 28 px; a person is always a circle) on `--app-indigo-tint`, its initials in
-    `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or Korean
-    character), with the brand's light at its top right corner. 28 px (`default`) where it heads a row
-    of a list of agents (the chat's list to ask, the course's agents), 20 px (`small`) inline in a line of
-    text (the chat's header and author line, a proposal's proposer or target, a name in a table, the
-    feed's who line, a draft's drafter), 36 px (`large`) heading an entry of a list of agents with their
-    details (My agents, the administration's card). It is decorative (`aria-hidden`); its initials are
-    drawn by CSS.
+  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a square with the
+    app's 2 px corners at every size (a person is always a circle) on `--app-indigo-tint`, its initials
+    in `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or
+    Korean character), and nothing else: the brand's light, which sat at its top right corner until
+    design wave 3, is the wordmark's alone, the navy being the identity and the amber its accent. 28 px
+    (`default`) where it heads a row of a list of agents (the chat's list to ask, the course's agents),
+    20 px (`small`) inline in a line of text (the chat's header and author line, a proposal's proposer or
+    target, a name in a table, the feed's who line, a draft's drafter), 36 px (`large`) heading an entry
+    of a list of agents with their details (My agents, the administration's card). It is decorative
+    (`aria-hidden`); its initials are drawn by CSS.
   - Agents as a kind (a view of the activity bar, a course's tab, a kind to choose, a note about
     agents) take `<AgentSeatIcon />`, the person-beside-a-seat line icon of aishie.app (stroke 1.8,
     round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
   - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
-    (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
+    (`common.agent.ai`), 11 px, on the indigo tint, a rectangle with the app's 2 px corners, its words
+    on hover; it takes no focus.
     It never parts from the name: `<AgentName :name />` keeps the name's last character (with any
     punctuation after it) on the line of the "AI" when the name wraps, and nothing more, so a name with
     no spaces (`cs101-introduction-to-programming-weekly-revision-tutor`) still breaks wherever it must
