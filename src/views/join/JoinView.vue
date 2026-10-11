@@ -294,7 +294,7 @@ function goToCourse(courseId: string) {
         >
           <template #extra>
             <router-link :to="{ name: 'home' }">
-              <el-button>{{ t('join.page.toHome') }}</el-button>
+              <el-button class="join__home">{{ t('join.page.toHome') }}</el-button>
             </router-link>
           </template>
         </AppResult>
@@ -368,7 +368,7 @@ function goToCourse(courseId: string) {
                 <router-link :to="signInRoute" class="join__path">
                   <el-button type="primary" size="large" class="join__primary">{{ t('join.page.signIn') }}</el-button>
                 </router-link>
-                <el-button v-if="mayRegister" text size="large" class="join__primary" @click="registering = true">
+                <el-button v-if="mayRegister" text size="large" class="join__register" @click="registering = true">
                   {{ t('join.page.register') }}
                 </el-button>
               </div>
@@ -480,6 +480,14 @@ function goToCourse(courseId: string) {
   flex-direction: column;
   align-items: flex-start;
   gap: 10px;
+}
+/* Registering, words that start a line: the button's room at its left is taken back by as much outside it, so
+   that its words start at the column's left, as the solid button's edge and the text over it do, and only its
+   hovered ground reaches past. So is Home's, under a link that cannot be used. */
+.el-button.join__register,
+.el-button.join__home {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
 }
 .join__path {
   display: block;

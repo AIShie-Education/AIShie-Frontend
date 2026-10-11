@@ -11,6 +11,11 @@ import { useUiStore } from '@/stores/ui'
 import AppResult from '@/components/AppResult.vue'
 import JoinView from './JoinView.vue'
 
+// The page's style, as written: jsdom lays nothing out.
+const joinStyle = Object.values(
+  import.meta.glob<string>('./JoinView.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
+
 let preview: () => Promise<JoinPreview>
 const joinCourse = vi.fn()
 vi.mock('@/api/http', async (orig) => {
@@ -136,6 +141,11 @@ describe('the join page', () => {
     // Signing in comes back here to join.
     expect(signIn.attributes('href')).toBe(`/login?next=/join/${TOKEN}?then=join`)
     const create = w.findAll('button').find((b) => b.text() === 'Create an account')!
+    // Words that start their line under the solid Sign in to join: their room at the left taken back.
+    expect(create.classes()).toEqual(expect.arrayContaining(['is-text', 'join__register']))
+    expect(joinStyle).toMatch(
+      /\.el-button\.join__register,\n\.el-button\.join__home \{\s*padding-inline: var\(--app-space-sm\);\s*margin-inline-start: calc\(-1 \* var\(--app-space-sm\)\);/,
+    )
     await create.trigger('click')
     await flushPromises()
     expect(w.find('input[name="email"]').exists()).toBe(true)

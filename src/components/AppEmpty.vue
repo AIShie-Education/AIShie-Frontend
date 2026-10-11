@@ -68,3 +68,16 @@ withDefaults(defineProps<{ text: string; page?: boolean; title?: string }>(), { 
   margin-top: var(--app-space-xs);
 }
 </style>
+
+<!-- What the slot holds is the caller's: its first button is reached here, by the slot's own class. -->
+<style>
+/* What to do about it, after the words: a button of words (a text button, in the ink or the indigo, not a link)
+   that starts the slot's line takes back its room at its left by as much outside it, so that its words start
+   where the words over it do, and only its hovered ground reaches past them. A solid button keeps its edge at
+   their left. */
+.app-empty__more > .el-button:first-child:is(.is-text, :not(.el-button--primary, .el-button--danger)):not(.is-link),
+.app-empty__more > a:first-child > .el-button:is(.is-text, :not(.el-button--primary, .el-button--danger)):not(.is-link) {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
+}
+</style>

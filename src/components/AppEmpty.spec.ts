@@ -66,6 +66,42 @@ describe('AppEmpty', () => {
   })
 })
 
+describe('AppEmpty’s way in, a button of words at the start of its line', () => {
+  // Unscoped: the slot's buttons are the caller's. Read as written: jsdom lays nothing out.
+  const shared = Object.values(
+    import.meta.glob<string>('./AppEmpty.vue', { query: '?raw', import: 'default', eager: true }),
+  )[0]!.replace(/^[\s\S]*<style>/, '')
+  /** The rule's selector, which an element in the slot matches or not. */
+  const selector = shared.slice(0, shared.indexOf('{')).replace(/\/\*[\s\S]*?\*\//g, '').trim()
+
+  it('takes back its room at its left, so that its words start under the words over it; a solid one and a link do not', () => {
+    expect(shared).toMatch(/padding-inline: var\(--app-space-sm\);\s*margin-inline-start: calc\(-1 \* var\(--app-space-sm\)\);/)
+    const w = mount(AppEmpty, {
+      props: { text: 'No course agents.' },
+      slots: { default: '<button class="el-button el-button--primary is-text">Add a course agent</button>' },
+      attachTo: document.body,
+    })
+    const page = mount(AppEmpty, {
+      props: { text: 'No form.', page: true },
+      slots: { default: '<a href="/x"><button class="el-button">To the assignment</button></a>' },
+      attachTo: document.body,
+    })
+    const solid = mount(AppEmpty, {
+      props: { text: 'Deleted.', page: true },
+      slots: { default: '<a href="/x"><button class="el-button el-button--primary">Back to the list</button></a>' },
+      attachTo: document.body,
+    })
+    const link = mount(AppEmpty, {
+      props: { text: 'None.' },
+      slots: { default: '<button class="el-button el-button--primary is-link">Add</button>' },
+      attachTo: document.body,
+    })
+    const taken = (x: ReturnType<typeof mount>) => x.find('.app-empty__more .el-button').element.matches(selector)
+    expect([w, page, solid, link].map(taken)).toEqual([true, true, false, false])
+    for (const x of [w, page, solid, link]) x.unmount()
+  })
+})
+
 describe('AsyncState', () => {
   const failing = (status: number, code: string) =>
     mount(AsyncState, { props: { error: new ApiError({ status, code, message: 'Down' }) }, global })
