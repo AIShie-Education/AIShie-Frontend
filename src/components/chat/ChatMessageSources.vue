@@ -15,7 +15,7 @@
 // A title with no spaces (one taken from a file's name,
 // "COMP1001_Lecture04_Lists_Tuples_and_Dictionaries") breaks wherever it
 // must, on the line and in the summary alike: nothing in the chat scrolls
-// sideways, on a phone or in the chat's window.
+// sideways, on a phone or in the chat's pane.
 import AppTag from '@/components/AppTag.vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'

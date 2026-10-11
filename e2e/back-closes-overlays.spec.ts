@@ -512,7 +512,7 @@ test.describe('on a phone, back', () => {
 test.describe('on a wider screen, back', () => {
   test.use({ viewport: { width: 1280, height: 800 } })
 
-  test('closes the file viewer too, but moves between pages under the chat’s window, which stays open', async ({
+  test('closes the file viewer too, but moves between pages beside the chat’s pane, which stays open', async ({
     page,
   }) => {
     await signIn(page, demo().actors.yuki)

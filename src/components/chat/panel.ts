@@ -21,8 +21,6 @@ export const PAGE_MIN = 420
 export const PANEL_STEP = 16
 /** At this width and below, the chat is a sheet over the whole screen instead of a pane beside the page. */
 export const PANEL_SHEET_MAX_WIDTH = 899
-/** The header's height, which the pane's own head row matches, its rule on the header's. */
-export const HEADER_HEIGHT = 56
 
 /**
  * The widest the pane may be, where `room` is the width the page and the

@@ -63,13 +63,21 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   key only until Core answers or the form changes, and not through `useWrite`, which keeps the
   arguments it sent to compare with. The sign-in page shows a button for each of
   `ssoButtons(authMethods())`: Core's `sso_providers`, or the one `sso` of a Core from before them.
-  Where there is one, single sign-on comes first, its first button the page's primary, and the
-  password form is behind a link ("Use your student number and password instead"), and back; the
-  page waits a moment (400 ms) for Core to say, so as not to show the form and take it away, and
-  keeps a form already typed in. The four pages before the app (signing in, an invitation, a join
-  link, a password of one's own) are one card on the flat ground, `.app-auth-page` with its
-  `__lang`, `__card` and `__wordmark` (`styles/main.css`), under the public site's line
-  (`common.tagline`).
+  Where there is one, single sign-on comes first, its first button the page's primary and any other
+  a text button, and the password form is behind a link ("Use your student number and password
+  instead"), and back; the page waits a moment (400 ms) for Core to say, so as not to show the form
+  and take it away, and keeps a form already typed in. The four pages before the app (signing in, an
+  invitation, a join link, a password of one's own) are set as aishie.app sets its pages, never a
+  card on a shadow nor centred: a header of one row (`.app-auth-page__head`, its `__bar`), the
+  wordmark at its left and the language (`__lang`) at its right, ruled under, 56 px with its rule;
+  and under it one column (`__card`), at most 400 px, left-aligned at the wordmark's edge, on the
+  page's ground, both in the site's content column (1152 px at most, 24 px gutters, 16 on a phone).
+  The column holds the page's `h1` (`__title`), the public site's line under it (`__sub`,
+  `common.tagline`, in the third ink: under the title as a page's subtitle is, never a grey line
+  over it), the fields, and the one solid button as wide as its words, the other way in as words in
+  the indigo under it. A join link's course and its facts (the time left, the email domains) are
+  rows between rules, not a tinted box. On a phone's screen (390 × 844) the wordmark, the title,
+  both fields and the button show without scrolling (`e2e/chrome-style.spec.ts`).
 - **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
   `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and
   department administrators alike (meta `admin: 'departments'`, the side bar's last entry), through
@@ -673,7 +681,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   overview, the tab to its page where the page is one under it, and only the last step marked as the
   page, `aria-current`); then a line of context, the course's code, its name in the sans and its
   status, never a heading, on one line (a long name is cut short with an ellipsis; only on a phone's
-  page does it wrap, to two lines at most); then the tabs, one row (above). A page's title that only
+  page does it wrap, to two lines at most), where only what departs from the usual is said: the
+  course's state only where it is not active (a draft, archived; never 「進行中」), and the reader's
+  role only where their roles differ among their courses (a teacher in one, a student in another),
+  as the side bar's rows do; then the tabs, one row over a rule (the strip's own border), the tab
+  shown underlined in the navy on it, and the tab chosen in More's menu marked as the side bar marks
+  the page shown. A page's title that only
   names the tab chosen is not shown again: `PageHeader` keeps it for screen readers, and its
   subtitle and actions share one row (`coursePage.ts`, by the title's
   words, so title a tab's page with the tab's own name). A page's own title (a document, a member)
@@ -681,7 +694,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `useCourseNav()` (`src/layouts/courseNav.ts`), which the strip, the top bar and the phone's menu
   all read; the phone's menu lists the course's tabs under the course the page is in. The gradebook
   and the grading scheme are pages of the Grades tab, all three read with `grade_read`: their
-  header shows the grades' own tabs (`CourseSubTabs`) in the title's place, the student a page is
+  header shows the grades' own tabs (`CourseSubTabs`, the one shown underlined in the navy, never a
+  tinted pill) in the title's place, the student a page is
   about going with the way to the other; the first is All grades (a student's, My grades), never
   Grades again. A new tab goes in `COURSE_TABS`, in the order most used, and the target stays: on a
   laptop's screen (1280 × 800), with the side bar open, a course page starts its content within
@@ -841,7 +855,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
-  irreversible actions with `ElMessageBox.confirm`.
+  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in the
+  line with 2 px corners and cast no shadow, their title over a rule (one that fills a phone's
+  screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
+  title over a rule too; a notification is framed and square as a message is
+  (`styles/overlays.css`, after `element.css`).
 - **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
   (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
   no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
@@ -1002,7 +1020,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   on top (one at a time, where one is open over another; a message box asked over them, ElMessageBox,
   is dismissed first, as cancelled), and closed by its own means (its button, Escape, a click beside
   it) it goes back over its entry, so that history is as it was. It is used by the file viewer, the
-  phone's menu, the chat's sheet (`when` it is a sheet: the window on a wider screen stays open from
+  phone's menu, the chat's sheet (`when` it is a sheet: the pane on a wider screen stays open from
   page to page, and back moves between them), the agent's conversation log and the conversation
   open in it (back goes back to the log's list first, as its Back button does), the invite link put up
   full screen, and the administrators' drawers of a preset and of a department's administrators
@@ -1018,8 +1036,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is still on its way adds its entry at once, as any does: back closes it and the page shown stays
   (the page on its way is dropped, as back drops one still loading), closed otherwise it lets that
   page land, and still open as the page lands its entry makes way for the page's and comes after it.
-- A page's two columns follow the page's own width, not the window's, since the side bar takes from it
-  (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
+- A page's two columns follow the page's own width, not the window's, since the side bar takes from it,
+  and so does the chat's pane while it is open: the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
   left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
   actor's page at 856). A course's tabs keep to one row at any width, never wrapped: as many as fit
@@ -1142,18 +1160,32 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`src/components/sidebar/ActivityBar.vue`, mounted by `AppLayout`), with the brand's mark and a button
   for each view the caller is offered (their courses; their agents, for a person; administration, for
   whoever may open its pages), the caller's account at its bottom, and beside it the side bar (`SideBar.vue`) showing the one chosen, at a
-  fixed 260 px, with no edge to resize it by. A view's button, pressed again, collapses the side bar.
+  fixed 260 px, with no edge to resize it by. Both are on the paper (the activity bar on its second
+  shade), each ruled at its right edge; the page column beside them, its header and the page, is on
+  the page's own ground (`--app-page`, the near-white), so that removing the cards lays no page on
+  the warm paper. The view shown is marked on the activity bar by its icon in the navy and a 2 px
+  navy line on the bar's outer edge, with no tinted ground; its buttons are squares with 2 px
+  corners. The side bar's title is the view's name in the ink and its groups' headings in the second
+  ink, in the case they are written, never upper-cased nor tracked ("Courses", not "COURSES"). Its
+  rows are square, hovered in the ground's second shade, and the one open is marked as aishie.app's
+  contents mark the page shown: a 2 px navy rule at its left and its words in the navy, on no tint.
+  A course's row names the caller's role in it only where their roles differ among their courses;
+  registering a new agent there is a text button, the one solid being My agents' header's. A view's button, pressed again, collapses the side bar.
   Going to a page of a view (a course's pages, `/account/agents…`, `/admin…`) shows that view, and never
   opens a collapsed side bar. `useSideBarStore()` (`@/stores/sidebar`) holds the view and whether it is
   open, which this browser remembers. A new view is a `SideView` in `components/sidebar/frame.ts` (its
   icon, its name, whose it is, the path of its pages) and a component for its body. On a phone there is
   no activity bar: three lines at the header's left (`Expand`, an outlined icon, 20 px in a 44 px
-  button named 「選單」) open the views in a drawer, with the wordmark (`AppWordmark`) at its top and
-  the views as tabs under it (the course the page is in with its tabs under it), and following a link
-  in it closes it, as back does.
+  button named 「選單」) open the views in a drawer, square, casting no shadow and ruled at its right
+  edge, with the wordmark (`AppWordmark`) at its top in a row as high as the header and ruled as it
+  is, the views as tabs under it, the one chosen underlined in the navy (never a tinted tile), the
+  course the page is in with its tabs under it, marked at their left as the side bar's rows are, and
+  the account's row at its bottom under a rule; following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
-  initial of the caller's name at the bottom of the activity bar (on a phone, a row at the bottom of the
-  side menu). Its menu says who is signed in (name, email or login ID, platform role) and holds the
+  initial of the caller's name, in a circle (a person's), at the bottom of the activity bar (on a phone,
+  a row at the bottom of the side menu). Its menu, and each submenu, is framed in the line with 2 px
+  corners and casts no shadow, as every menu is; focus from the keyboard is the focus ring inside an
+  item. Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
   (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place
   either is shown; the sign-in page names none; `append-to-body`, as the activity bar's sticky layer would
@@ -1161,55 +1193,47 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   signing out. It works from the keyboard as a menu does (the arrow keys, Home and End; ArrowRight into a
   submenu and ArrowLeft out; Escape or Tab closes it, back on its button). The header holds the page's
   title (on a course's pages, the way up to it: the course and the tab) and, at its right end, the
-  chat's button (on a phone, the menu's button before the title and no chat's button): nothing else
-  is offered there.
+  chat's button (on a phone too, with the menu's button before the title, in one row of 56 px with
+  its rule): nothing else is offered there.
 - A tab left open runs the build it loaded. While it is shown, `useNewVersion` (`NewVersionNotice`,
   mounted by `AppLayout`) reads `index.html` again (`cache: 'no-store'`) every five minutes and when the
   tab is shown again, and compares the entry script it names (`/assets/index-<hash>.js`) with the one
-  this page loaded; another one is a small notice, 「已有新版本」, with Reload and Later. It never reloads
-  by itself: someone may be writing. It is off in development, and says nothing against the one build a
+  this page loaded; another one is a strip at the top of the page column, under the header, on the
+  ground's second shade and ruled below, saying 「已有新版本」 with Reload, as words in the indigo, and
+  Later, as words in the ink: neither is solid, for the page under it may have its own one primary,
+  and it floats over nothing. It never reloads by itself: someone may be writing. It is off in development, and says nothing against the one build a
   preview serves.
-- The chat with agents is one window over every signed-in page (`src/components/chat/ChatPanel.vue`,
-  mounted by `AppLayout`), not a page of a course: every conversation in it is in a course and with an
-  agent. Nothing runs along the window's right edge: the header and the page reach it. The chat's
-  entry (`.app-chat-entry`, `#chat-panel-toggle`), with the count of answers not read in the indigo,
-  is, from 900 px up, an icon button at the header's right end (`.app-header__chat`), with a tooltip
-  saying its shortcut: nothing floats over the page, whose rows keep their actions, times and status
-  at their right end in sight. It stays while the chat is open (`aria-expanded`, on the indigo's
-  tint), and pressed again minimizes it. On a phone (up to 899 px) it is a 48 px round button
-  floating at the bottom right (`.app-chat-fab`), 16 px from the screen's edges and above the safe
-  area, in the thumb's reach: it slides out of the way while the page is scrolled down and comes back
-  as soon as it is scrolled up, reaches its top, or the button takes focus (at once, with no slide,
-  where motion is reduced), and the page keeps room below its last item for it (`.has-chat-fab`,
-  88 px and the safe area), so that a list's last item, its pages or a button are never under it; a
-  page that pins something to the bottom of the screen keeps it clear of the button too, and so does
-  a toolbar whose action at its right end would be under it when the page opens (`.has-chat-fab`
-  `.grades-view__post`: the button's column kept clear). The
-  activity bar holds only the side bar's views. The button opens the chat in its corner (a phone's
-  button is gone while the sheet is open); Ctrl/⌘+J opens it too. It is a window over the page, not docked beside it: it takes nothing from the page's
-  width, which stays as it is, and usable, behind it (a dialog, not a modal one: `role="dialog"`,
-  `aria-modal="false"`, named by its title bar). It is 400 × 600 px (`WINDOW_WIDTH`, `WINDOW_HEIGHT`),
-  16 px from the viewport's bottom right corner, and clear of the header where the viewport is too
-  short for 600. Its title bar holds its name, Minimize and Close, moves it, and a double click on it
-  puts it back in its corner; its left edge, its top and its top left corner resize it, from 320 × 360
-  up to the viewport's left and top, its right and bottom edges staying (the edges are separators the
-  arrow keys, Home and End move too). It is placed from the viewport's bottom right corner (`WindowBox`
-  in `components/chat/panel.ts`: its size, and how far its right and bottom edges are from the
-  viewport's), so that it keeps its distance from that corner as the viewport changes, and is always
-  wholly within the viewport (`clampBox`, `moveBox`, `resizeBox`); where the viewport no longer holds
-  it, it goes back to its corner (`fitsIn`). A drag is set once a frame, nothing on the page is
-  selected meanwhile, and where it was left and how big is kept (with whether it is open, in this
-  browser, `aishie.chatPanel`) once it is let go. It lies over the page and under whatever Element Plus
-  lays over it, with a shadow all round (`--app-z-panel`, `--app-shadow-window`; the layers are in
-  `styles/tokens.css`). Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on
-  what it showed; closed, on a new conversation in the course it asks in (the chat store's `close`);
-  either way focus goes back to the chat's button. Files dropped anywhere on the window, its title bar
-  too, go to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
-  screen, a modal dialog with no edge to drag, closed with its one button, Escape or back, keeping what it
-  showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
+- The chat with agents is one pane docked at the window's right edge beside every signed-in page
+  (`src/components/chat/ChatPanel.vue`, mounted by `AppLayout` after the page column), not a page of a
+  course: every conversation in it is in a course and with an agent. Nothing floats over the page,
+  whose rows keep their actions, times and status at their right end in sight. The chat's entry
+  (`.app-chat-entry`, `#chat-panel-toggle`), with the count of answers not read in the indigo, is an
+  icon button at the header's right end (`.app-header__chat`) at every width, with a tooltip saying
+  its shortcut (on a phone, none): a 44 px square there on a touch screen, as the menu's is at the
+  header's left, so that the phone's header stays one row. It stays while the chat is open
+  (`aria-expanded`, on the indigo's tint), and pressed again minimizes it; Ctrl/⌘+J opens it too. The
+  activity bar holds only the side bar's views. From 900 px up the pane is a region of the page
+  (`role="complementary"`, named by its head row), as tall as the window and staying as the page
+  scrolls, as the side bar does on the left: on the page's own ground with a rule at its left, its
+  head row as high as the header and ruled with it, holding its name, Minimize and Close. The page
+  column narrows by its width while it is open and lays itself out by its own width, as it does
+  beside the side bar (`e2e/page-layout.spec.ts`). It is 400 px wide (`PANEL_DEFAULT`) until its
+  left edge is dragged, or moved with the arrow keys, Home and End (a separator, named
+  「對話寬度」), from 320 to 640 px (`PANEL_MIN`, `PANEL_MAX`) and never so wide that the page
+  beside it is left less than 420 px (`PAGE_MIN`) where the window has room for both
+  (`panelMax`, in `components/chat/panel.ts`, of the width the page and the pane share: the
+  window's less what is at the page column's left); a double click on the edge puts it back. How
+  wide it was made is kept (with whether it is open, in this browser, `aishie.chatPanel`) once a drag
+  is let go; the box an earlier version kept for the window it floated in is read for its width
+  alone. Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on what it
+  showed; closed, on a new conversation in the course it asks in (the chat store's `close`); either
+  way focus goes back to the chat's button. Files dropped anywhere on the pane, its head row too, go
+  to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
+  screen (`--app-z-sheet`), square, a modal dialog with no edge to drag, closed with its one button,
+  Escape or back, keeping what it showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
   link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
-  the address the course's conversations page once had, which opens the window on it and leaves the
+  the address the course's conversations page once had, which opens the pane on it and leaves the
   page where it was. The chat
   reads the caller's seat in a conversation's course from their memberships (`useChatSeat`), never from
   the course store, since the page may show another course or none. Conversations are with agents
@@ -1245,7 +1269,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`AskableText`) and, only once it is closed, its state, and a ⋯ menu for who can
   read it, how its answers arrive, and to download it as a PDF, every message read back to the first
   (nothing ends a conversation from the chat); the messages; and
-  the composer (`ChatComposer.vue`), one bordered box whose send button, small and icon-only, sits
+  the composer (`ChatComposer.vue`), one box framed as a field is (2 px corners; focused, a navy edge
+  and a navy line round it, no halo) whose send button, small, square and icon-only, sits
   inside it at the bottom right, with its keys in the button's tooltip and the count near Core's
   limit beside it, and a paperclip at the bottom left. **Files in the chat** (Core's conversation
   attachments, `attachments.ts`): a message may carry files, chosen with the paperclip, dropped on
@@ -1282,12 +1307,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`conversation.message_posted`'s `attachments`), and an action that writes a message how many
   it names. The agent's messages (`ChatMessage.vue`) take the whole width with no bubble, as
   Markdown set for reading
-  (`styles/chat-prose.css`), their code in a box with its language and a copy button
-  (`<MarkdownView code-tools>`); the person's are a quiet bubble on the right; a run of messages by
+  (`styles/chat-prose.css`), their code a listing as aishie.app sets one, ruled above and below with
+  no box nor ground, its language and a copy button on its first line (`<MarkdownView code-tools>`),
+  their tables ruled between rows; the person's are a quiet block on the ground's second shade,
+  square-cornered (2 px), on the right; a run of messages by
   one author is named once (`groupedWith`), and each message's time and actions (copy it as written;
   edit the question awaiting its answer; withdraw it) show under it on hover or focus, always on a
   touch screen. While an answer is awaited, a working line in the messages (`ChatStatusLine`, the
-  turning glyph of `ChatSpinner`) says 「思考中…」 and counts the seconds since the question, or
+  turning glyph of `ChatSpinner`, both in the third ink and no light passing over the words: the
+  amber is the brand's dot alone) says 「思考中…」 and counts the seconds since the question, or
   that the agent is waited for where nothing runs it; and the send button, while nothing is
   written, is a stop button. Stopping, or editing that question, withdraws it
   (`conversation.retract`, as its author) and puts its words back in the box: Core's inbox leaves
@@ -1314,7 +1342,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
-  few ways to begin, which fill the box.
+  few ways to begin, which fill the box: at the pane's left as the page's text is, no mark over it,
+  the ways to begin as rows of words between rules. Its history and the agents to ask are rows
+  between rules too, hovered in a tint, the conversation shown marked at its left in the navy as the
+  side bar marks the page shown, and the history's groups (today, yesterday…) plain sub-headings in
+  the second ink, not tracked.
   An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
   working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps
