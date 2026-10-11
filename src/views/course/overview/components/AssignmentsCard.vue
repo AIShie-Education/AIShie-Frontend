@@ -109,7 +109,6 @@ const groups = computed(() => [
       <span>{{ t('overview.assignments.title') }}</span>
       <router-link :to="{ name: 'course-assignments', params: { courseId } }" class="assignments__all">
         {{ t('overview.assignments.all') }}
-        <el-icon><ArrowRight /></el-icon>
       </router-link>
     </h2>
 
@@ -134,7 +133,6 @@ const groups = computed(() => [
             <span class="assignments__main">
               <span class="assignments__name">{{ r.a.title }}</span>
               <span class="assignments__meta">
-                <el-icon><Clock /></el-icon>
                 <span>{{ t('overview.assignments.due') }}</span>
                 <TimeText :value="r.a.due_at" relative cutoff />
                 <span class="assignments__dot">·</span>
@@ -168,49 +166,46 @@ const groups = computed(() => [
 
 <style scoped>
 .assignments__all {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
   font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
 }
 .assignments__group + .assignments__group {
-  margin-top: 12px;
+  margin-top: var(--app-space-lg);
 }
+/* A group's heading (Due soon, Later): a plain sub-heading in the second
+   ink, in the case it is written in, not a grey capitalised label above it. */
 .assignments__group-title {
-  margin: 0 0 6px;
-  font-size: var(--app-text-xs);
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--el-text-color-secondary);
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink-2);
 }
 .assignments__empty {
   margin: 0;
   font-size: var(--app-text-sm);
 }
+/* Rows between rules; one due within days has the amber line at its left. */
 .assignments__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--app-space-md);
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-primary);
+  padding: var(--app-space-md) var(--app-space-sm) var(--app-space-md) var(--app-space-md);
+  border-bottom: var(--app-rule);
+  color: var(--app-ink);
   text-decoration: none;
 }
-.assignments__row + .assignments__row {
-  margin-top: 6px;
+.assignments__row:first-of-type {
+  border-top: var(--app-rule);
 }
 .assignments__row:hover {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-fill-color-lighter);
+  background: var(--el-fill-color-light);
 }
 .assignments__row.is-urgent {
-  border-left: 3px solid var(--el-color-warning);
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
 }
 .assignments__main {
   display: flex;
@@ -230,7 +225,7 @@ const groups = computed(() => [
   gap: 4px;
   flex-wrap: wrap;
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .assignments__dot {
   margin: 0 2px;
