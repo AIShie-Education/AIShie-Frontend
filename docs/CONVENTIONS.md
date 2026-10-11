@@ -862,11 +862,14 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   English); and `--app-lh-heading`, 1.25, the site's too, for a page's, a section's, a dialog's and a
   drawer's title and the headings of rendered Markdown. Running text stops at `var(--app-measure)`,
   34em of its own size, as every paragraph of the site does: rendered Markdown's paragraphs, items and
-  quotations (a table and a listing run the column's width), a note, a page's subtitle; a line of 70
-  Han characters across a laptop's page is hard to read. An author's headings in rendered Markdown
-  are a step under the page's title, whatever level they were written at: `#` 18 px (`-xl`), `##` 16
-  (`-lg`), `###` the text's 15 in the strong weight, so that the page's own `h1` stays its largest
-  heading (`#` was 1.6em, 24 px, as large as the title). A token read is a token set:
+  quotations, a note, a page's subtitle; a line of 70 Han characters across a laptop's page is hard
+  to read. What is not running text runs the column's width, and so does the paragraph, item or
+  quotation that holds it: an image (a student's screenshot at 510 px is too small to read), a table,
+  a listing, a displayed formula. An author's headings in rendered Markdown are a step under the
+  page's title, whatever level they were written at, and all in the ink and a heading's weight: `#`
+  18 px (`-xl`), `##` 16 (`-lg`), `###` and `####` the text's 15, as the site's `h4`, so that the
+  page's own `h1` stays its largest heading (`#` was 1.6em, 24 px, as large as the title) and an
+  author's bold words, in the text's ink, never outweigh a heading. A token read is a token set:
   `src/styles/customProperties.spec.ts` fails on a
   `var(--app-…)` that no style sheet, component or script sets, which a browser would take for
   nothing and leave the element to inherit. Element Plus's sizes are mapped
