@@ -174,7 +174,7 @@ async function takeBack(r: AgentRequest) {
             <span>
               <el-button
                 type="danger"
-                plain
+                text
                 size="small"
                 :disabled="s.course_status === 'archived'"
                 :loading="withdrawing === s.member_id"

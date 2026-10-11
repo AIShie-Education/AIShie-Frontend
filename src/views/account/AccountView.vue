@@ -9,7 +9,6 @@ import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useSessionStore } from '@/stores/session'
 import PageHeader from '@/components/PageHeader.vue'
-import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import ProfileCard from './components/ProfileCard.vue'
 import PasswordCard from './components/PasswordCard.vue'
 import SeatsCard from './components/SeatsCard.vue'
@@ -74,7 +73,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
     />
 
     <section v-if="ownsAgents" class="app-card account-view__section account-agents">
-      <el-icon :size="28" class="account-agents__icon" aria-hidden="true"><AgentSeatIcon /></el-icon>
       <div class="account-agents__text">
         <h2 class="account-agents__title">{{ t('agents.accountCard.title') }}</h2>
         <p class="app-form-hint account-agents__body">{{ t('agents.accountCard.body') }}</p>
@@ -82,7 +80,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
       <router-link :to="{ name: 'account-agents' }" class="account-agents__link">
         <el-button>
           <span>{{ t('agents.accountCard.open') }}</span>
-          <el-icon class="el-icon--right"><ArrowRight /></el-icon>
         </el-button>
       </router-link>
     </section>
@@ -111,17 +108,14 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 .account-view__top > .app-card + .app-card {
   margin-top: 0;
 }
+/* Sections as far apart as anywhere: 32 px (24 on a phone). */
 .account-view__section {
-  margin-top: 16px;
+  margin-top: var(--app-space-2xl);
 }
 .account-agents {
   display: flex;
   align-items: center;
   gap: 14px;
-}
-.account-agents__icon {
-  flex-shrink: 0;
-  color: var(--el-color-primary);
 }
 .account-agents__text {
   flex: 1;
@@ -138,12 +132,14 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
   flex-shrink: 0;
 }
 @media (max-width: 600px) {
+  .account-view__section {
+    margin-top: var(--app-space-xl);
+  }
   .account-agents {
     flex-wrap: wrap;
   }
   .account-agents__link {
     width: 100%;
-    padding-left: 42px;
   }
 }
 /* Two columns (3 : 2) while the main one keeps 420 px or more. */

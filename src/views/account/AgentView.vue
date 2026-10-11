@@ -192,7 +192,7 @@ function onBrought() {
           <el-icon><Edit /></el-icon>
           <span>{{ t('agents.detail.rename') }}</span>
         </el-button>
-        <el-button v-if="standing === 'active'" type="danger" plain :loading="suspendW.pending.value" @click="suspend">
+        <el-button v-if="standing === 'active'" type="danger" text :loading="suspendW.pending.value" @click="suspend">
           <el-icon><CircleClose /></el-icon>
           <span>{{ t('agents.detail.suspend') }}</span>
         </el-button>
@@ -205,7 +205,7 @@ function onBrought() {
           <span>
             <el-button
               type="primary"
-              plain
+              text
               :disabled="standing !== 'suspendedByMe'"
               :loading="reactivateW.pending.value"
               @click="reactivate"
@@ -355,8 +355,14 @@ function onBrought() {
 .agent-view__fixed {
   margin-top: 2px;
 }
+/* Sections as far apart as anywhere: 32 px (24 on a phone). */
 .agent-view__section {
-  margin-top: 16px;
+  margin-top: var(--app-space-2xl);
+}
+@media (max-width: 600px) {
+  .agent-view__section {
+    margin-top: var(--app-space-xl);
+  }
 }
 /* Two columns (3 : 2) while the main one keeps 420 px or more. */
 @container (max-width: 735px) {

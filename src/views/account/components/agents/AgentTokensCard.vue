@@ -96,7 +96,7 @@ defineExpose({ revokeById })
   <section class="app-card tokens-card">
     <h2 class="app-card__title">
       <span>{{ t('agents.tokens.title') }}</span>
-      <el-button type="primary" plain size="small" @click="emit('issue')">
+      <el-button type="primary" text size="small" @click="emit('issue')">
         <el-icon><Plus /></el-icon>
         <span>{{ t('agents.tokens.new') }}</span>
       </el-button>
@@ -148,7 +148,7 @@ defineExpose({ revokeById })
           <div v-if="state === 'active'" class="token__actions">
             <el-button
               type="danger"
-              plain
+              text
               size="small"
               :loading="revoking === c.id"
               @click="revoke(c.id, c.token_prefix)"
@@ -232,7 +232,7 @@ defineExpose({ revokeById })
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 1px 5px;
 }
 .token__actions {

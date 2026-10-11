@@ -215,7 +215,6 @@ function onHosted(_: unknown, actorId: string) {
   padding: 12px 8px;
   margin: 0 -8px;
   border-bottom: var(--app-rule);
-  border-radius: var(--app-radius-control);
   cursor: pointer;
 }
 .agents-item:last-child {

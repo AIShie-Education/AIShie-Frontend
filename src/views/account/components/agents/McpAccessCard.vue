@@ -65,7 +65,7 @@ const { t } = useI18n()
           <span v-else-if="progress.course === 'waiting'">{{ t('agents.connect.courseWaiting') }}</span>
           <template v-else>
             <span>{{ t('agents.connect.courseTodo') }}</span>
-            <el-button type="primary" plain size="small" :disabled="disabled" @click="emit('bring')">
+            <el-button type="primary" text size="small" :disabled="disabled" @click="emit('bring')">
               {{ t('agents.bring.open') }}
             </el-button>
           </template>

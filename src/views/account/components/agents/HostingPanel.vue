@@ -226,7 +226,7 @@ watch(
       </template>
       <div v-if="!(agent.seats ?? []).length" class="hosting-offer__course">
         <span>{{ t('agents.connect.courseTodo') }}</span>
-        <el-button type="primary" plain size="small" :disabled="!active" @click="emit('bring')">
+        <el-button type="primary" text size="small" :disabled="!active" @click="emit('bring')">
           {{ t('agents.bring.open') }}
         </el-button>
       </div>

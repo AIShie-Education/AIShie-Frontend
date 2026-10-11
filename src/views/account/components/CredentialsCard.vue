@@ -275,7 +275,7 @@ async function revoke(c: Credential) {
             </p>
           </div>
           <div v-if="state === 'active'" class="creds-item__actions">
-            <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
+            <el-button type="danger" text size="small" :loading="revoking === c.id" @click="revoke(c)">
               {{ t('account.credentials.revoke') }}
             </el-button>
           </div>
@@ -356,7 +356,7 @@ async function revoke(c: Credential) {
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 1px 5px;
 }
 .creds-item__subject {

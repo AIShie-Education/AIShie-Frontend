@@ -380,11 +380,11 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
       />
       <el-form label-position="top" class="model-form" @submit.prevent>
         <el-radio-group v-if="schoolAvailable && ownAvailable" v-model="plan" class="model-form__plans">
-          <el-radio value="school" border class="model-form__plan model-form__plan--school">
+          <el-radio value="school" class="model-form__plan model-form__plan--school">
             <span class="model-form__plan-title">{{ t('hosting.school.choice') }}</span>
             <span class="model-form__plan-hint">{{ t('hosting.school.choiceHint') }}</span>
           </el-radio>
-          <el-radio value="own" border class="model-form__plan model-form__plan--own">
+          <el-radio value="own" class="model-form__plan model-form__plan--own">
             <span class="model-form__plan-title">{{ t('hosting.school.own') }}</span>
             <span class="model-form__plan-hint">{{ t('hosting.school.ownHint') }}</span>
           </el-radio>
@@ -585,8 +585,13 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 </template>
 
 <style scoped>
-.model-dialog__steps {
+/* Where the dialog is among its two steps, in words over a rule: not on a grey rounded band. */
+.model-dialog__steps.el-steps--simple {
   margin-bottom: 16px;
+  padding: 0 0 var(--app-space-sm);
+  border-radius: 0;
+  border-bottom: var(--app-rule);
+  background: transparent;
 }
 .model-dialog__loading {
   min-height: 160px;
@@ -601,19 +606,21 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 .model-form :deep(.el-autocomplete) {
   width: 100%;
 }
+/* The school's plan or one's own key: plain radios on rows between rules, not a box each. */
 .model-form__plans {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   margin-bottom: 16px;
+  border-top: var(--app-rule);
 }
 .model-form__plans .el-radio {
   height: auto;
   margin-right: 0;
-  padding: 10px 12px;
+  padding: 10px 0;
   align-items: flex-start;
   white-space: normal;
+  border-bottom: var(--app-rule);
 }
 .model-form__plans :deep(.el-radio__label) {
   display: flex;

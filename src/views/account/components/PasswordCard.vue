@@ -115,7 +115,7 @@ async function save() {
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.retry') }}</span>
       </el-button>
-      <el-button v-else type="primary" plain :disabled="!known" @click="start">
+      <el-button v-else type="primary" text :disabled="!known" @click="start">
         <el-icon><Key /></el-icon>
         <span>{{ current ? t('account.password.change') : t('account.password.set') }}</span>
       </el-button>
