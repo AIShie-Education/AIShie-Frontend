@@ -47,7 +47,7 @@ const session = useSessionStore()
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
-useTableRelayout(tableRef, narrow)
+useTableRelayout(tableRef, [narrow, statusVaries])
 const presets = usePresets()
 
 const PAGE = 100
@@ -89,6 +89,14 @@ const rows = computed(() =>
   list.items.value.filter(
     (m) => !kind.value || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
   ),
+)
+/**
+ * Whether any row's state is not the usual one (active, and not past its
+ * end): only then is there a Status column. A column that says Active on
+ * every row says nothing (docs/CONVENTIONS.md, "Tags").
+ */
+const statusVaries = computed(() =>
+  rows.value.some((m) => m.status !== 'active' || isExpired(m.expires_at)),
 )
 // member.list has no kind filter, so People and Agents are picked out of the
 // pages loaded so far. Nobody of that kind among them says nothing about the
@@ -243,7 +251,7 @@ function rowClass({ row }: { row: MemberSummary }) {
           <el-option value="" :label="t('members.filters.anyRole')" />
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
         </el-select>
-        <el-checkbox v-model="includeRemoved" :label="t('members.filters.includeRemoved')" border />
+        <el-checkbox v-model="includeRemoved" :label="t('members.filters.includeRemoved')" />
       </div>
 
       <AsyncState
@@ -313,7 +321,12 @@ function rowClass({ row }: { row: MemberSummary }) {
                  padding, and the cell's ellipsis stood after it as a clipped dot. -->
             <template #default="{ row }"><RoleTag :member="row" no-icon /></template>
           </el-table-column>
-          <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
+          <el-table-column
+            v-if="!narrow && statusVaries"
+            prop="status"
+            :label="t('members.columns.status')"
+            min-width="100"
+          >
             <template #default="{ row }">
               <div class="members__tags">
                 <StatusTag vocab="memberStatus" :value="row.status" />

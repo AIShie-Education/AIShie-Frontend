@@ -97,7 +97,6 @@ function goReach() {
             :value="r"
             :disabled="r === current"
             class="role-dialog__role"
-            border
           >
             <span class="role-dialog__role-name">{{ t(`enums.role.${r}`) }}</span>
             <span v-if="r === current" class="role-dialog__role-note">{{ t('members.role.isCurrent') }}</span>
@@ -158,13 +157,13 @@ function goReach() {
 .role-dialog__roles {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 24px;
 }
 .role-dialog__role {
   margin-right: 0;
   height: auto;
-  padding-top: 8px;
-  padding-bottom: 8px;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 .role-dialog__role :deep(.el-radio__label) {
   display: inline-flex;

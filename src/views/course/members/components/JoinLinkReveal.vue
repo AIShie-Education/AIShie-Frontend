@@ -226,9 +226,8 @@ async function download() {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--el-color-info-light-9);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
   width: 100%;
   box-sizing: border-box;
 }
