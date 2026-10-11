@@ -599,14 +599,15 @@ test.describe('a course’s tables beside the side bar, under the chat’s windo
     await expect(seat).not.toHaveClass(/is-narrow/)
     await expect.poll(() => cellsInFirstRow(seat)).toBe(4)
 
-    // My actions: status and when under each action in 644 px of page.
+    // My actions: status and when under each action in 644 px of page (a status only where the actions differ in
+    // it, and a column of it likewise wider).
     await page.goto(coursePath('my-actions'))
     await expect(page.locator('.my-actions__table')).toBeVisible()
     await layout(page, 1000, 800, { side: true })
     await expect.poll(() => headingsOf(page, '.my-actions__table')).toEqual(['Action'])
     await expect(page.locator('.my-actions__stack').first()).toBeVisible()
     await layout(page, 1000, 800, { side: false })
-    await expect.poll(() => headingsOf(page, '.my-actions__table')).toContain('Status')
+    await expect.poll(() => headingsOf(page, '.my-actions__table')).toContain('When')
   })
 
   test('a course’s assignments and grades are laid out for the page’s width, not the window’s', async ({ page }) => {

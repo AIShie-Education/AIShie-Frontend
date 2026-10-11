@@ -674,12 +674,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   nothing laid in it can read as a card in a card, and what it holds is as wide as the page. What a
   section lists, it lists as rows between rules (a rule above the first, one under each; the site's
   line, not Element Plus's softer one), tinted under the pointer where the row opens something,
-  and keeping its › at its end there; a mark a row carries (not published, waiting on the reader,
-  new, the one shown) is a 3 px line at its left, square-ended, never a tinted box. A box (the
-  site's line, 2 px corners, no ground of its own, no shadow) is kept for one thing the reader
-  operates as a whole: a proposal with its decision in the approvals queue, a course on the home
-  page, a file, a group in a set and the place for the students in none, the chat's composer; never
-  a stack of boxed rows, and never a box in a box. Quoted words (an agent's message, a proposed
+  and keeping its › at its end there, which alone says so on a touch screen (an assignment on the
+  overview, another attempt, a phone's row of work or of the roster, a conversation in a course
+  agent's log); a mark a row carries (not published, waiting on the reader, new, the one shown) is
+  a 3 px line at its left, square-ended, never a tinted box. A box (the site's line, 2 px corners,
+  no ground of its own, no shadow) is kept for one thing the reader operates as a whole: a proposal
+  with its decision in the approvals queue, a course on the home page, a file, a group in a set and
+  the place for the students in none, the chat's composer; never a stack of boxed rows, and never
+  a box in a box. The queue has one solid button: the first proposal's Approve (oldest first, it is
+  the next to decide), and, once a decision is opened on any proposal, that decision's confirm
+  instead, the first's Approve turning to indigo words meanwhile (`DecidePanel`'s `lead`, which
+  `ApprovalsView` moves to the decision opened last). Quoted words (an agent's message, a proposed
   answer, a total's comment) have a 2 px rule at their left; a block set apart in a dialog (what will
   be posted, what is fixed) lies between rules; figures that stand side by side (a work's counts,
   the runtime's totals) are parted by a vertical rule, not set in tiles; choices with words under
@@ -688,9 +693,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   circle behind it), no › follows a text link (All assignments, Details), and a heading over a
   group of rows is a plain sub-heading in the second ink, in the case it is written in, never small
   grey capitals. A status a list would show the same on every row is not shown (Published on each
-  material, the members' Status column while every seat is active, Built in on each preset while
-  no department's are beside them, a role tag where the reader's roles do not differ), and a page
-  says its thing's state once, in its facts, not again beside its title. `npm run lint` refuses
+  material, the members' Status column while every seat is active, the people's while nobody
+  listed is suspended, My actions' Status while every action listed is in one (its filter's chips
+  say which, once) and its Decided while nobody decided any, Awaiting approval on each of a
+  submission's grades waiting for approval, Built in on each preset while no department's are
+  beside them, a role tag where the reader's roles do not differ), and a page says its thing's
+  state once, in its facts, not again beside its title. `npm run lint` refuses
   Element Plus's card, a bordered checkbox or radio, and a button made outlined, a pill or a disc
   (`plain`, `round`, `circle`) wherever a template writes one (`eslint.config.js`, ELEMENT_LOOK,
   with `src/lint/elementLook.spec.ts`); `e2e/screens-style.spec.ts` reads every screen's computed
@@ -1019,7 +1027,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `usePhoneScreen()` (640 px or narrower) for a dialog or a drawer laid over the page that fills a
   phone's screen, and `useMediaQuery()` for the side bar's drawer, the chat's sheet and touch. On a
   touch screen (`pointer: coarse`, `styles/element.css`) Element Plus's controls are 44 px (40 small,
-  48 large) and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
+  48 large), a checkbox or a radio with its words among them (but one in a table's cell, which keeps
+  its row's height), and its fields' text 16 px, below which iOS zooms into a field it focuses; a component
   that sets the text size of a field one types into (`MarkdownEditor`'s 13 px monospace, the PDF
   viewer's page number) outweighs that rule, and so sets 16 px under `pointer: coarse` itself. A
   control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the

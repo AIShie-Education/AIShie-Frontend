@@ -1,5 +1,5 @@
 /// <reference lib="dom" />
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import { call, coursePath, demo, photograph, signIn, signInAsRoot } from './support'
 
 // A page's look, as aishie.app sets its own (docs/CONVENTIONS.md, "Shapes"):
@@ -74,6 +74,8 @@ const SCREENS: Screen[] = [
   { name: 'admin-course', who: 'root', path: `/admin/courses/${d().course.id}` },
   { name: 'admin-actors', who: 'root', path: '/admin/actors' },
   { name: 'admin-actor', who: 'root', path: `/admin/actors/${d().actors.grader.actor_id}` },
+  // A person's page, which an agent's is not: an invitation and single sign-on side by side, each a form.
+  { name: 'admin-person', who: 'root', path: `/admin/actors/${d().actors.yuki.actor_id}` },
   { name: 'admin-terms', who: 'root', path: '/admin/terms' },
   { name: 'admin-departments', who: 'root', path: '/admin/departments' },
   { name: 'admin-presets', who: 'root', path: '/admin/presets' },
@@ -261,7 +263,16 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     { label: 'on a phone, light', width: 390, height: 844, dark: false },
   ]
   /** The last two views, for the screens a theme or a width changes most. */
-  const BOTH = new Set(['overview', 'materials', 'approvals', 'members', 'submission', 'home', 'student-overview'])
+  const BOTH = new Set([
+    'overview',
+    'materials',
+    'approvals',
+    'members',
+    'submission',
+    'home',
+    'student-overview',
+    'admin-person',
+  ])
 
   for (const view of VIEWS) {
     test(`no section is a card, no box holds a box, one solid primary at most, no eyebrow, square corners and no shadow, ${view.label}`, async ({
@@ -371,6 +382,19 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
       return { radius: s.borderTopLeftRadius, width: s.borderTopWidth, ground: s.backgroundColor }
     })
     expect(box).toEqual({ radius: '2px', width: '1px', ground: 'rgba(0, 0, 0, 0)' })
+
+    // Deciding out of turn: the second rejected, its form open. Its confirm is now the one solid button, and the
+    // first's Approve is indigo words until the form is put away.
+    const solids = async () => (await page.evaluate(audit, Object.keys(PENDING))).solids
+    await cards.nth(1).getByRole('button', { name: 'Reject', exact: true }).click()
+    const confirm = cards.nth(1).locator('.decide-panel__confirm').getByRole('button', { name: 'Reject', exact: true })
+    await expect(confirm).toBeVisible()
+    await expect(confirm).not.toHaveClass(/is-text/)
+    await expect(approve(0)).toHaveClass(/is-text/)
+    expect(await solids()).toEqual([expect.stringContaining('Reject')])
+    await cards.nth(1).getByRole('button', { name: 'Cancel', exact: true }).click()
+    await expect(approve(0)).not.toHaveClass(/is-text/)
+    expect(await solids()).toEqual([expect.stringContaining('Approve')])
   })
 
   test('a status that never varies is not shown: no Active column, no Published on each material, no Person beside one’s own seat', async ({
@@ -401,5 +425,149 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     )
     if (varies) await expect(heads.filter({ hasText: 'Status' })).toHaveCount(1)
     else await expect(heads.filter({ hasText: 'Status' })).toHaveCount(0)
+
+    // My actions: a Status column while the actions listed differ in it, and Decided while someone decided one;
+    // read from what the page itself was given.
+    const listed = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/actions/mine'))
+    await page.goto(coursePath('my-actions'))
+    const mine = ((await (await listed).json()).result?.actions ?? []) as {
+      status: string
+      review_state: string
+      decided_at?: string | null
+    }[]
+    const mineHeads = page.locator('.my-actions__table thead th')
+    await expect(mineHeads.first()).toBeVisible()
+    expect(mine.length).toBeGreaterThan(0)
+    const statusShown = new Set(mine.map((a) => a.status)).size > 1 || mine.some((a) => a.review_state !== 'none')
+    await expect(mineHeads.filter({ hasText: /^Status$/ })).toHaveCount(statusShown ? 1 : 0)
+    await expect(mineHeads.filter({ hasText: /^Decided$/ })).toHaveCount(mine.some((a) => a.decided_at) ? 1 : 0)
+
+    // A submission's grades waiting for approval (the two this run proposed for Yuki's homework): every one of
+    // them waits, as their heading says, and none says so again.
+    await page.goto(coursePath(`submissions/${d().course.submissions.yuki_hw1}`))
+    const waiting = page.locator('.pending-proposals')
+    await expect(waiting.locator('.pending-proposals__row').first()).toBeVisible()
+    await expect(waiting.locator('.pending-proposals__list')).not.toContainText('Awaiting approval')
+  })
+
+  test('the people list has a Status column only while someone in it is suspended', async ({ page }) => {
+    await signInAsRoot(page)
+    const heads = page.locator('.actors__table thead th')
+    // The run's six people, every one of them active.
+    await page.goto(`/admin/actors?q=${encodeURIComponent(`+${d().tag}@demo.test`)}`)
+    await expect(page.locator('.actors__table .el-table__body tr')).toHaveCount(6)
+    await expect(heads.filter({ hasText: /^Status$/ })).toHaveCount(0)
+    await expect(page.locator('.actors__table .el-table__body')).not.toContainText('Active')
+    // The same six, one of them as if suspended: the column, saying which.
+    await page.route(
+      (url) => url.pathname.endsWith('/v1/actors'),
+      async (route) => {
+        const res = await route.fetch()
+        const body = await res.json()
+        const actors = body.result?.actors as { status: string; display_name: string }[] | undefined
+        if (actors?.[0]) actors[0].status = 'suspended'
+        await route.fulfill({ response: res, json: body })
+      },
+    )
+    await page.reload()
+    await expect(heads.filter({ hasText: /^Status$/ })).toHaveCount(1)
+    await expect(page.locator('.actors__table .el-table__body')).toContainText('Suspended')
+    await page.unroute((url) => url.pathname.endsWith('/v1/actors'))
+  })
+
+  test('a text button keyboard-focused has the app’s ring: the focus colour, 2 px, 2 px clear of it', async ({ page }) => {
+    await signIn(page, d().actors.instructor)
+    /** The ring on a button reached by the keyboard, and what it is drawn against. */
+    const ring = async (button: Locator) => {
+      await button.focus()
+      await page.keyboard.press('Shift+Tab')
+      await page.keyboard.press('Tab')
+      return button.evaluate((el) => {
+        const s = getComputedStyle(el)
+        const probe = document.createElement('span')
+        probe.style.color = 'var(--app-focus)'
+        document.body.append(probe)
+        const focus = getComputedStyle(probe).color
+        probe.remove()
+        return {
+          visible: el.matches(':focus-visible'),
+          colour: s.outlineColor === focus,
+          width: s.outlineWidth,
+          offset: s.outlineOffset,
+          style: s.outlineStyle,
+        }
+      })
+    }
+    const app = { visible: true, colour: true, width: '2px', offset: '2px', style: 'solid' }
+    // A member's Remove, red words.
+    await page.goto(coursePath(`members/${d().actors.yuki.member_id}`))
+    const remove = page.locator('.page-header').getByRole('button', { name: 'Remove', exact: true })
+    await expect(remove).toHaveClass(/is-text/)
+    expect(await ring(remove)).toEqual(app)
+    // A later proposal's Approve, indigo words.
+    await page.goto(coursePath('approvals'))
+    const later = page.locator('.action-card').nth(1).getByRole('button', { name: 'Approve', exact: true })
+    await expect(later).toHaveClass(/is-text/)
+    expect(await ring(later)).toEqual(app)
+  })
+
+  test('on a touch screen a checkbox or a radio is as tall as a button beside it', async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+    const page = await context.newPage()
+    await signIn(page, d().actors.instructor)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    const tall = (sel: string) =>
+      page.locator(sel).evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().height)))
+    for (const [path, toggle] of [
+      [coursePath('materials'), '.page-header .el-checkbox'],
+      [coursePath('members'), '.app-toolbar .el-checkbox'],
+      [coursePath('groups'), '.app-toolbar .el-checkbox'],
+      [coursePath('my-actions'), '.my-actions__toolbar .el-checkbox'],
+    ] as const) {
+      await page.goto(path)
+      await expect(page.locator(toggle).first(), path).toBeVisible()
+      for (const h of await tall(toggle)) expect(h, path).toBeGreaterThanOrEqual(44)
+    }
+    // A member's role, chosen among plain radios.
+    await page.goto(coursePath(`members/${d().actors.yuki.member_id}`))
+    await page.getByRole('button', { name: 'Change role' }).click()
+    const roles = page.locator('.role-dialog__role')
+    await expect(roles.first()).toBeVisible()
+    for (const h of await tall('.role-dialog__role')) expect(h).toBeGreaterThanOrEqual(44)
+    await context.close()
+  })
+
+  test('a row that opens something keeps its › at its end, on a laptop and on a phone', async ({ browser }) => {
+    for (const phone of [false, true]) {
+      const context = await browser.newContext({
+        viewport: phone ? { width: 390, height: 844 } : { width: 1280, height: 800 },
+        isMobile: phone,
+        hasTouch: phone,
+      })
+      const page = await context.newPage()
+      await signIn(page, d().actors.instructor)
+      const each = async (path: string, row: string, go: string) => {
+        await page.goto(path)
+        const rows = page.locator(row)
+        await expect(rows.first(), `${path} ${row}`).toBeVisible()
+        const without = await rows.evaluateAll(
+          (els, g) => els.filter((el) => !el.querySelector(g)).map((el) => el.textContent?.trim().slice(0, 40)),
+          go,
+        )
+        expect(without, `${path}: ${row} without ${go}`).toEqual([])
+      }
+      // The overview's assignments.
+      await each(coursePath(), '.assignments__row', '.assignments__go')
+      if (phone) {
+        // A phone's submissions, and an assignment's roster, a row each.
+        await each(coursePath('submissions'), '.submission-cards__item', '.submission-cards__go')
+        await each(
+          coursePath(`assignments/${d().course.assignments.hw1}`),
+          '.roster-cards__link',
+          '.roster-cards__go',
+        )
+      }
+      await context.close()
+    }
   })
 })
