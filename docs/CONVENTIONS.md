@@ -688,10 +688,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   200 px of the window's top. Inside a course the page's header has 12 px under it, not 20. Known
   to miss it, by a line of their own: an assignment, a submission and a proposal, whose header has
   a back link, a title and a line of facts beside their actions (about 220 px), and the Submissions
-  and Grading scheme pages (207 and 216 px in Chinese), whose subtitle takes a second line; in
-  English, whose subtitles are longer, the Grades page too (214 px), and Submissions and Agents by a
-  pixel or so (201 px); do not add to them. Chinese's smaller steps are a size larger than English's,
-  so measure a page's header in both.
+  page (207 px in Chinese, 201 in English), whose subtitle takes a second line; in English, whose
+  subtitles are longer, the Grades tab's three pages too (214 px), whose own tabs and subtitle take a
+  line each; do not add to them. Chinese's smaller steps are a size larger than English's, so measure
+  a page's header in both: `e2e/course-header.spec.ts` measures each tab's page in English and
+  Traditional Chinese, and fails on one that starts later than this says. A page's subtitle takes
+  the width its actions leave it, never the measure (Type, below).
 - **Navigation's icons are outlined, never filled**: the activity bar, the side bar, the phone's
   header, a course's tabs and More's menu, the grades' tabs. A filled glyph among outlined ones
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
@@ -883,8 +885,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   English); and `--app-lh-heading`, 1.25, the site's too, for a page's, a section's, a dialog's and a
   drawer's title and the headings of rendered Markdown. Running text stops at `var(--app-measure)`,
   34em of its own size, as every paragraph of the site does: rendered Markdown's paragraphs, items and
-  quotations (a table and a listing run the column's width), a note, a page's subtitle; a line of 70
-  Han characters across a laptop's page is hard to read. An author's headings in rendered Markdown
+  quotations (a table and a listing run the column's width), a note, where data goes, an empty page's
+  words; a line of 70 Han characters across a laptop's page is hard to read. A page's subtitle is not
+  running text but a lede beside its actions, and takes the width they leave it: stopped at the
+  measure (442 px, at its own 13 px), it took a second line on nearly every course page, and their
+  content started past 200 px (A course's pages, above). An author's headings in rendered Markdown
   are a step under the page's title, whatever level they were written at: `#` 18 px (`-xl`), `##` 16
   (`-lg`), `###` the text's 15 in the strong weight, so that the page's own `h1` stays its largest
   heading (`#` was 1.6em, 24 px, as large as the title). A token read is a token set:

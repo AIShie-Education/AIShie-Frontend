@@ -1,11 +1,14 @@
 <script setup lang="ts">
 // A page's header: its title, the page's one h1, at a heading's leading, a
-// line under it in the third ink that stops at the measure, and its primary
-// actions. The way back, on a page under another, is a square with the app's
-// 2 px corners. Inside a course, a title that only names the tab chosen
-// (Materials, under the Materials tab) is not shown again: the h1 is kept
-// for screen readers, and the subtitle and the actions alone show. On the
-// grades' pages, the grades' own tabs take the title's place.
+// line under it in the third ink, and its primary actions. The line is a
+// lede, not running text: it takes the width the actions leave it, and does
+// not stop at the measure, which would wrap it on a course's pages and push
+// their content past 200 px of the window's top. The way back, on a page
+// under another, is a square with the app's 2 px corners. Inside a course, a
+// title that only names the tab chosen (Materials, under the Materials tab)
+// is not shown again: the h1 is kept for screen readers, and the subtitle
+// and the actions alone show. On the grades' pages, the grades' own tabs
+// take the title's place.
 import { computed, Comment, Fragment, inject, Text, useSlots, type VNode } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { COURSE_PAGE } from '@/layouts/coursePage'
@@ -151,7 +154,6 @@ function filled(nodes: VNode[] | undefined): boolean {
   margin-top: 0;
 }
 .page-header__subtitle {
-  max-width: var(--app-measure);
   margin: 4px 0 0;
   color: var(--app-ink-3);
   font-size: var(--app-text-sm);

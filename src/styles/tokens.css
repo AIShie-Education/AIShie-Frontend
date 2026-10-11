@@ -165,9 +165,11 @@
   --app-lh-text: 1.7;
   --app-lh-prose: 1.7;
   --app-lh-heading: 1.25;
-  /* The measure: running text (a paragraph of rendered Markdown, a note, a
-     page's subtitle) stops at 34 em of its own size, 34 Han characters, as
-     the site's every paragraph does; a line of 70 is hard to read. */
+  /* The measure: running text (a paragraph of rendered Markdown, a note,
+     where data goes, an empty page's words) stops at 34 em of its own size,
+     34 Han characters, as the site's every paragraph does; a line of 70 is
+     hard to read. A page's subtitle is a lede beside its actions, not
+     running text, and takes the width they leave it. */
   --app-measure: 34em;
   /* What stands out in the interface's text: a name, a label, a table's
      heading, a figure. A heading takes --app-heading-weight, as does a
