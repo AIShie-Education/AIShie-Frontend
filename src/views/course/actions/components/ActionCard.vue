@@ -32,12 +32,15 @@ const props = withDefaults(
     mode: 'decide' | 'review'
     /** The caller's own decision on this is waiting for approval. */
     waiting?: string | null
-    /** Whether its Approve (Reviewed) is the queue's one solid button: the first's alone (DecidePanel). */
+    /**
+     * Whether the queue's one solid button is here (DecidePanel): its Approve (Reviewed), or the confirm of the
+     * decision it has open.
+     */
     lead?: boolean
   }>(),
   { waiting: null, lead: true },
 )
-const emit = defineEmits<{ done: [Done] }>()
+const emit = defineEmits<{ done: [Done]; choosing: [open: boolean] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const rules = useJudgeRules()
@@ -152,6 +155,7 @@ const excerpt = computed(() => {
         :lead="lead"
         size="small"
         @done="(d) => emit('done', d)"
+        @choosing="(open) => emit('choosing', open)"
       />
       <div class="action-card__side">
         <el-button
