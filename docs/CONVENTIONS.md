@@ -856,7 +856,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in the
-  line with 2 px corners and cast no shadow, their title over a rule (one that fills a phone's
+  line (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
+  and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
   title over a rule too; a notification is framed and square as a message is
   (`styles/overlays.css`, after `element.css`).
