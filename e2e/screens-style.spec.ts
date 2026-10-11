@@ -439,6 +439,17 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     await expect(mineHeads.filter({ hasText: /^Status$/ })).toHaveCount(statusShown ? 1 : 0)
     await expect(mineHeads.filter({ hasText: /^Decided$/ })).toHaveCount(mine.some((a) => a.decided_at) ? 1 : 0)
 
+    // The submissions: a State column only while some work listed is not handed in (Submitted, the usual);
+    // read from what the page itself was given.
+    const handedIn = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/submissions'))
+    await page.goto(coursePath('submissions'))
+    const work = ((await (await handedIn).json()).result?.submissions ?? []) as { state: string }[]
+    const workHeads = page.locator('.submissions-table thead th')
+    await expect(workHeads.first()).toBeVisible()
+    expect(work.length).toBeGreaterThan(0)
+    const stateShown = work.some((s) => s.state !== 'submitted')
+    await expect(workHeads.filter({ hasText: /^State$/ })).toHaveCount(stateShown ? 1 : 0)
+
     // A submission's grades waiting for approval (the two this run proposed for Yuki's homework): every one of
     // them waits, as their heading says, and none says so again.
     await page.goto(coursePath(`submissions/${d().course.submissions.yuki_hw1}`))
