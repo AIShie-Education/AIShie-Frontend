@@ -95,17 +95,21 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await offencesIn(page, '.el-dialog')).toEqual([])
     expect((await soloPrimary(page)).overlays).toEqual([['Create']])
 
-    // A field focused: its edge in the focus colour, doubled by an outline on it, and no halo.
+    // A field focused: its edge in the focus colour (--app-focus, the navy; in the dark theme its lighter step),
+    // doubled by an outline on it in the same colour, and no halo.
     const title = dialog.locator('input').first()
     await title.focus()
     const focused = await title.evaluate((input) => {
       const wrapper = input.closest('.el-input__wrapper')!
       const cs = getComputedStyle(wrapper)
-      return { radius: cs.borderTopLeftRadius, shadow: cs.boxShadow, outline: `${cs.outlineWidth} ${cs.outlineStyle}` }
+      return {
+        radius: cs.borderTopLeftRadius,
+        shadow: cs.boxShadow,
+        outline: `${cs.outlineWidth} ${cs.outlineStyle} ${cs.outlineColor}`,
+      }
     })
-    expect(focused.radius).toBe('2px')
-    expect(focused.shadow).toMatch(/^rgb\([^)]+\) 0px 0px 0px 1px inset$/)
-    expect(focused.outline).toBe('1px solid')
+    const focus = theme === 'dark' ? 'rgb(157, 179, 230)' : 'rgb(34, 64, 122)'
+    expect(focused).toEqual({ radius: '2px', shadow: `${focus} 0px 0px 0px 1px inset`, outline: `1px solid ${focus}` })
 
     // The scheme's component it counts towards: a select's options, a box of their own.
     await dialog

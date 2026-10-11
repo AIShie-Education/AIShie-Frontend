@@ -40,9 +40,9 @@ describe('FilterChips', () => {
     expect(all.map((c) => c.attributes('role'))).toEqual(['radio', 'radio', 'radio'])
     expect(all[0]!.attributes('aria-checked')).toBe('true')
     expect(all[0]!.classes()).toContain('el-check-tag')
-    // One with nothing in it is marked so (its count is quieter), and none is Element Plus's rounded one.
+    // One with nothing in it is marked so (its count is quieter). Its corners, as drawn, are
+    // e2e/components-style.spec.ts's to measure.
     expect(all[2]!.classes()).toContain('is-zero')
-    for (const c of all) expect(c.classes()).not.toContain('is-round')
   })
 
   it('chooses one at a time, by a click or from the keyboard, and the chosen one again goes back to all', async () => {

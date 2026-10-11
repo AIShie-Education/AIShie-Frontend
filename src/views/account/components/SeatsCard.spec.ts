@@ -28,23 +28,50 @@ function seat(member: string, role: string, code: string): Membership {
   } as unknown as Membership
 }
 
+function seats(list: Membership[]) {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/courses/:courseId', name: 'course-overview', component: { render: () => null } }],
+  })
+  return mount(SeatsCard, {
+    props: { seats: list, loading: false, error: null },
+    global: { plugins: [ElementPlus, i18n, router] },
+  })
+}
+/** Each seat's tags, as words. */
+const tags = (w: ReturnType<typeof seats>) =>
+  w.findAll('.seat').map((s) =>
+    s
+      .find('.seat__tags')
+      .findAll('.app-tag')
+      .map((t) => t.text()),
+  )
+
 describe('SeatsCard', () => {
+  it('says each seat’s role only where the reader’s roles differ among their seats', () => {
+    const same = seats([
+      seat('01a0d79f-0000-70da-a7cc-00000000aaaa', 'student', 'CS101'),
+      seat('01a0d79f-0000-70da-a7cc-00000000bbbb', 'student', 'CS202'),
+    ])
+    expect(tags(same)).toEqual([[], []])
+    const differ = seats([
+      seat('01a0d79f-0000-70da-a7cc-00000000aaaa', 'student', 'CS101'),
+      seat('01a0d79f-0000-70da-a7cc-00000000bbbb', 'instructor', 'CS202'),
+    ])
+    expect(tags(differ)).toEqual([['Student'], ['Instructor']])
+  })
+
+  it('says a seat’s state only where it is not active', () => {
+    const paused = { ...seat('01a0d79f-0000-70da-a7cc-00000000bbbb', 'student', 'CS202'), status: 'paused' }
+    const w = seats([seat('01a0d79f-0000-70da-a7cc-00000000aaaa', 'student', 'CS101'), paused as Membership])
+    expect(tags(w)).toEqual([[], ['Paused']])
+  })
+
   it('shows a member ID on a teaching seat, and none on a student’s', async () => {
-    const router = createRouter({
-      history: createMemoryHistory(),
-      routes: [{ path: '/courses/:courseId', name: 'course-overview', component: { render: () => null } }],
-    })
-    const w = mount(SeatsCard, {
-      props: {
-        seats: [
-          seat('01a0d79f-0000-70da-a7cc-00000000aaaa', 'student', 'CS101'),
-          seat('01a0d79f-0000-70da-a7cc-00000000bbbb', 'instructor', 'CS202'),
-        ],
-        loading: false,
-        error: null,
-      },
-      global: { plugins: [ElementPlus, i18n, router] },
-    })
+    const w = seats([
+      seat('01a0d79f-0000-70da-a7cc-00000000aaaa', 'student', 'CS101'),
+      seat('01a0d79f-0000-70da-a7cc-00000000bbbb', 'instructor', 'CS202'),
+    ])
     const [student, teaching] = w.findAll('.seat')
     expect(student!.text()).toContain('CS101')
     expect(student!.find('.seat__id').exists()).toBe(false)
