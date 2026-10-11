@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { PENDING } from './shapes.pending'
 import tokensCss from './tokens.css?raw'
 import elementCss from './element.css?raw'
 
@@ -15,24 +14,25 @@ import elementCss from './element.css?raw'
 // its style sheets, its components' <style>, the CSS its templates and
 // scripts write as strings and as style objects, and the loading screen's
 // in index.html. It reads a corner however it is written: border-radius or
-// any of its longhands, a custom property whose name holds "radius", in px,
-// em or rem, through a token (which passes when the token does: var() is
-// followed to what tokens.css, element.css or the file itself sets), in a
-// calc(). A shadow is box-shadow, a custom property whose name holds
-// "shadow", drop-shadow(), or a read of a shadow's token anywhere but where
-// the tokens are set (tokens.css, element.css). In tokens.css, every corner
-// is 4 px or less, and every shadow none.
+// any of its longhands, -webkit- or -moz- prefixed or not, a custom property
+// whose name holds "radius", in px, em or rem, through a token (which passes
+// when the token does: var() is followed to what tokens.css, element.css or
+// the file itself sets), in a calc(); in a script, camel-cased, quoted or
+// not. A shadow is box-shadow (prefixed or not), text-shadow, a custom
+// property whose name holds "shadow", drop-shadow(), or a read of a shadow's
+// token anywhere but where the tokens are set (tokens.css, element.css); its
+// lengths are read as a corner's are, and one the scan cannot read is
+// reported, never passed. In tokens.css every corner is 4 px or less, and no
+// shadow is set: nothing casts one.
 //
-// What is let through is in ROUND_MARKS and GRADIENTS, each with why. While
-// design wave 3 is under way, a file not yet converted is listed in
-// shapes.pending.ts, and the test fails on one listed that no longer offends,
-// so that the lists only shrink.
+// What is let through is in ROUND_MARKS and GRADIENTS, each with why.
 
 const sources: Record<string, string> = {
-  ...import.meta.glob<string>(
-    ['/src/**/*.{vue,css,ts}', '!/src/**/*.spec.ts', '!/src/api/generated/**', '!/src/styles/shapes.pending.ts'],
-    { query: '?raw', import: 'default', eager: true },
-  ),
+  ...import.meta.glob<string>(['/src/**/*.{vue,css,ts}', '!/src/**/*.spec.ts', '!/src/api/generated/**'], {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  }),
   ...import.meta.glob<string>('/index.html', { query: '?raw', import: 'default', eager: true }),
 }
 type Sources = Record<string, string>
@@ -157,18 +157,23 @@ function declarationsIn(file: string, text: string, property: Property): Found[]
   // In a string of CSS in a template or a script, on one line.
   for (const m of other.matchAll(new RegExp(`(?<![-\\w])(${property.css.source})\\s*:\\s*([^;}"'\`\\n]+)`, 'gi')))
     out.set(m.index!, { file, property: m[1]!.toLowerCase(), value: clean(m[2]!), selector: '' })
-  // A style object's key, camel-cased or quoted, an assignment to an element's style, or setProperty's
-  // first argument; its value quoted or not.
+  // A style object's key, camel-cased or kebab-cased, quoted or not, an assignment to an element's style,
+  // or setProperty's first argument; its value quoted or not.
   const js = new RegExp(
-    `(?:(?<![-\\w$'"\`])(${property.js.source})\\s*(?::|=(?![=>]))|(['"\`])(${property.css.source})\\2\\s*[:,])\\s*(?:(['"\`])(.*?)\\4|([^,;}\\n]+))`,
+    `(?:(?<![-\\w$'"\`])(${property.js.source})\\s*(?::|=(?![=>]))|(['"\`])(${property.css.source}|${property.js.source})\\2\\s*[:,])\\s*(?:(['"\`])(.*?)\\4|([^,;}\\n]+))`,
     'g',
   )
   for (const m of other.matchAll(js)) {
     if (out.has(m.index!)) continue
-    const name = (m[1] ?? m[3]!).replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
-    out.set(m.index!, { file, property: name, value: clean(m[5] ?? m[6]!), selector: '' })
+    out.set(m.index!, { file, property: cssName(m[1] ?? m[3]!), value: clean(m[5] ?? m[6]!), selector: '' })
   }
   return [...out].sort(([a], [b]) => a - b).map(([, d]) => d)
+}
+
+/** A property's name as CSS writes it, from a script's (camel-cased, `WebkitBoxShadow` or `webkitBoxShadow`). */
+function cssName(name: string): string {
+  if (name.startsWith('-')) return name.toLowerCase()
+  return name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`).replace(/^(webkit|moz)-/, '-$1-')
 }
 
 /** A property's name as CSS writes it, and as a script does (camel-cased). */
@@ -176,15 +181,20 @@ interface Property {
   css: RegExp
   js: RegExp
 }
-/** A corner's property: border-radius, any of its longhands, or a custom property whose name holds "radius". */
+/** A corner's property: border-radius or any of its longhands, prefixed or not, or a custom property whose name holds "radius". */
 const RADIUS: Property = {
-  css: /border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius|--[\w-]*radius[\w-]*/,
-  js: /border(?:Top|Bottom|Start|End)?(?:Left|Right|Start|End)?Radius/,
+  css: /(?:-webkit-|-moz-)?border(?:-(?:top|bottom|start|end)-(?:left|right|start|end))?-radius|--[\w-]*radius[\w-]*/,
+  js: /(?:(?:[Ww]ebkit|Moz)B|b)order(?:Top|Bottom|Start|End)?(?:Left|Right|Start|End)?Radius/,
 }
-/** A shadow's property: box-shadow, or a custom property whose name holds "shadow". */
-const SHADOW: Property = { css: /box-shadow|--[\w-]*shadow[\w-]*/, js: /boxShadow/ }
-/** Frosted glass. */
-const BACKDROP: Property = { css: /backdrop-filter/, js: /backdropFilter/ }
+/** A shadow's property: box-shadow, prefixed or not, or a custom property whose name holds "shadow". */
+const SHADOW: Property = {
+  css: /(?:-webkit-|-moz-)?box-shadow|--[\w-]*shadow[\w-]*/,
+  js: /(?:(?:[Ww]ebkit|Moz)B|b)oxShadow/,
+}
+/** A shadow cast by the letters. */
+const TEXT_SHADOW: Property = { css: /text-shadow/, js: /textShadow/ }
+/** Frosted glass, prefixed or not. */
+const BACKDROP: Property = { css: /(?:-webkit-)?backdrop-filter/, js: /(?:[Ww]ebkitB|b)ackdropFilter/ }
 
 /** The custom properties set in a text, by name: each value it is given. */
 function customPropertiesIn(text: string): Map<string, string[]> {
@@ -290,6 +300,38 @@ function corner(value: string, file: string, from: Sources = sources, depth = 0)
   }, NONE)
 }
 
+/** A word of a shadow's layer, as far as the scan can read it: a length in px, its colour, or neither. */
+type ShadowWord = { px: number } | 'colour' | 'unread'
+
+/**
+ * What a word of a shadow is: a length (px, em, rem, 0); a var() followed to
+ * what it may be (a length, the largest it may be; a colour; neither, where
+ * its values are of both kinds, or it is set nowhere and has no fallback); a
+ * calc(), min(), max() or clamp() worked out as a corner's is; else the
+ * colour (a name, a hex, rgb(), color-mix()). A value of more than one word
+ * in a word's place cannot be read.
+ */
+function shadowWord(word: string, file: string, from: Sources, depth: number): ShadowWord {
+  if (depth > 10 || split(word, /\s/).length > 1) return 'unread'
+  const px = lengthPx(word)
+  if (px !== undefined) return { px }
+  const v = parseVar(word)
+  if (v) {
+    const values = candidates(v.name, file, from) ?? (v.fallback ? [v.fallback] : undefined)
+    if (!values) return 'unread'
+    const read = values.map((value) => shadowWord(clean(value), file, from, depth + 1))
+    if (read.every((r) => r === 'colour')) return 'colour'
+    const lengths = read.flatMap((r) => (typeof r === 'object' ? [r.px] : []))
+    if (lengths.length < read.length) return 'unread'
+    return { px: lengths.reduce((a, b) => (Math.abs(b) > Math.abs(a) ? b : a)) }
+  }
+  if (/^(?:calc|min|max|clamp)\(/.test(word)) {
+    const c = corner(word, file, from, depth + 1)
+    return c.round || c.unread.length ? 'unread' : { px: c.px }
+  }
+  return 'colour'
+}
+
 /** Why a shadow's value is not a line drawn as one, or undefined where it is (none, a ring, an inset rule). */
 function shadowFault(value: string, file: string, from: Sources = sources, depth = 0): string | undefined {
   if (/^(?:none|inherit|initial|unset|revert|revert-layer)$/.test(value)) return undefined
@@ -308,9 +350,11 @@ function shadowFault(value: string, file: string, from: Sources = sources, depth
     }
     const words = split(layer, /\s/)
     const inset = words.includes('inset')
-    const lengths = words.map((w) => lengthPx(w)).filter((n): n is number => n !== undefined)
+    const read = words.filter((w) => w !== 'inset').map((w) => shadowWord(w, file, from, depth + 1))
+    const lengths = read.flatMap((r) => (typeof r === 'object' ? [r.px] : []))
+    if (read.includes('unread') || read.filter((r) => r === 'colour').length > 1) return 'cannot be read'
     if (lengths.length < 2 || lengths.length > 4) return 'cannot be read'
-    const [x, y, blur = 0, spread = 0] = lengths
+    const [x = 0, y = 0, blur = 0, spread = 0] = lengths
     if (blur !== 0) return 'casts a shadow (it is blurred)'
     if (!inset && (x !== 0 || y !== 0)) return 'casts a shadow (it is offset outside)'
     if (!inset && spread > MAX_RING) return `is a ring wider than ${MAX_RING} px`
@@ -331,7 +375,7 @@ function offences(from: Sources = sources): string[] {
         say(d, 'round, and not a mark listed in ROUND_MARKS')
       else if (c.px > MAX_RADIUS) say(d, `${c.px} px, over ${MAX_RADIUS}`)
     }
-    for (const d of declarationsIn(file, text, SHADOW)) {
+    for (const d of [...declarationsIn(file, text, SHADOW), ...declarationsIn(file, text, TEXT_SHADOW)]) {
       const fault = shadowFault(d.value, file, from)
       if (fault) say(d, fault)
     }
@@ -361,15 +405,6 @@ function offences(from: Sources = sources): string[] {
   return out
 }
 
-/**
- * The entries of shapes.pending.ts: a file, all of whose offences wait, or a
- * file and a rule's selector (`/src/styles/main.css: .app-auth-page__card`),
- * where a file holds one rule that waits for a part of the wave and the rest
- * is held to the guard already.
- */
-const PENDING_ENTRIES: string[] = [...PENDING.components, ...PENDING.screens, ...PENDING.chrome]
-const pendingFor = (offence: string) => PENDING_ENTRIES.find((e) => offence.startsWith(`${e}: `))
-
 const PLANTED: Sources = {
   '/src/Planted.vue': `<template>
   <span :style="{ borderRadius: '8px', boxShadow: '0 2px 8px rgb(0 0 0 / 20%)' }">a</span>
@@ -394,7 +429,7 @@ el.style.backdropFilter = 'blur(8px)'
   box-shadow:
     0 0 0 1px var(--app-line) inset,
     0 4px 12px rgb(0 0 0 / 10%);
-  box-shadow: var(--app-shadow-pop);
+  box-shadow: var(--planted-shadow);
   box-shadow: 0 1px 0 var(--app-line);
   box-shadow: inset 3px 0 0 var(--app-wait-fg);
   box-shadow: 0 0 0 2px var(--app-focus);
@@ -404,6 +439,33 @@ el.style.backdropFilter = 'blur(8px)'
 }
 .askable-dot {
   border-radius: 50%;
+}
+</style>`,
+  // Prefixed properties, a script's quoted camel-cased keys, a shadow cast by letters, and a shadow's lengths
+  // the scan has to work out or cannot read.
+  '/src/Prefixed.vue': `<template>
+  <b :style="{ WebkitBorderRadius: '10px', '-webkit-box-shadow': '0 2px 4px red', textShadow: '0 1px 2px black' }">b</b>
+</template>
+<script setup lang="ts">
+const look = { 'borderRadius': '12px', "boxShadow": '0 3px 0 red' }
+el.style.webkitBoxShadow = '0 0 6px red'
+el.style.setProperty('text-shadow', '1px 1px 0 red')
+el.style.WebkitBackdropFilter = 'blur(2px)'
+</script>
+<style scoped>
+.c {
+  -webkit-border-radius: 8px;
+  -moz-border-radius: 6px;
+  -webkit-border-radius: var(--app-radius);
+  -webkit-box-shadow: 0 2px 6px black;
+  -webkit-backdrop-filter: blur(4px);
+  text-shadow: 0 1px 0 white;
+  text-shadow: none;
+  box-shadow: 0 0 var(--nowhere) red;
+  box-shadow: 0 0 0 calc(2px + 6px) red;
+  box-shadow: 0 0 var(--planted-blur) red;
+  box-shadow: 0 0 0 calc(var(--app-radius) - 1px) var(--app-focus);
+  --planted-blur: 6px;
 }
 </style>`,
 }
@@ -422,12 +484,10 @@ describe('the shapes', () => {
     ).toBeGreaterThan(20)
   })
 
-  it('sets every corner in tokens.css at 4 px or less, and every shadow to none', () => {
+  it('sets every corner in tokens.css at 4 px or less, and no shadow', () => {
     const set = customPropertiesIn(tokensCss)
     const radii = [...set].filter(([name]) => name.includes('radius'))
-    expect(radii.map(([name]) => name)).toEqual(
-      expect.arrayContaining(['--app-radius', '--app-radius-card', '--app-radius-control', '--app-radius-item']),
-    )
+    expect(radii.map(([name]) => name)).toEqual(['--app-radius', '--app-radius-card'])
     for (const [name, values] of radii)
       for (const v of values) {
         const c = corner(v, '/src/styles/tokens.css')
@@ -436,9 +496,13 @@ describe('the shapes', () => {
       }
     expect(set.get('--app-radius')).toEqual(['2px'])
     expect(set.get('--app-radius-card')).toEqual(['0'])
-    const shadows = [...set].filter(([name]) => name.includes('shadow'))
-    expect(shadows.length).toBeGreaterThanOrEqual(3)
-    for (const [name, values] of shadows) expect(values, name).toEqual(values.map(() => 'none'))
+    // Nothing casts a shadow, so no token names one; one set there that casts one is refused as any is.
+    expect([...set.keys()].filter((name) => name.includes('shadow'))).toEqual([])
+    expect(
+      offences({ '/src/styles/tokens.css': ':root {\n  --app-shadow-planted: 0 1px 3px rgb(0 0 0 / 10%);\n}' }),
+    ).toEqual([
+      '/src/styles/tokens.css: :root: --app-shadow-planted: 0 1px 3px rgb(0 0 0 / 10%) (casts a shadow (it is blurred))',
+    ])
     // Element Plus's own, in both themes (its dark theme casts shadows of its own, which element.css undoes).
     const el = customPropertiesIn(elementCss)
     for (const name of ['--el-box-shadow', '--el-box-shadow-light', '--el-box-shadow-lighter', '--el-box-shadow-dark'])
@@ -448,27 +512,7 @@ describe('the shapes', () => {
   })
 
   it('draws no corner over 4 px but a round mark’s, no shadow but a line, no frosted glass, and no gradient but the two named', () => {
-    expect(offences().filter((o) => !pendingFor(o))).toEqual([])
-  })
-
-  it('lists in shapes.pending.ts only what still offends, once each, in one list', () => {
-    const found = offences()
-    expect(
-      PENDING_ENTRIES.filter((e) => !found.some((o) => o.startsWith(`${e}: `))),
-      'listed, but no longer offending',
-    ).toEqual([])
-    expect(
-      PENDING_ENTRIES.filter((e, i) => PENDING_ENTRIES.indexOf(e) !== i),
-      'listed twice',
-    ).toEqual([])
-    const file = (e: string) => e.split(': ')[0]!
-    expect(
-      PENDING_ENTRIES.filter((e) => !(file(e) in sources)),
-      'listed, but no such source',
-    ).toEqual([])
-    // Never the files where the tokens are set, nor Markdown's: those are drawn as the site's already.
-    for (const f of ['/src/styles/tokens.css', '/src/styles/element.css', '/src/styles/markdown-rich.css'])
-      expect(PENDING_ENTRIES.map(file)).not.toContain(f)
+    expect(offences()).toEqual([])
   })
 
   it('names, of what it lets through, only rules and files that are there', () => {
@@ -483,7 +527,7 @@ describe('the shapes', () => {
     const file = '/src/Planted.vue'
     expect(corner('var(--app-radius)', file)).toEqual({ px: 2, round: false, unread: [] })
     expect(corner('var(--app-radius-card, 16px)', file)).toEqual({ px: 0, round: false, unread: [] })
-    expect(corner('var(--app-radius-item)', file).px).toBe(2)
+    expect(corner('var(--el-border-radius-base)', file).px).toBe(2)
     expect(corner('var(--nowhere, 8px)', file).px).toBe(8)
     expect(corner('var(--nowhere)', file).unread).toEqual(['var(--nowhere)'])
     expect(corner('calc(var(--app-radius) - 2px)', file).px).toBe(0)
@@ -506,14 +550,35 @@ describe('the shapes', () => {
       '0 0 0 1px var(--app-focus) inset',
       '0 0 0 2px var(--app-focus)',
       '0 0 0 1.5px var(--agent-avatar-ring, var(--el-bg-color))',
+      '0 0 0 calc(var(--app-radius) - 1px) var(--app-focus)',
+      '0 0 0 min(1px, 0.25rem) currentColor',
     ])
       expect(shadowFault(ok, file), ok).toBeUndefined()
     expect(shadowFault('0 0 0 3px var(--el-color-success-light-8)', file)).toMatch(/ring/)
     expect(shadowFault('0 1px 0 var(--app-line)', file)).toMatch(/offset/)
     expect(shadowFault('0 1px 4px rgb(0 0 0 / 14%)', file)).toMatch(/blurred/)
     expect(shadowFault('inset 0 0 4px red', file)).toMatch(/blurred/)
-    expect(shadowFault('var(--app-shadow-pop)', file)).toMatch(/token/)
-    expect(shadowFault('var(--app-shadow-pop)', '/src/styles/element.css')).toBeUndefined()
+    // A length in a var() or a calc() is worked out, a var() of a colour is the colour, and what is neither is
+    // not read: never passed as though it were not there.
+    expect(shadowFault('0 0 0 calc(2px + 6px) red', file)).toMatch(/ring/)
+    expect(shadowFault('0 0 var(--planted-blur) red', '/src/Prefixed.vue', PLANTED)).toMatch(/blurred/)
+    expect(shadowFault('0 var(--app-radius) 0 var(--app-line)', file)).toMatch(/offset/)
+    for (const unread of [
+      '0 0 var(--nowhere) red',
+      '0 0 0 1px var(--nowhere)',
+      '0 0 calc(var(--app-line) + 1px) red',
+      '0 0 0 1px red blue',
+      '0 0 0 1px var(--planted-pair)',
+      'var(--nowhere)',
+    ])
+      expect(shadowFault(unread, '/src/Pair.vue', { '/src/Pair.vue': '--planted-pair: 2px 4px;' }), unread).toBe(
+        'cannot be read',
+      )
+    // A shadow's token is read only where the tokens are set, whatever its name.
+    expect(shadowFault('var(--planted-shadow)', file)).toMatch(/token/)
+    expect(shadowFault('0 0 0 1px red, var(--el-box-shadow-light)', file)).toMatch(/token/)
+    const tokens = { '/src/styles/element.css': ':root {\n  --planted-shadow: none;\n}' }
+    expect(shadowFault('var(--planted-shadow)', '/src/styles/element.css', tokens)).toBeUndefined()
   })
 
   it('catches a corner, a shadow, frosted glass and a gradient, however they are written', () => {
@@ -532,12 +597,29 @@ describe('the shapes', () => {
       '/src/Planted.vue: box-shadow: 0 2px 8px rgb(0 0 0 / 20%) (casts a shadow (it is blurred))',
       '/src/Planted.vue: box-shadow: 0 0 0 4px red (is a ring wider than 2 px)',
       '/src/Planted.vue: .b: box-shadow: 0 0 0 1px var(--app-line) inset, 0 4px 12px rgb(0 0 0 / 10%) (casts a shadow (it is blurred))',
-      '/src/Planted.vue: .b: box-shadow: var(--app-shadow-pop) (reads a shadow’s token)',
+      '/src/Planted.vue: .b: box-shadow: var(--planted-shadow) (reads a shadow’s token)',
       '/src/Planted.vue: .b: box-shadow: 0 1px 0 var(--app-line) (casts a shadow (it is offset outside))',
       '/src/Planted.vue: backdrop-filter: blur(8px) (frosted glass)',
       '/src/Planted.vue: .b: background-image: radial-gradient( (a gradient, and not one listed in GRADIENTS)',
       '/src/Planted.vue: .b: filter: drop-shadow( (casts a shadow)',
       '/src/Planted.vue: background: linear-gradient( (a gradient, and not one listed in GRADIENTS)',
+      // Prefixed, quoted camel-cased keys, letters' shadows, lengths in a var() or a calc(), and one not read.
+      '/src/Prefixed.vue: -webkit-border-radius: 10px (10 px, over 4)',
+      '/src/Prefixed.vue: border-radius: 12px (12 px, over 4)',
+      '/src/Prefixed.vue: .c: -webkit-border-radius: 8px (8 px, over 4)',
+      '/src/Prefixed.vue: .c: -moz-border-radius: 6px (6 px, over 4)',
+      '/src/Prefixed.vue: -webkit-box-shadow: 0 2px 4px red (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: box-shadow: 0 3px 0 red (casts a shadow (it is offset outside))',
+      '/src/Prefixed.vue: -webkit-box-shadow: 0 0 6px red (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: .c: -webkit-box-shadow: 0 2px 6px black (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: .c: box-shadow: 0 0 var(--nowhere) red (cannot be read)',
+      '/src/Prefixed.vue: .c: box-shadow: 0 0 0 calc(2px + 6px) red (is a ring wider than 2 px)',
+      '/src/Prefixed.vue: .c: box-shadow: 0 0 var(--planted-blur) red (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: text-shadow: 0 1px 2px black (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: text-shadow: 1px 1px 0 red (casts a shadow (it is offset outside))',
+      '/src/Prefixed.vue: .c: text-shadow: 0 1px 0 white (casts a shadow (it is offset outside))',
+      '/src/Prefixed.vue: -webkit-backdrop-filter: blur(2px) (frosted glass)',
+      '/src/Prefixed.vue: .c: -webkit-backdrop-filter: blur(4px) (frosted glass)',
     ])
     // A round mark is let through only in its own file and rule.
     expect(

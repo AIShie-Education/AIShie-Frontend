@@ -32,7 +32,7 @@ async function offencesIn(page: Page, within: string) {
   return (await shapeOffences(page, { within })).map((o) => `${o.kind}: ${o.where}: ${o.value} «${o.text}»`)
 }
 
-test('the audit finds a shadow, a pill, a rounded box, a gradient and frosted glass, and lets a round mark through', async ({
+test('the audit finds a shadow, a pill, a rounded box, a gradient, frosted glass and letters’ shadow, and lets a round mark through', async ({
   page,
 }) => {
   await signIn(page, demo().actors.instructor)
@@ -49,6 +49,8 @@ test('the audit finds a shadow, a pill, a rounded box, a gradient and frosted gl
       <div class="planted-quiet" style="width:80px;height:40px;border-radius:12px"></div>
       <div class="planted-fade" style="width:80px;height:40px;background-image:linear-gradient(red, blue)"></div>
       <div class="planted-glass" style="width:80px;height:40px;backdrop-filter:blur(8px)"></div>
+      <p class="planted-letters" style="width:80px;text-shadow:0 1px 2px rgb(0 0 0 / 30%)">Aa</p>
+      <p class="planted-plain" style="width:80px;text-shadow:none">Aa</p>
       <span class="askable-dot" style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#333"></span>
       <span class="planted-circle" style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#333"></span>
       <span class="askable-dot planted-wide" style="display:inline-block;width:24px;height:8px;border-radius:50%;background:#333"></span>`
@@ -61,6 +63,7 @@ test('the audit finds a shadow, a pill, a rounded box, a gradient and frosted gl
     'radius: div.planted-card: 12px «»',
     'gradient: div.planted-fade: linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)) «»',
     'backdrop: div.planted-glass: blur(8px) «»',
+    'text-shadow: p.planted-letters: rgba(0, 0, 0, 0.3) 0px 1px 2px «Aa»',
     // Round, but not a mark; and a mark is round only where it is as wide as it is tall.
     'radius: span.planted-circle: 50% «»',
     'pill: span.askable-dot.planted-wide: 50% «»',

@@ -5,7 +5,7 @@ import type { Page } from '@playwright/test'
 // src/styles/shapes.spec.ts reads them as they are written): every box that
 // draws something (a ground, an edge, a shadow, what it clips) has a corner
 // of 4 px or less but a round mark as wide as it is tall, nothing
-// casts a shadow but a line drawn as one, nothing is frosted, and no gradient
+// casts a shadow but a line drawn as one (its letters none), nothing is frosted, and no gradient
 // fills anything but the two named. With the solid buttons a screen shows,
 // of which a view, and each dialog over it, has one at most. The end-to-end
 // specs of the shapes use it, as does scripts/style-audit.mjs, which
@@ -41,7 +41,7 @@ export const NAMED_GRADIENTS: { selector: string; property: 'backgroundImage' | 
 
 /** A shape the app does not draw, where it is drawn, and what the element says. */
 export interface Offence {
-  kind: 'radius' | 'pill' | 'shadow' | 'gradient' | 'backdrop'
+  kind: 'radius' | 'pill' | 'shadow' | 'text-shadow' | 'gradient' | 'backdrop'
   where: string
   value: string
   text: string
@@ -183,6 +183,8 @@ function audit(args: AuditArgs): Offence[] {
           }
         }
         if (shadowFault(cs.boxShadow)) out.push({ kind: 'shadow', where, value: cs.boxShadow, text })
+        // A shadow cast by letters, held as a box's is: a text-shadow has no spread and is never inset.
+        if (shadowFault(cs.textShadow)) out.push({ kind: 'text-shadow', where, value: cs.textShadow, text })
         for (const property of ['backgroundImage', 'maskImage', 'borderImageSource'] as const) {
           const value = cs[property] || (property === 'maskImage' ? cs.webkitMaskImage : '')
           if (!value || !value.includes('gradient(')) continue
@@ -200,7 +202,7 @@ function audit(args: AuditArgs): Offence[] {
 /**
  * Each shape the page shows that the app does not draw: a corner over 4 px
  * (a pill among them) but a round mark's, a shadow that is not a line, a
- * gradient but the two named, frosted glass.
+ * shadow cast by letters, a gradient but the two named, frosted glass.
  */
 export function shapeOffences(page: Page, options: AuditOptions = {}): Promise<Offence[]> {
   return page.evaluate(audit, {

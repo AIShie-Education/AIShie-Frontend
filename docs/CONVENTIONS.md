@@ -920,13 +920,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
   (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
   doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
-  anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
-  for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
-  the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
-  outside `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two
-  named; in `tokens.css` every corner is 4 px or less and every shadow none. While design wave 3 is
-  under way, `src/styles/shapes.pending.ts` lists what its parts still convert, a file or a file's one
-  rule, and fails on an entry that no longer offends, so that it only shrinks. `e2e/styleAudit.ts`
+  anything else, however a style writes it (`-webkit-` or `-moz-` prefixed or not; in a script,
+  camel-cased, quoted or not): `border-radius` or a longhand, or a custom property named for a radius,
+  over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on the round marks
+  it lists by file and rule, a `box-shadow` or `text-shadow` that is not a line (its lengths read
+  through a `var()` or a `calc()`, and one it cannot read refused), a read of a shadow's token outside
+  `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two named; in
+  `tokens.css` every corner is 4 px or less, and no shadow is set. `e2e/styleAudit.ts`
   measures the same as the browser draws it (`shapeOffences`), with `soloPrimary`, the solid buttons of
   a page and of each dialog over it, and `e2e/shapes.spec.ts` holds Element Plus's overlays to it in
   both themes; `scripts/style-audit.mjs` photographs the main screens with what it finds, for a

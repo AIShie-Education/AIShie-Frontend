@@ -91,24 +91,16 @@
   --app-radius: 2px;
   --app-radius-card: 0;
   --app-rule: 1px solid var(--app-line);
-  /* The names of waves 1 and 2, each now the one corner, until every rule
-     that reads them reads --app-radius instead; then they go. */
-  --app-radius-control: var(--app-radius);
-  --app-radius-item: var(--app-radius);
-  --app-radius-pill: var(--app-radius);
-  --app-shadow-raised: none;
-  --app-shadow-pop: none;
-  --app-shadow-window: none;
 
   /* Layers, lowest first. Element Plus lays its overlays over the page from
      2000 up, one above another as each opens: a drawer (the phone's side
      menu) and its dimmed layer, a dialog, a message box, a dropdown, a
-     tooltip. What the app floats itself stays under 2000, so that all of them
-     cover it: the header, the chat's round button at the bottom right, the
-     chat's window, floating over the page, and the chat's sheet, which a
-     confirmation or a list opened from it still covers. */
+     tooltip. What the app lays over the page itself stays under 2000, so
+     that all of them cover it: the header, which stays as the page scrolls;
+     the chat docked at the window's right edge, which stays beside it; and
+     the chat's sheet over a phone's whole screen, which a confirmation or a
+     list opened from it still covers. */
   --app-z-header: 10;
-  --app-z-fab: 20;
   --app-z-panel: 30;
   --app-z-sheet: 1500;
 
