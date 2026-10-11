@@ -242,6 +242,20 @@ describe('the whole class’s gradebook', () => {
     expect(w.find('.matrix__row').attributes('aria-rowindex')).toBe(String(Number(names[0]!.slice(-3)) + 2))
   })
 
+  it('gives a total’s column room for a component’s name to stand whole in its heading, wider than an assignment’s', async () => {
+    const { w } = await mountClass()
+    const widths = w.findAll('.matrix__table col').map((c) => c.attributes('style'))
+    const heads = w.findAll('thead th')
+    expect(widths).toHaveLength(heads.length)
+    // The names' column, then each column by its kind: 112 px for a total ("Assignments總分" at 14 px), 104 for work.
+    expect(widths[0]).toBe('width: 208px;')
+    heads.slice(1).forEach((th, i) =>
+      expect(widths[i + 1], th.text()).toBe(th.classes().includes('is-total') ? 'width: 112px;' : 'width: 104px;'),
+    )
+    expect(heads.filter((th) => th.classes().includes('is-total'))).toHaveLength(2)
+    expect(w.find('.matrix__table').attributes('style')).toBe(`width: ${208 + 2 * 112 + A * 104}px;`)
+  })
+
   it('sorts by a column’s heading, highest first, then the other way', async () => {
     const { w } = await mountClass()
     await w.find('button[aria-label="Sort by Course total"]').trigger('click')

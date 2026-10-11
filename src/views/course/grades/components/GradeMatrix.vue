@@ -45,9 +45,12 @@ const NAME_WIDTH = 208
  * after it, and a draft its flag, which together take 119 px for a score of
  * two places in the hundreds ("100.25 ± 草稿"), where another assignment's
  * cell has room for 87; it has 123, a little to spare for another machine's
- * fonts.
+ * fonts. A total's is as wide as its heading needs: a component's name, in
+ * the strong weight, then 總分 or "total" ("Assignments總分" at 14 px in
+ * Chinese), whose word must fit a line whole, never "Assignment|s".
  */
-const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : c.groupWork ? 140 : 104)
+const TOTAL_WIDTH = 112
+const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? TOTAL_WIDTH : c.groupWork ? 140 : 104)
 const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s + widthOf(c), 0))
 
 // ---------------------------------------------------------------------------
