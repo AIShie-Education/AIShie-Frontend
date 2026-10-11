@@ -34,8 +34,15 @@ const props = withDefaults(
     size?: 'small' | 'default'
     /** The caller's own decision on this, waiting for approval: nothing more to do here meanwhile. */
     waiting?: string | null
+    /**
+     * Whether its Approve (or Reviewed) is the view's one solid button. In a
+     * list whose items all carry the same decision (the approvals queue),
+     * only the first's is, the next to decide in a list kept oldest first;
+     * the others' are the same action in indigo words.
+     */
+    lead?: boolean
   }>(),
-  { size: 'default' },
+  { size: 'default', lead: true },
 )
 const emit = defineEmits<{ done: [Done] }>()
 const { t, locale } = useI18n()
@@ -314,6 +321,7 @@ function tell(
       <template v-if="mode === 'decide'">
         <el-button
           :type="!choice || choice === 'approve' ? 'primary' : undefined"
+          :text="!lead && choice !== 'approve'"
           :size="size"
           :class="{ 'is-chosen': choice === 'approve' }"
           :aria-pressed="choice === 'approve'"
@@ -347,6 +355,7 @@ function tell(
       <template v-else>
         <el-button
           :type="!choice || choice === 'reviewed' ? 'primary' : undefined"
+          :text="!lead && choice !== 'reviewed'"
           :size="size"
           :class="{ 'is-chosen': choice === 'reviewed' }"
           :aria-pressed="choice === 'reviewed'"
@@ -463,14 +472,13 @@ function tell(
   margin-top: 2px;
   flex-shrink: 0;
 }
+/* The reason or note, under a rule: the proposal's box holds no box of its own. */
 .decide-panel__form {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding-top: 12px;
+  border-top: var(--app-rule);
 }
 .decide-panel__hint {
   margin: 0;

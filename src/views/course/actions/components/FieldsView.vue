@@ -460,10 +460,8 @@ function json(v: unknown) {
 .fields-view__text {
   max-height: 360px;
   overflow: auto;
-  padding: 8px 12px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
 }
 .fields-view__text :deep(.markdown-body) {
   font-size: var(--app-text-md);

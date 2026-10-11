@@ -314,11 +314,13 @@ function toggleRules() {
             @retry="reloadProposed"
           >
             <div class="approvals__list">
+              <!-- Only the first's Approve is solid: the queue is oldest first, so it is the next to decide. -->
               <ActionCard
-                v-for="a in proposed.items.value"
+                v-for="(a, i) in proposed.items.value"
                 :key="a.id"
                 :action="a"
                 :course-id="courseId"
+                :lead="i === 0"
                 mode="decide"
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'proposed')"
@@ -345,10 +347,11 @@ function toggleRules() {
           >
             <div class="approvals__list">
               <ActionCard
-                v-for="a in review.items.value"
+                v-for="(a, i) in review.items.value"
                 :key="a.id"
                 :action="a"
                 :course-id="courseId"
+                :lead="i === 0"
                 mode="review"
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'review')"
@@ -418,7 +421,7 @@ function toggleRules() {
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .approvals__recent-head {
   display: flex;
@@ -447,12 +450,13 @@ function toggleRules() {
 .approvals__card {
   position: relative;
 }
-/* Over the tabs' header, which runs the card's width under it (its padding keeps the tabs clear of the
-   button): without the layer, the header takes every click and tap meant for Refresh. */
+/* Over the tabs' header, which runs the section's width under it (its padding keeps the tabs clear of the
+   button): without the layer, the header takes every click and tap meant for Refresh. At the section's top
+   right, under its rule and its 24 px (16 on a phone). */
 .approvals__toolbar {
   position: absolute;
   top: 24px;
-  right: 24px;
+  right: 0;
   z-index: 1;
 }
 .approvals__tabs :deep(.el-tabs__header) {
@@ -461,7 +465,7 @@ function toggleRules() {
 @media (max-width: 600px) {
   .approvals__toolbar {
     top: 16px;
-    right: 16px;
+    right: 0;
   }
   .approvals__tabs :deep(.el-tabs__header) {
     padding-right: 52px;

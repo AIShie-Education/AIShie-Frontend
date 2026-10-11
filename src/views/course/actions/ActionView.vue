@@ -711,11 +711,10 @@ const errorTitle = computed(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  padding: var(--app-space-sm) 0;
   margin-bottom: 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .action-view__about-label {
   font-size: var(--app-text-xs);

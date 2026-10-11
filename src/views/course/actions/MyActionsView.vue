@@ -174,7 +174,7 @@ function open(row: ActionRow) {
           <el-option value="" :label="t('actions.mine.anyType')" />
           <el-option v-for="ty in types" :key="ty.value" :value="ty.value" :label="ty.label" />
         </el-select>
-        <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" border />
+        <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" />
         <span class="app-toolbar__spacer" />
         <el-radio-group v-model="order" size="default" :aria-label="t('actions.mine.sort.label')">
           <el-radio-button value="newest">{{ t('actions.mine.sort.newest') }}</el-radio-button>

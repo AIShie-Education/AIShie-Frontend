@@ -467,7 +467,7 @@ const aboutAction = computed(() => about.value?.value as ActionRow | undefined)
   font-variant-numeric: tabular-nums;
   color: var(--el-text-color-primary);
   background: var(--el-fill-color);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 0 6px;
 }
 .action-target__muted {
