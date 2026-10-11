@@ -29,6 +29,12 @@ const courses = computed(() => {
     .sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`))
 })
 const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_status === 'archived'))
+/**
+ * Whether the reader's roles differ among their courses: only then does a
+ * course say the reader's role in it. A tag that says Instructor on every
+ * course says nothing (docs/CONVENTIONS.md, "Tags").
+ */
+const rolesVary = computed(() => new Set(session.liveMemberships.map((m) => m.role)).size > 1)
 // Each card's term, next deadline and what waits there, read after the page is shown.
 const facts = useCourseFacts(courses)
 
@@ -95,7 +101,7 @@ watch(offersFilter, (on) => {
       >
         <template #prefix><el-icon><Search /></el-icon></template>
       </el-input>
-      <el-checkbox v-if="hasArchived" v-model="showArchived" :label="t('home.showArchived')" border />
+      <el-checkbox v-if="hasArchived" v-model="showArchived" :label="t('home.showArchived')" />
     </PageHeader>
 
     <AsyncState
@@ -131,14 +137,13 @@ watch(offersFilter, (on) => {
           </div>
           <h3 class="course-card__title">{{ m.title }}</h3>
           <div class="course-card__meta">
-            <StatusTag vocab="role" :value="m.role" />
+            <StatusTag v-if="rolesVary" vocab="role" :value="m.role" />
             <span v-if="facts.get(m.course_id)?.term" class="app-muted">{{ facts.get(m.course_id)?.term }}</span>
             <span v-if="m.expires_at" class="app-muted">
               {{ t('home.expires', { t: '' }) }}<TimeText :value="m.expires_at" relative cutoff />
             </span>
           </div>
           <p v-if="facts.get(m.course_id)?.next" class="course-card__due">
-            <el-icon aria-hidden="true"><Calendar /></el-icon>
             <i18n-t keypath="home.nextDue" tag="span" scope="global">
               <template #title>{{ facts.get(m.course_id)!.next!.title }}</template>
               <template #when><TimeText :value="facts.get(m.course_id)!.next!.dueAt" relative cutoff /></template>
@@ -146,7 +151,6 @@ watch(offersFilter, (on) => {
           </p>
           <!-- What waits for the caller here, as the course's overview says it (AttentionCard). -->
           <span v-if="(facts.get(m.course_id)?.waiting?.n ?? 0) > 0" class="course-card__waiting">
-            <span class="course-card__waiting-icon"><el-icon aria-hidden="true"><Stamp /></el-icon></span>
             <span class="course-card__waiting-label">
               {{
                 facts.get(m.course_id)!.waiting!.agentsOnly
@@ -183,7 +187,8 @@ watch(offersFilter, (on) => {
               >{{ c.code }}<template v-if="c.section"><span class="app-sep">·</span>{{ c.section }}</template></span
             >
             <div class="course-card__tags">
-              <StatusTag vocab="courseStatus" :value="c.status" />
+              <!-- Only a course that is not running says its state, as a seated course's does. -->
+              <StatusTag v-if="c.status !== 'active'" vocab="courseStatus" :value="c.status" />
             </div>
           </div>
           <h3 class="course-card__title">{{ c.title }}</h3>
@@ -213,7 +218,7 @@ watch(offersFilter, (on) => {
 }
 .home-unseated__explain {
   margin: 6px 0 16px;
-  max-width: 72ch;
+  max-width: var(--app-measure);
   font-size: var(--app-text-sm);
   line-height: var(--app-lh-text);
   color: var(--el-text-color-secondary);
@@ -230,25 +235,22 @@ watch(offersFilter, (on) => {
   color: var(--el-color-primary);
   font-weight: 500;
 }
+/* A course is one thing the reader opens: a box, the one kind the home page
+   keeps, its edge the site's line, 2 px corners, no ground of its own and no
+   shadow; under the pointer, its edge in the control's ink. */
 .course-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 22px 24px;
-  border-radius: var(--app-radius-card);
+  padding: var(--app-space-xl);
+  border-radius: var(--app-radius);
   border: 1px solid var(--app-line);
-  background: var(--app-card);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s,
-    transform 0.15s;
+  transition: border-color 0.15s;
 }
 .course-card:hover {
-  border-color: var(--app-indigo-line);
-  box-shadow: var(--app-shadow-raised);
-  transform: translateY(-1px);
+  border-color: var(--app-control-border);
 }
 .course-card__top {
   display: flex;
@@ -256,11 +258,11 @@ watch(offersFilter, (on) => {
   align-items: center;
   gap: 8px;
 }
+/* The course's code, as its context line writes it: no tracking, not a label over the title. */
 .course-card__code {
   font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
   color: var(--app-indigo);
-  letter-spacing: 0.06em;
 }
 .course-card__tags {
   display: flex;
@@ -272,7 +274,7 @@ watch(offersFilter, (on) => {
   font-size: var(--app-text-xl);
   font-weight: var(--app-heading-weight);
   letter-spacing: var(--app-heading-tracking);
-  line-height: 1.3;
+  line-height: var(--app-lh-heading);
 }
 .course-card__meta {
   display: flex;
@@ -282,39 +284,21 @@ watch(offersFilter, (on) => {
   flex-wrap: wrap;
 }
 .course-card__due {
-  display: flex;
-  align-items: center;
-  gap: 6px;
   margin: 0;
   font-size: var(--app-text-sm);
   color: var(--app-ink-2);
 }
-.course-card__due .el-icon {
-  flex-shrink: 0;
-  color: var(--app-ink-3);
-}
-/* The overview's "waiting for you" row, small: the wait pill's colours. */
+/* What waits for the reader here, as the overview's row says it: the amber
+   line of what waits at its left and its figure in that amber, not an amber
+   box in the box. */
 .course-card__waiting {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid color-mix(in srgb, var(--app-wait-fg) 30%, transparent);
-  background: var(--app-wait-bg);
+  padding: 2px 0 2px var(--app-space-md);
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
   color: var(--app-ink);
   font-size: var(--app-text-sm);
-}
-.course-card__waiting-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--app-card);
-  color: var(--app-wait-fg);
-  flex-shrink: 0;
 }
 .course-card__waiting-label {
   flex: 1;
