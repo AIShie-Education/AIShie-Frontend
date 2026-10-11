@@ -369,6 +369,113 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
   })
 })
 
+/**
+ * What the app shares with aishie.app, written out as the site's :root has it
+ * (AIShie-Website: public/index.html, and docs-src/template/base.css, which
+ * its build holds equal to it), by the site's name for each of the app's
+ * tokens. A change on either side fails here: make it on both, or write the
+ * difference in DIFFERS with why.
+ */
+const SITE: { light: Record<string, string>; dark: Record<string, string>; root: Record<string, string> } = {
+  light: {
+    navy: '#22407a',
+    'navy-dark': '#152b55',
+    focus: '#22407a',
+    amber: '#e0934f',
+    'amber-halo': '#f0d8c0',
+    paper: '#f6f3ec',
+    line: '#d9d4c8',
+    'field-line': '#8c8472',
+    ink: '#1c1c1c',
+    'ink-body': '#3a3a3a',
+    'ink-3': '#5a5d68',
+    'ok-fg': '#1e6b47',
+    'no-bg': '#fbe9e6',
+    'no-fg': '#a93a2f',
+  },
+  dark: {
+    navy: '#9db3e6',
+    'navy-dark': '#b8c8ee',
+    focus: '#9db3e6',
+    amber: '#e0934f',
+    'amber-halo': '#a8704f',
+    paper: '#10131c',
+    line: '#2b3245',
+    'field-line': '#6a7490',
+    ink: '#eeeae1',
+    'ink-body': '#c9c6bd',
+    'ink-3': '#a9a7a0',
+    'ok-fg': '#8fd4b0',
+    'no-bg': '#3d1f1c',
+    'no-fg': '#f2a59b',
+  },
+  root: {
+    radius: '2px',
+    'radius-card': '0',
+    rule: '1px solid var(--line)',
+    'lh-body': '1.7',
+    'lh-heading': '1.25',
+    measure: '34em',
+  },
+}
+
+/** The app's token for each of the site's colours. */
+const SITE_COLOURS: Record<string, string> = {
+  navy: 'app-indigo',
+  'navy-dark': 'app-indigo-dark',
+  focus: 'app-focus',
+  amber: 'app-light',
+  'amber-halo': 'app-light-halo',
+  paper: 'app-ground',
+  line: 'app-line',
+  'field-line': 'app-control-border',
+  ink: 'app-ink',
+  'ink-body': 'app-ink-2',
+  'ink-3': 'app-ink-3',
+  'ok-fg': 'app-done-fg',
+  'no-bg': 'app-danger-bg',
+  'no-fg': 'app-danger-fg',
+}
+
+/** Where the app keeps a value of its own, by theme and the site's name, and why. */
+const DIFFERS: Record<string, string> = {
+  'dark ink-3':
+    'the site’s #a9a7a0 is 1.41:1 from its second ink, under the 1.5:1 the app keeps between its second and third; the app’s #a19f98 is 1.55:1 (the site may take it)',
+  'dark field-line':
+    'a field in the app also lies on raised grounds the site has not got: on a dialog’s (--app-overlay, #212739) the site’s #6a7490 is 3.19:1, the app’s #737889 3.38:1',
+  'dark ok-fg': 'the done colour of the app’s dark theme, measured on its own grounds and the pills’ (above)',
+  'dark no-bg': 'the refused colour’s ground of the app’s dark theme, measured with its text (above)',
+  'dark no-fg': 'the refused colour of the app’s dark theme, measured on its own grounds and the pills’ (above)',
+}
+
+describe('what the app shares with aishie.app', () => {
+  it.each(['light', 'dark'] as const)('has the site’s colours in the %s theme, but where it says why not', (theme) => {
+    const differs: Record<string, [site: string, app: string]> = {}
+    for (const [name, value] of Object.entries(SITE[theme])) {
+      const app = colour(theme, SITE_COLOURS[name]!)
+      if (app !== value) differs[`${theme} ${name}`] = [value, app]
+    }
+    expect(Object.keys(differs).sort()).toEqual(
+      Object.keys(DIFFERS)
+        .filter((k) => k.startsWith(`${theme} `))
+        .sort(),
+    )
+  })
+
+  it('has the site’s corners, rule, leading and measure', () => {
+    expect({
+      radius: ROOT['app-radius'],
+      'radius-card': ROOT['app-radius-card'],
+      rule: ROOT['app-rule']?.replace('--app-line', '--line'),
+      'lh-body': ROOT['app-lh-text'],
+      'lh-heading': ROOT['app-lh-heading'],
+      measure: ROOT['app-measure'],
+    }).toEqual(SITE.root)
+    // Rendered Markdown, a chat's answers: running text too, at the same leading.
+    expect(ROOT['app-lh-prose']).toBe(SITE.root['lh-body'])
+  })
+})
+
 describe('the palette', () => {
   const colours = Object.entries(ROOT)
     .filter(([k, v]) => k.startsWith('app-') && /^#[0-9a-f]{6}$/i.test(v))

@@ -10,7 +10,13 @@
    needs, and the -rgb triplets repeat the colours they name. Success,
    warning and danger are the pills' colours: the colour is the pill's text
    (done, waiting, refused), light-9 its ground, and the steps between are
-   mixed the same way. Info is the neutral pill's, the third ink. */
+   mixed the same way. Info is the neutral pill's, the third ink.
+
+   Its shapes are the app's (styles/tokens.css, "Shapes"): every corner it
+   draws is 2 px but a mark's that is round (an avatar, a radio, a dot), and
+   nothing it draws casts a shadow, in either theme: its four shadows are
+   none, and what floated on one (a dialog, a menu, a tooltip, a drawer) is
+   parted from the page by its edge. */
 
 :root {
   --el-color-white: #ffffff;
@@ -99,18 +105,21 @@
 
   --el-mask-color: rgb(246 243 236 / 90%);
   --el-mask-color-extra-light: rgb(246 243 236 / 30%);
-  --el-overlay-color: rgb(27 29 36 / 80%);
-  --el-overlay-color-light: rgb(27 29 36 / 70%);
-  --el-overlay-color-lighter: rgb(27 29 36 / 45%);
+  /* The ink, dimmed, under a dialog. */
+  --el-overlay-color: rgb(28 28 28 / 80%);
+  --el-overlay-color-light: rgb(28 28 28 / 70%);
+  --el-overlay-color-lighter: rgb(28 28 28 / 45%);
 
-  --el-box-shadow: 0 24px 48px -12px rgb(27 29 36 / 22%), 0 4px 12px rgb(27 29 36 / 8%);
-  --el-box-shadow-light: var(--app-shadow-pop);
-  --el-box-shadow-lighter: 0 2px 8px rgb(27 29 36 / 8%);
-  --el-box-shadow-dark: 0 32px 64px -16px rgb(27 29 36 / 30%), 0 8px 16px -8px rgb(27 29 36 / 16%);
+  --el-box-shadow: none;
+  --el-box-shadow-light: none;
+  --el-box-shadow-lighter: none;
+  --el-box-shadow-dark: none;
 
-  --el-border-radius-base: var(--app-radius-control);
-  --el-border-radius-small: 4px;
-  --el-border-radius-round: var(--app-radius-pill);
+  /* A control's, a small one's and a round one's corner are the one 2 px; a
+     circle (an avatar, a radio) stays one. */
+  --el-border-radius-base: var(--app-radius);
+  --el-border-radius-small: var(--app-radius);
+  --el-border-radius-round: var(--app-radius);
 
   --el-font-family: var(--app-font-sans);
 }
@@ -206,25 +215,30 @@ html.dark {
   --el-overlay-color-light: rgb(0 0 0 / 70%);
   --el-overlay-color-lighter: rgb(0 0 0 / 55%);
 
-  --el-box-shadow: 0 24px 48px -12px rgb(0 0 0 / 60%), 0 4px 12px rgb(0 0 0 / 35%);
-  --el-box-shadow-light: var(--app-shadow-pop);
-  --el-box-shadow-lighter: 0 2px 8px rgb(0 0 0 / 35%);
-  --el-box-shadow-dark: 0 32px 64px -16px rgb(0 0 0 / 70%), 0 8px 16px -8px rgb(0 0 0 / 50%);
+  /* Over Element Plus's dark theme, which casts its own. */
+  --el-box-shadow: none;
+  --el-box-shadow-light: none;
+  --el-box-shadow-lighter: none;
+  --el-box-shadow-dark: none;
 }
 html.dark .el-card {
   --el-card-bg-color: var(--app-card);
 }
 
-/* Shapes: 8px for a control (the base radius), 16px for a card and for
-   whatever stands on the page as one, a dialog. */
+/* Shapes: 2 px for a control (the base radius) and for whatever stands
+   over the page as a box of its own, a dialog, a message box, a
+   notification; a card, a section of a page, has none. */
 .el-card {
   --el-card-border-radius: var(--app-radius-card);
 }
 .el-dialog {
-  --el-dialog-border-radius: var(--app-radius-card);
+  --el-dialog-border-radius: var(--app-radius);
 }
 .el-message-box {
-  --el-messagebox-border-radius: var(--app-radius-card);
+  --el-messagebox-border-radius: var(--app-radius);
+}
+.el-notification {
+  --el-notification-radius: var(--app-radius);
 }
 
 /* Type: Element Plus's sizes are the scale's (styles/tokens.css), so that
@@ -633,8 +647,9 @@ html.dark .el-card {
 }
 
 /* Focus: a ring in the focus colour (the indigo), clear of the control, on
-   whatever takes focus from the keyboard. A field shows its indigo edge and
-   a halo around it. */
+   whatever takes focus from the keyboard. A field, as aishie.app's form
+   does, turns its edge navy and doubles it with a 1 px outline on it, with
+   no halo: its edge is Element Plus's inset line, the outline the second. */
 .el-button:focus-visible,
 .el-radio__original:focus-visible + .el-radio__inner,
 .el-checkbox__original:focus-visible + .el-checkbox__inner,
@@ -645,9 +660,13 @@ html.dark .el-card {
 .el-input__wrapper.is-focus,
 .el-textarea__inner:focus,
 .el-select__wrapper.is-focused {
-  box-shadow:
-    0 0 0 1px var(--el-color-primary) inset,
-    0 0 0 3px rgba(var(--el-color-primary-rgb), 0.18);
+  box-shadow: 0 0 0 1px var(--app-focus) inset;
+  outline: 1px solid var(--app-focus);
+  outline-offset: 0;
+}
+/* A radio focused by the pointer, not the keyboard: Element Plus glows it. */
+.el-radio:focus:not(:focus-visible):not(.is-focus):not(:active):not(.is-disabled) .el-radio__inner {
+  box-shadow: none;
 }
 
 /* Tags are rectangles with the app's 2 px corners, never pills: a state on
@@ -687,10 +706,11 @@ html.dark .el-card {
   box-shadow: inset 0 0 0 1px var(--app-indigo-line);
 }
 
-/* Surfaces: alerts and popovers are items, 12px; menus and tooltips, 8px,
-   their entries 6px within them. */
+/* Surfaces: what floats over the page (a popover, a menu, a tooltip, a
+   select's options) is a box with 2 px corners and an edge, its entries 2 px
+   within it; an alert lies on the page as a band, with no corners. */
 .el-alert {
-  --el-alert-border-radius-base: var(--app-radius-item);
+  --el-alert-border-radius-base: 0;
   --el-alert-padding: 10px 16px;
 }
 /* An alert is a warning or an error (an explanation is an AppNote): its
@@ -707,10 +727,10 @@ html.dark .el-card {
   margin-right: 8px;
 }
 .el-popover.el-popper {
-  --el-popover-border-radius: var(--app-radius-item);
+  --el-popover-border-radius: var(--app-radius);
 }
 .el-popper {
-  --el-popper-border-radius: var(--app-radius-control);
+  --el-popper-border-radius: var(--app-radius);
 }
 .el-dropdown-menu,
 .el-select-dropdown__list {
@@ -718,7 +738,7 @@ html.dark .el-card {
 }
 .el-dropdown-menu__item,
 .el-select-dropdown__item {
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 .el-dialog {
   --el-dialog-padding-primary: 24px;
@@ -740,11 +760,16 @@ html.dark .el-card {
 
 /* Tables: no ground of their own. A table lies on the card it is in, as the
    card's text does (white is a field's alone, the one surface that asks for
-   input); its headings are in the third ink over a stronger line, and a row
-   turns to the ground's shade on hover. A column fixed to an edge is laid
-   on the card's colour (the overlay's, in a dialog or a drawer), or what
-   scrolls under it would show through. */
+   input); its rows are parted by the site's line, its headings are in the
+   third ink over a stronger line, and a row turns to the ground's shade on
+   hover. A column fixed to an edge is laid on the card's colour (the
+   overlay's, in a dialog or a drawer), or what scrolls under it would show
+   through, and while the rest scrolls under it a rule at its edge, not
+   Element Plus's shadow, says so. */
 .el-table {
+  --el-table-border-color: var(--app-line);
+  --el-table-fixed-left-column: inset 1px 0 0 var(--app-line-strong);
+  --el-table-fixed-right-column: inset -1px 0 0 var(--app-line-strong);
   --el-table-bg-color: transparent;
   --el-table-tr-bg-color: transparent;
   --el-table-header-bg-color: transparent;
@@ -816,4 +841,37 @@ html.dark .el-card {
 .el-collapse {
   --el-collapse-header-bg-color: transparent;
   --el-collapse-content-bg-color: transparent;
+}
+
+/* Element Plus's own round shapes, squared to the app's corner. A switch is
+   a 2 px track and a knob with a 1 px corner, square as a checkbox is. In a
+   date picker, today and the chosen day, month or year are 2 px squares,
+   and a range is a band whose ends are square, not round. A scroll bar's
+   thumb is 2 px, and a progress bar's track and fill have no corners. */
+.el-switch__core,
+.el-switch--small .el-switch__core,
+.el-switch--large .el-switch__core {
+  border-radius: var(--app-radius);
+}
+.el-switch__core .el-switch__action {
+  border-radius: 1px;
+}
+.el-date-table td .el-date-table-cell .el-date-table-cell__text,
+.el-date-table td.selected .el-date-table-cell,
+.el-date-table td.selected .el-date-table-cell__text,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td .el-date-table-cell__text,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td.current:not(.disabled) .el-date-table-cell {
+  border-radius: var(--app-radius);
+}
+.el-date-table td:is(.start-date, .end-date) .el-date-table-cell,
+.el-date-table.is-week-mode .el-date-table__row:hover td:is(:first-child, :last-child) .el-date-table-cell,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td:is(.start-date, .end-date) .el-date-table-cell {
+  border-radius: 0;
+}
+.el-scrollbar__thumb {
+  border-radius: var(--app-radius);
+}
+.el-progress-bar__outer,
+.el-progress-bar__inner {
+  border-radius: 0;
 }
