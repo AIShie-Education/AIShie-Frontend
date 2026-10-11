@@ -515,8 +515,8 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
 .st-link:hover {
   text-decoration: underline;
 }
-/* Each tag at its own weight (AppTag): a kind's outline in the regular, 「未發佈」's pill in the medium, as every
-   other page's pill is. */
+/* Each tag at its own weight (AppTag): a kind's outline in the regular, 「未發佈」's state tag in the medium, as
+   every other page's state tag is. */
 .st-kind {
   flex-shrink: 0;
 }

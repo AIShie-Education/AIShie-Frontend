@@ -139,7 +139,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
   color: var(--el-text-color-secondary);
 }
 /* In the third ink, not the placeholder's, which does not read at AA on a changed row (the waiting
-   pill's ground). */
+   state tag's ground). */
 .perm-editor__key {
   font-family: var(--app-font-mono);
   font-size: var(--app-text-mark);

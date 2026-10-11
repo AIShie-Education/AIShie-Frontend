@@ -6,8 +6,8 @@
 // one lecture are one material. Core checks each again when the answer is
 // approved, and every reader is then shown them as they may open them, which
 // the line says on hover, focus or a tap. An empty list says it relied on
-// none (a neutral pill, as the chat shows); without one the answer does not
-// say, and nothing is shown.
+// none (a neutral state tag, as the chat shows); without one the answer does
+// not say, and nothing is shown.
 import AppTag from '@/components/AppTag.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'

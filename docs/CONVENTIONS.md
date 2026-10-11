@@ -614,7 +614,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `row-reverse`) and, while the note is missing, is `aria-disabled` and described by that line, not
   `disabled`, so that Tab still reaches it and it says why: type, Tab, Enter sends it. The proposal
   ends in `changes_requested`, a final state that is no failure: its tag is `warning`, amber, as it
-  waits on its proposer to propose again, not a rejection's `danger`. Its button is outlined, as
+  waits on its proposer to propose again, not a rejection's `danger`. Its button is a text button, as
   Reject's is, and pressed in while its form is open, whose confirm button is the one primary. Its
   note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and who
   asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal it
@@ -867,7 +867,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
   its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
   scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
-  of event, in the neutral pill's colours (`--app-neutral-bg`, the ground's second shade in the light
+  of event, in the neutral state tag's colours (`--app-neutral-bg`, the ground's second shade in the light
   theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
   alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
@@ -1258,7 +1258,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
 - **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
-  hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
+  hue of its own (no orange for agents: it would be taken for a waiting state tag or the brand's light):
   - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a square with the
     app's 2 px corners at every size (a person is always a circle) on `--app-indigo-tint`, its initials
     in `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or
@@ -1547,7 +1547,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   published again): it is "another version" (「另一個版本」), never an earlier one, and its link,
   to the document as it is now, says so beside it, not only in its tooltip ("(opens it as it is
   now)", 「（開啟的是目前的版本）」); `restricted` is said to be a course material the reader cannot
-  open, with no title and no link. An empty list is the neutral pill 「未引用課程教材」, which takes
+  open, with no title and no link. An empty list is the neutral state tag 「未引用課程教材」, which takes
   focus and says that the agent said so in a tooltip on hover, focus or a tap; no `sources` (or
   `null`) is an answer that did not say, and shows nothing. A proposed answer keeps its sources by
   id alone: the queue and the action's page count the course materials, each `document_id` once

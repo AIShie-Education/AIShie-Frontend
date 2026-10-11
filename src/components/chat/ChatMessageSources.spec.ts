@@ -197,25 +197,25 @@ describe('ChatMessageSources', () => {
     ['en', 'No course material cited'],
     ['zh-Hant', '未引用課程教材'],
     ['zh-Hans', '未引用课程教材'],
-  ] as const)('shows a neutral pill where the answer relied on no course material (%s)', (locale, text) => {
+  ] as const)('shows a neutral state tag where the answer relied on no course material (%s)', (locale, text) => {
     setLocale(locale)
     const w = sources([])
-    const pill = w.get('.chat-sources__none')
-    expect(pill.classes()).toContain('el-tag--info')
-    expect(pill.text()).toBe(text)
+    const none = w.get('.chat-sources__none')
+    expect(none.classes()).toContain('el-tag--info')
+    expect(none.text()).toBe(text)
     expect(w.find('.chat-sources__summary').exists()).toBe(false)
   })
 
-  it('says that the agent said it relied on none when the pill takes focus, as a tap gives it, not only on hover', async () => {
+  it('says that the agent said it relied on none when the tag takes focus, as a tap gives it, not only on hover', async () => {
     const w = sources([])
-    const pill = w.get('.chat-sources__none')
-    expect(pill.attributes('tabindex')).toBe('0')
-    expect(pill.attributes('title')).toBeUndefined()
+    const none = w.get('.chat-sources__none')
+    expect(none.attributes('tabindex')).toBe('0')
+    expect(none.attributes('title')).toBeUndefined()
     const tip = 'The agent said this answer relied on no course material.'
     expect(document.body.textContent).not.toContain(tip)
-    await pill.trigger('focus')
+    await none.trigger('focus')
     await vi.waitFor(() => expect(document.body.textContent).toContain(tip))
-    expect(pill.attributes('aria-describedby')).toBe(document.querySelector('.el-popper.app-tip-wrap')?.id)
+    expect(none.attributes('aria-describedby')).toBe(document.querySelector('.el-popper.app-tip-wrap')?.id)
   })
 
   it.each([
