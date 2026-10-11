@@ -97,6 +97,20 @@ function offences(page: Page, selector: string) {
   }, selector)
 }
 
+/**
+ * A dialog's or a message box's frame: a line of 1 px drawn round it as a ring (no offset, no blur, a spread of
+ * 1 px), which casts nothing and takes no width from what it holds; its corners; and the rule under its title.
+ */
+function frameOf(el: Element, head: string) {
+  const cs = getComputedStyle(el)
+  const title = getComputedStyle(el.querySelector(head)!)
+  return {
+    frame: /^rgba?\([^)]*\) 0px 0px 0px 1px$/.test(cs.boxShadow) && cs.borderTopStyle === 'none',
+    radius: parseFloat(cs.borderTopLeftRadius),
+    titleRule: `${title.borderBottomWidth} ${title.borderBottomStyle}`,
+  }
+}
+
 /** The header: one row at most 56 px tall with its rule, everything in it on that row. */
 async function oneRowHeader(page: Page, what: string) {
   const header = await page.locator('.app-header').evaluate((h) => {
@@ -290,7 +304,7 @@ test.describe('the frame', () => {
     expect(await offences(page, '#chat-panel')).toEqual([])
   })
 
-  test('dialogs and message boxes are framed and square-cornered, their titles over a rule, and cast no shadow', async ({
+  test('dialogs and message boxes are framed by a line and square-cornered, their titles over a rule, and cast no shadow', async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 })
@@ -299,18 +313,9 @@ test.describe('the frame', () => {
     await page.getByRole('button', { name: 'Add member', exact: true }).click()
     const dialog = page.locator('.el-dialog:visible')
     await expect(dialog).toBeVisible()
-    const look = await dialog.evaluate((el) => {
-      const cs = getComputedStyle(el)
-      const head = getComputedStyle(el.querySelector('.el-dialog__header')!)
-      return {
-        frame: `${cs.borderTopWidth} ${cs.borderTopStyle}`,
-        radius: parseFloat(cs.borderTopLeftRadius),
-        shadow: cs.boxShadow,
-        titleRule: `${head.borderBottomWidth} ${head.borderBottomStyle}`,
-      }
-    })
+    const look = await dialog.evaluate(frameOf, '.el-dialog__header')
     expect(look.radius).toBeLessThanOrEqual(2)
-    expect(look).toMatchObject({ frame: '1px solid', shadow: 'none', titleRule: '1px solid' })
+    expect(look).toMatchObject({ frame: true, titleRule: '1px solid' })
     // A list opened in it: a popper, framed, with no shadow.
     await dialog.locator('.el-select').first().click()
     const list = page.locator('.el-select__popper:visible').first()
@@ -327,18 +332,9 @@ test.describe('the frame', () => {
     await undo.locator('.el-dialog__footer .el-button--primary').click()
     const box = page.locator('.el-message-box:visible')
     await expect(box).toBeVisible()
-    const boxLook = await box.evaluate((el) => {
-      const cs = getComputedStyle(el)
-      const head = getComputedStyle(el.querySelector('.el-message-box__header')!)
-      return {
-        frame: `${cs.borderTopWidth} ${cs.borderTopStyle}`,
-        radius: parseFloat(cs.borderTopLeftRadius),
-        shadow: cs.boxShadow,
-        titleRule: `${head.borderBottomWidth} ${head.borderBottomStyle}`,
-      }
-    })
+    const boxLook = await box.evaluate(frameOf, '.el-message-box__header')
     expect(boxLook.radius).toBeLessThanOrEqual(2)
-    expect(boxLook).toMatchObject({ frame: '1px solid', shadow: 'none', titleRule: '1px solid' })
+    expect(boxLook).toMatchObject({ frame: true, titleRule: '1px solid' })
     expect(await offences(page, '.el-message-box')).toEqual([])
     await photograph(page, 'chrome-message-box')
     await box.getByRole('button', { name: 'Cancel' }).click()

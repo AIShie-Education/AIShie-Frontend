@@ -11,9 +11,8 @@
 
 /* Nothing Element Plus lays over the page casts a shadow: the tokens make its shadows none (element.css), and it
    is said here too, by name, so that each overlay's whole look is in one place. A popper (a list, a menu, a
-   tooltip, a popover) and a message are named by two classes, as Element Plus's own rules for them are. */
-.el-dialog,
-.el-message-box,
+   tooltip, a popover) and a message are named by two classes, as Element Plus's own rules for them are. A
+   dialog's and a message box's frame, below, is a line drawn as a ring, not a shadow. */
 .el-drawer,
 .el-popper.el-popper,
 .el-message.el-message,
@@ -21,10 +20,12 @@
   box-shadow: none;
 }
 
-/* A dialog and a message box: framed in the line, the title over a rule, what they say under it. */
+/* A dialog and a message box: framed in the line, the title over a rule, what they say under it. The frame is a
+   ring of 1 px, a line and no shadow (no offset, no blur), which takes nothing from the width a dialog gives what
+   it holds: a border would, and a table that fits its dialog would scroll by its 2 px. */
 .el-dialog,
 .el-message-box {
-  border: var(--app-rule);
+  box-shadow: 0 0 0 1px var(--app-line);
 }
 .el-dialog__header {
   margin-bottom: var(--app-space-lg);
@@ -36,7 +37,7 @@
 }
 /* One that fills a phone's screen (fullscreen) is the screen: no frame, no corners. */
 .el-dialog.is-fullscreen {
-  border: none;
+  box-shadow: none;
   border-radius: 0;
 }
 
