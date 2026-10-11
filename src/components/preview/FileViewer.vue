@@ -737,8 +737,10 @@ function onClosed() {
 
 <style>
 /* Not scoped: Element Plus puts the dialog at the end of the page. */
+/* The viewer: a surface of its own over the page, square, framed in the line as every dialog is. */
 .el-dialog.file-viewer {
   --el-dialog-padding-primary: 0;
+  border-radius: 0;
   display: flex;
   flex-direction: column;
   height: 94vh;
@@ -757,7 +759,7 @@ function onClosed() {
   flex-shrink: 0;
   margin: 0;
   padding: 12px 12px 10px 16px;
-  border-bottom: 1px solid var(--app-line);
+  border-bottom: var(--app-rule);
 }
 .file-viewer .el-dialog__body {
   flex: 1;
@@ -775,16 +777,15 @@ function onClosed() {
   gap: 12px;
   min-width: 0;
 }
+/* The file's kind, by its icon alone, with no tile under it. */
 .file-viewer__icon,
 .file-viewer__note-icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
+  width: 28px;
   height: 36px;
-  border-radius: 9px;
-  background: var(--app-ground-2);
   color: var(--app-ink-2);
   font-size: var(--app-text-xl);
 }
@@ -907,7 +908,6 @@ function onClosed() {
   max-width: 100%;
   max-height: calc(94vh - 160px);
   background: #000;
-  border-radius: 8px;
 }
 .file-viewer__text-version {
   padding: 16px;
@@ -918,9 +918,8 @@ function onClosed() {
   gap: 8px;
   max-width: 860px;
   margin: 0 auto 12px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--el-color-info-light-9);
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--app-indigo-line);
   color: var(--app-ink-2);
   font-size: var(--app-text-sm);
   line-height: 1.55;
@@ -936,24 +935,23 @@ function onClosed() {
   padding: 28px 32px;
   background: var(--el-bg-color);
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item, 8px);
+  border-radius: 0;
 }
+/* What the viewer says in place of a file (not shown here, still being made): its icon, title, words and
+   actions, left-aligned in a column in the middle of the viewer. */
 .file-viewer__note {
   margin: auto;
   max-width: 460px;
   padding: 32px 24px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
-  text-align: center;
 }
 .file-viewer__note-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
   font-size: var(--app-text-2xl);
-  background: var(--el-bg-color);
   margin-bottom: 4px;
 }
 .file-viewer__note-icon.is-waiting {
@@ -962,7 +960,7 @@ function onClosed() {
 .file-viewer__note-words {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
 }
 .file-viewer__note-title {
@@ -980,7 +978,7 @@ function onClosed() {
 .file-viewer__note-actions {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
 }
 .file-viewer__note-actions .el-button + .el-button {

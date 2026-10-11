@@ -73,6 +73,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
   padding: 16px;
   background: var(--app-ground-2);
 }
+/* A page on the viewer's ground: a 1 px line round it, square, as a PDF's page is. */
 .text-view__paper,
 .text-view__pre,
 .text-view__code {
@@ -80,7 +81,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
   margin: 0 auto;
   background: var(--el-bg-color);
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item, 8px);
+  border-radius: 0;
 }
 .text-view__paper {
   padding: 28px 32px;
@@ -130,11 +131,12 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
   overflow: auto;
   background: var(--el-bg-color);
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item, 8px);
+  border-radius: 0;
   outline: none;
 }
 .text-view__table-wrap:focus-visible {
-  box-shadow: 0 0 0 2px var(--app-focus);
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
 }
 .text-view__table {
   border-collapse: separate;

@@ -1,0 +1,70 @@
+/* What Element Plus lays over the page (dialogs, message boxes, drawers,
+   notifications), drawn as aishie.app draws a box: framed in the line with
+   2 px corners and no shadow, a rule under its title, never a card floating
+   on a shadow. The corners and the shadows are set in styles/element.css,
+   from the tokens (--app-radius; no shadow anywhere); what is here is each
+   one's edge and its rules. Loaded after element.css (main.ts).
+
+   A dialog's footer is its own: a text button for Cancel, then its one solid
+   button at the right end (solid red for the last step of something that
+   cannot be undone), as docs/CONVENTIONS.md's "Buttons" says. */
+
+/* Nothing Element Plus lays over the page casts a shadow: the tokens make its shadows none (element.css), and it
+   is said here too, by name, so that each overlay's whole look is in one place. A popper (a list, a menu, a
+   tooltip, a popover) and a message are named by two classes, as Element Plus's own rules for them are. */
+.el-dialog,
+.el-message-box,
+.el-drawer,
+.el-popper.el-popper,
+.el-message.el-message,
+.el-notification {
+  box-shadow: none;
+}
+
+/* A dialog and a message box: framed in the line, the title over a rule, what they say under it. */
+.el-dialog,
+.el-message-box {
+  border: var(--app-rule);
+}
+.el-dialog__header {
+  margin-bottom: var(--app-space-lg);
+  border-bottom: var(--app-rule);
+}
+.el-message-box__header {
+  margin-bottom: var(--app-space-md);
+  border-bottom: var(--app-rule);
+}
+/* One that fills a phone's screen (fullscreen) is the screen: no frame, no corners. */
+.el-dialog.is-fullscreen {
+  border: none;
+  border-radius: 0;
+}
+
+/* A drawer (the phone's menu, administration's drawers, a group's history, an agent's conversations): square, a
+   rule along the edge it opens from, its title over a rule as a dialog's is. */
+.el-drawer {
+  border-radius: 0;
+}
+.el-drawer.ltr {
+  border-right: var(--app-rule);
+}
+.el-drawer.rtl {
+  border-left: var(--app-rule);
+}
+.el-drawer.ttb {
+  border-bottom: var(--app-rule);
+}
+.el-drawer.btt {
+  border-top: var(--app-rule);
+}
+.el-drawer__header {
+  margin-bottom: 0;
+  padding-bottom: var(--app-space-lg);
+  border-bottom: var(--app-rule);
+}
+
+/* A notification (what a write did, an error that is not a field's): framed and square as a message is. */
+.el-notification {
+  --el-notification-radius: var(--app-radius);
+  --el-notification-border-color: var(--app-line);
+}
