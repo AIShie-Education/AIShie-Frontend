@@ -109,6 +109,8 @@ interface Audit {
   dangers: string[]
   /** A small capitalised or letter-spaced label. */
   eyebrows: string[]
+  /** A button of an icon alone (a ⋯, a menu's opener) that is not a square as tall as a button is high. */
+  iconButtons: string[]
 }
 
 /** Reads a screen's computed styles (in the page). */
@@ -122,6 +124,7 @@ function audit(pending: string[]): Audit {
     solids: [],
     dangers: [],
     eyebrows: [],
+    iconButtons: [],
   }
   const waits = (el: Element, what: string[]) => {
     const p = pending.find((sel) => el.matches(sel))
@@ -218,6 +221,12 @@ function audit(pending: string[]): Audit {
     if (shown(b) && !overlay(b)) out.solids.push(name(b))
   for (const b of scope.querySelectorAll(`${solid}.el-button--danger`))
     if (shown(b) && !overlay(b)) out.dangers.push(name(b))
+  // An icon alone is a square of a button's height (36 px, a finger's 44 on a touch screen, 28 and 40 small).
+  for (const b of scope.querySelectorAll('.el-button:not(.is-link):not(.is-loading)')) {
+    if (!shown(b) || overlay(b) || (b.textContent ?? '').trim() || !b.querySelector('svg')) continue
+    const r = b.getBoundingClientRect()
+    if (Math.abs(r.width - r.height) > 1) out.iconButtons.push(`${name(b)} ${Math.round(r.width)}×${Math.round(r.height)}`)
+  }
   return out
 }
 
@@ -314,6 +323,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
       expect.soft(each('shadows'), 'a shadow that is not a stroke').toEqual({})
       expect.soft(each('eyebrows'), 'small capitalised or letter-spaced words').toEqual({})
       expect.soft(each('dangers'), 'a solid red button outside a confirmation').toEqual({})
+      expect.soft(each('iconButtons'), 'a button of an icon alone that is not a square').toEqual({})
       expect
         .soft(
           Object.fromEntries(Object.entries(found).filter(([, a]) => a.solids.length > 1).map(([n, a]) => [n, a.solids])),

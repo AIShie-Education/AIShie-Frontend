@@ -419,7 +419,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
         </span>
         <!-- What cannot be taken back is not beside posting: it is in the toolbar's menu, at its far end. -->
         <el-dropdown trigger="click" placement="bottom-end" @command="undoVisible = true">
-          <el-button class="grades-view__more" :aria-label="t('grades.post.more')">
+          <el-button class="grades-view__more app-icon-button" :aria-label="t('grades.post.more')">
             <el-icon><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>

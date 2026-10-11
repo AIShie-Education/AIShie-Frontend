@@ -13,6 +13,11 @@ import { useSessionStore } from '@/stores/session'
 import DepartmentsView from '../DepartmentsView.vue'
 import AdminsDrawer from './AdminsDrawer.vue'
 
+// The view's style, as written: jsdom lays nothing out.
+const viewStyle = Object.values(
+  import.meta.glob<string>('../DepartmentsView.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
+
 // What Core answers each read with, and every call made.
 let answers: Record<string, (args: Record<string, unknown>) => Promise<unknown>> = {}
 let asked: { tool: string; args: Record<string, unknown> }[] = []
@@ -194,6 +199,10 @@ describe('DepartmentsView', () => {
     await flushPromises()
     expect(widths()).toEqual(expect.arrayContaining(['80', '110', '56']))
     expect(widths()).not.toContain('130')
+    // Its ⋯ a square of a finger's 44 px (app-icon-button) within the 56: the cell keeps 6 px each side, not 12.
+    const more = w.find('.dept-actions .dept-more')
+    expect(more.classes()).toContain('app-icon-button')
+    expect(viewStyle).toMatch(/\.dept-tree :deep\(\.dept-actions \.cell\) \{\s*padding-inline: 6px;/)
     w.unmount()
   })
 

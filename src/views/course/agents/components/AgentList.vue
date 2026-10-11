@@ -258,7 +258,12 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             trigger="click"
             @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)"
           >
-            <el-button size="small" :loading="busy === r.member.id" :aria-label="t('courseAgents.row.more')">
+            <el-button
+              size="small"
+              class="app-icon-button"
+              :loading="busy === r.member.id"
+              :aria-label="t('courseAgents.row.more')"
+            >
               <el-icon><MoreFilled /></el-icon>
             </el-button>
             <template #dropdown>

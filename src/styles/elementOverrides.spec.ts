@@ -68,6 +68,39 @@ describe('Element Plus’s small round shapes, squared', () => {
   it('gives a closable tag’s close button the app’s corner, not a disc', () => {
     expect(rule('.el-tag .el-tag__close')).toMatch(/border-radius: var\(--app-radius\);/)
   })
+
+  it('gives a small button the app’s 2 px, not the 1 px Element Plus takes off its base for one', () => {
+    expect(rule('.el-button--small')).toMatch(/border-radius: var\(--app-radius\);/)
+  })
+})
+
+describe('an icon alone on a button', () => {
+  it('is a square as tall as a button is high, a finger’s on a touch screen, with no room at its sides', () => {
+    expect(rule('.el-button.app-icon-button')).toMatch(/width: var\(--el-component-size\);\s*padding: 0;/)
+    expect(rule('.el-button--small.app-icon-button')).toMatch(/width: var\(--el-component-size-small\);/)
+    expect(rule('.el-button--large.app-icon-button')).toMatch(/width: var\(--el-component-size-large\);/)
+    // While it works, its spinner alone, not the spinner beside its icon in a square too narrow for both.
+    expect(rule('.el-button.app-icon-button.is-loading > span')).toMatch(/display: none;/)
+  })
+
+  it('is what each ⋯ is, with no padding of its own to make it narrower or wider', () => {
+    const files = import.meta.glob<string>('../**/*.vue', { query: '?raw', import: 'default', eager: true })
+    const offenders: string[] = []
+    let found = 0
+    for (const [file, source] of Object.entries(files)) {
+      // Every button whose only content is the ⋯ icon.
+      for (const m of source.matchAll(/<el-button\b([^>]*)>\s*<el-icon[^>]*>\s*<MoreFilled \/>\s*<\/el-icon>\s*<\/el-button>/g)) {
+        found++
+        if (!/app-icon-button/.test(m[1]!)) offenders.push(file)
+      }
+    }
+    expect(offenders).toEqual([])
+    // A row's, a set's, a group's, an assignment's, the grades', a department's, the scheme's and the chat's.
+    expect(found).toBeGreaterThanOrEqual(8)
+    // Their own classes set no width or padding of their own beside it.
+    const own = /\n\.(assignment-more__button|set-view__more|group-card__more|chat-pane__more|grades-view__more|dept-more) \{[^}]*(padding|width)/
+    for (const file of Object.keys(files)) expect(files[file], file).not.toMatch(own)
+  })
 })
 
 describe('a result (AppResult)', () => {

@@ -581,6 +581,26 @@ html.dark .el-card {
 .el-button.is-circle {
   border-radius: var(--app-radius);
 }
+/* A small button's corners are the app's 2 px too: Element Plus takes 1 px off its base radius for one. */
+.el-button--small {
+  border-radius: var(--app-radius);
+}
+/* An icon alone (a row's or a toolbar's ⋯, a menu's opener) is a square as tall as a button is high, 36 px or a
+   finger's 44 (40 small), with no room at its sides: its width is its height, never its icon and some padding.
+   While it works, its spinner is all it shows. */
+.el-button.app-icon-button {
+  width: var(--el-component-size);
+  padding: 0;
+}
+.el-button--small.app-icon-button {
+  width: var(--el-component-size-small);
+}
+.el-button--large.app-icon-button {
+  width: var(--el-component-size-large);
+}
+.el-button.app-icon-button.is-loading > span {
+  display: none;
+}
 .el-button--success {
   --el-button-hover-bg-color: var(--el-color-success-dark-2);
   --el-button-hover-border-color: var(--el-color-success-dark-2);

@@ -956,7 +956,7 @@ const closedLine = computed(() => {
           <el-button
             text
             size="small"
-            class="chat-pane__more"
+            class="chat-pane__more app-icon-button"
             :aria-label="t('chat.menu.label')"
             :title="t('chat.menu.label')"
           >
@@ -1240,9 +1240,6 @@ const closedLine = computed(() => {
 .chat-pane__head-actions .el-button + .el-button,
 .chat-pane__head-actions .el-button + .el-dropdown {
   margin-left: 0;
-}
-.chat-pane__more {
-  padding: 5px 7px;
 }
 /* What it says of a conversation, muted: that an agent that answers others may repeat what is written. */
 .chat-pane__shared {

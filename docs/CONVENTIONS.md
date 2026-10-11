@@ -1032,11 +1032,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   asks first; and solid red alone for the last step of that confirmation (`confirmButtonClass:
   'el-button--danger'`, or a dialog's button that does it at once). The ghost, an indigo or red
   outline, is gone: `plain` still draws as `text` and `circle` as a square, but lint refuses both,
-  and `round`, in a template (Building a view, above); an icon alone is a square text button of its
-  height. A button of words that starts a line (Retry under its glyph, an empty place's way in, single
-  sign-on's other methods, Create an account) takes back its room at its left by as much outside it
-  (8 px each), so that its words start where the text over them does and only its hovered ground
-  reaches past them. `success`, `warning` and `info` are outcomes' colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
+  and `round`, in a template (Building a view, above); an icon alone (a ⋯, a menu's opener) is a
+  square text button of its height, `app-icon-button` (`styles/element.css`: 36 px, a finger's 44,
+  small 28 and 40, with no padding of its own; `e2e/screens-style.spec.ts` measures each). A button
+  of words that starts a line (Retry under its glyph, an empty place's way in, single sign-on's
+  other methods, Create an account) takes back its room at its left by as much outside it (8 px
+  each), so that its words start where the text over them does and only its hovered ground reaches
+  past them. `success`, `warning` and `info` are outcomes' colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
   a solid one keeps the ground's second shade under its words, so that the main action's place still
   reads. What cannot be taken back is not put beside what is done every day: it goes in the toolbar's
   ⋯ menu (`MoreFilled`), at its far end, as undoing final grades is beside posting them.

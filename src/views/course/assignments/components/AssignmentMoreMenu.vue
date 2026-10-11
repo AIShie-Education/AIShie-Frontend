@@ -23,7 +23,11 @@ const { t } = useI18n()
 
 <template>
   <el-dropdown trigger="click" placement="bottom-end" class="assignment-more" @command="emit('delete')">
-    <el-button :size="size" class="assignment-more__button" :aria-label="t('assignments.delete.more', { title })">
+    <el-button
+      :size="size"
+      class="assignment-more__button app-icon-button"
+      :aria-label="t('assignments.delete.more', { title })"
+    >
       <el-icon aria-hidden="true"><MoreFilled /></el-icon>
     </el-button>
     <template #dropdown>
@@ -39,13 +43,6 @@ const { t } = useI18n()
     </template>
   </el-dropdown>
 </template>
-
-<style scoped>
-.assignment-more__button {
-  padding-left: 9px;
-  padding-right: 9px;
-}
-</style>
 
 <!-- The menu is drawn in a popper outside the component: its item's colours are set where it is. -->
 <style>
