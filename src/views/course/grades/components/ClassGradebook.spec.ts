@@ -12,6 +12,11 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import ClassGradebook from './ClassGradebook.vue'
 
+// The matrix's style as written: jsdom lays nothing out.
+const matrixStyle = Object.values(
+  import.meta.glob<string>('./GradeMatrix.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!
+
 // The whole class's gradebook, mounted with a class of 300 students by 30
 // assignments: only the rows near the screen are drawn, the rest follow the
 // scroll; a phone's width is a list a student at a time; a seat listed to
@@ -247,13 +252,21 @@ describe('the whole class’s gradebook', () => {
     const widths = w.findAll('.matrix__table col').map((c) => c.attributes('style'))
     const heads = w.findAll('thead th')
     expect(widths).toHaveLength(heads.length)
-    // The names' column, then each column by its kind: 112 px for a total ("Assignments總分" at 14 px), 104 for work.
+    // The names' column, then each column by its kind: 128 px for a total ("Assignments總分" at 14 px, beside the
+    // sort arrow's room), 104 for work.
     expect(widths[0]).toBe('width: 208px;')
     heads.slice(1).forEach((th, i) =>
-      expect(widths[i + 1], th.text()).toBe(th.classes().includes('is-total') ? 'width: 112px;' : 'width: 104px;'),
+      expect(widths[i + 1], th.text()).toBe(th.classes().includes('is-total') ? 'width: 128px;' : 'width: 104px;'),
     )
     expect(heads.filter((th) => th.classes().includes('is-total'))).toHaveLength(2)
-    expect(w.find('.matrix__table').attributes('style')).toBe(`width: ${208 + 2 * 112 + A * 104}px;`)
+    expect(w.find('.matrix__table').attributes('style')).toBe(`width: ${208 + 2 * 128 + A * 104}px;`)
+    // A total's title keeps the arrow's room (1em and its 2 px gap) beside it, sorted by or not, so that sorting by
+    // it never breaks its heading anew ("Assignment|s總分"); e2e/class-gradebook.spec.ts reads the lines as drawn.
+    const style = matrixStyle.replace(/^[\s\S]*<style scoped>/, '')
+    const at = style.indexOf('\n.matrix__head.is-total .matrix__head-title {')
+    expect(at).toBeGreaterThanOrEqual(0)
+    expect(style.slice(at, style.indexOf('}', at))).toMatch(/max-width: calc\(100% - 1em - 2px\);/)
+    expect(style).toMatch(/\.matrix__sort \{[^}]*gap: 2px;/)
   })
 
   it('sorts by a column’s heading, highest first, then the other way', async () => {

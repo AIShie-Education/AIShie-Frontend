@@ -47,9 +47,12 @@ const NAME_WIDTH = 208
  * cell has room for 87; it has 123, a little to spare for another machine's
  * fonts. A total's is as wide as its heading needs: a component's name, in
  * the strong weight, then 總分 or "total" ("Assignments總分" at 14 px in
- * Chinese), whose word must fit a line whole, never "Assignment|s".
+ * Chinese), whose word must fit a line whole, never "Assignment|s", sorted
+ * by or not. Its title keeps the sort arrow's room beside it either way (the
+ * style, .matrix__head.is-total), and so has 96 px of the 128: "Assignments"
+ * is 85 px in the strong weight, "Presentations" 91.
  */
-const TOTAL_WIDTH = 112
+const TOTAL_WIDTH = 128
 const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? TOTAL_WIDTH : c.groupWork ? 140 : 104)
 const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s + widthOf(c), 0))
 
@@ -561,6 +564,8 @@ function meanHint(col: MatrixColumn): string {
   outline-offset: 1px;
   border-radius: var(--app-radius);
 }
+/* A heading's title, on two lines at most, broken between words; only a word longer than a whole line is broken
+   inside, which would otherwise run on under the next column. */
 .matrix__head-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -595,7 +600,11 @@ function meanHint(col: MatrixColumn): string {
 .matrix__open:focus-visible {
   color: var(--el-color-primary);
 }
+/* A total's title keeps the sort arrow's room (an icon of 1em, after a 2 px gap) beside it whether or not its column
+   is the one sorted by, so that sorting by it breaks its heading where it was broken, never inside a word that fitted:
+   a component's name has 96 px of the 128 either way. */
 .matrix__head.is-total .matrix__head-title {
+  max-width: calc(100% - 1em - 2px);
   font-weight: var(--app-weight-strong);
 }
 /* Totals stand apart from the work they add up: a tint, and a heavier figure. */
