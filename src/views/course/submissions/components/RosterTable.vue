@@ -64,11 +64,11 @@ const { t, te } = useI18n()
 const router = useRouter()
 const course = useCourseStore()
 // A card per student where the roster is as narrow as on a phone: its summary
-// 566 px or less, the width it has in a window of 640 px without the side bar
-// (the page's 592 px, less the card's edges). By its own width, not the
-// window's: the side bar takes from it.
+// 592 px or less, the width it has in a window of 640 px without the side bar
+// (the page's, a section having no padding of its own). By its own width, not
+// the window's: the side bar takes from it.
 const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
-const narrow = useContainerNarrow(summaryLine, 566)
+const narrow = useContainerNarrow(summaryLine, 592)
 
 const shown = computed(() => forStudent(props.rows, props.studentId))
 // The counts are a filter too: one state's students at a time, or all of them.
@@ -276,21 +276,24 @@ const emptyText = computed(() =>
             :to="submissionRoute(row)"
             class="roster-cards__item roster-cards__link"
           >
-            <div class="roster-cards__top">
-              <span class="roster-cards__name">
-                <span v-if="row.display_name">{{ row.display_name }}</span>
-                <MemberName v-else :id="row.student_member_id" />
-                <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
-              </span>
-              <WorkStateTag :value="row.state" />
+            <div class="roster-cards__body">
+              <div class="roster-cards__top">
+                <span class="roster-cards__name">
+                  <span v-if="row.display_name">{{ row.display_name }}</span>
+                  <MemberName v-else :id="row.student_member_id" />
+                  <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
+                </span>
+                <WorkStateTag :value="row.state" />
+              </div>
+              <div class="roster-cards__meta">
+                <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
+                <span v-if="otherWorkText(row)">{{ otherWorkText(row) }}</span>
+                <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
+                <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
+                <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
+              </div>
             </div>
-            <div class="roster-cards__meta">
-              <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
-              <span v-if="otherWorkText(row)">{{ otherWorkText(row) }}</span>
-              <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
-              <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
-              <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
-            </div>
+            <el-icon class="roster-cards__go"><ArrowRight /></el-icon>
           </router-link>
           <div v-else class="roster-cards__item">
             <div class="roster-cards__top">
@@ -449,23 +452,43 @@ const emptyText = computed(() =>
 .roster-action--end {
   justify-content: flex-end;
 }
+/* On a phone, a row each between rules, not a box each. */
 .roster-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.roster-cards > li {
+  border-bottom: var(--app-rule);
 }
 .roster-cards__item {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
+}
+/* A student's row that opens their work: the › at its end says so, as a
+   tint under the pointer cannot on a touch screen. */
+.roster-cards__link {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+.roster-cards__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.roster-cards__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .roster-cards__link:active,
 .roster-cards__link:hover {

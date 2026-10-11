@@ -598,7 +598,7 @@ const title = computed(() =>
   gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .sso-form :deep(.el-select),
 .sso-form__position {
@@ -651,9 +651,9 @@ const title = computed(() =>
 }
 .sso-form__report {
   margin: -4px 0 18px;
-  padding: 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .sso-form__secret-mode {
   display: flex;
@@ -666,7 +666,7 @@ const title = computed(() =>
 }
 .sso-form__by-email {
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .sso-form__switch {
   display: flex;

@@ -146,39 +146,44 @@ summary:focus-visible,
   }
 }
 
-/* A card that holds a section of a page. */
-/* A card: ivory on the ground, a line around it, generous room inside. */
+/* A section of a page (docs/CONVENTIONS.md, "Shapes"): a rule above it and
+   room, as aishie.app parts its sections, never a box. Without a ground or a
+   frame, a section laid inside another can no longer read as a card in a
+   card; what a section lists are rows between rules, and a box is kept for
+   one thing the reader operates as a whole (a proposal, a course on the home
+   page, a file, a group). The class keeps its name: some 150 sections read it. */
 .app-card {
-  background: var(--app-card);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
-  padding: 24px;
+  border-top: var(--app-rule);
+  padding-top: var(--app-space-xl);
+}
+.app-card + .app-card {
+  margin-top: var(--app-space-2xl);
 }
 @media (max-width: 600px) {
   .app-card {
-    padding: 16px;
+    padding-top: var(--app-space-lg);
+  }
+  .app-card + .app-card {
+    margin-top: var(--app-space-xl);
   }
 }
-.app-card + .app-card {
-  margin-top: 16px;
-}
 /*
- * A page's two columns of cards (docs/CONVENTIONS.md): the grid is
- * .app-columns, and each column is a card of its own or an .app-column, a
- * stack of cards 16 px apart. Side by side, both columns are as tall as
- * their row, and the last card of each (its only one, for a single card)
- * grows to fill it, so that the two end on one line; what a card holds
- * stays at its top. Stacked into one column (by the page's own container
- * query), each column is alone in its row, as tall as what it holds:
- * nothing grows.
+ * A page's two columns of sections (docs/CONVENTIONS.md): the grid is
+ * .app-columns, and each column is a section of its own or an .app-column,
+ * a stack of sections. With no boxes there is nothing to end on one line:
+ * each column is as tall as what it holds, its sections as far apart as
+ * anywhere on a page, and the columns kept apart by room alone (32 px, twice
+ * a box's gutter of old), not a rule between them. A view's own grid sets its
+ * columns and its container query, never its gap.
  */
 .app-columns {
-  align-items: stretch;
+  gap: var(--app-space-2xl);
+  align-items: start;
 }
 .app-column {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--app-space-2xl);
   min-width: 0;
 }
 .app-column > *,
@@ -186,14 +191,18 @@ summary:focus-visible,
   margin-top: 0;
   margin-bottom: 0;
 }
-/* Its last card, whatever follows it (a dialog kept in place, say). */
-.app-column > :nth-last-child(1 of .app-card) {
-  flex-grow: 1;
+@media (max-width: 600px) {
+  .app-columns,
+  .app-column {
+    row-gap: var(--app-space-xl);
+  }
 }
+/* A section's heading: the serif at the card's step, its row's actions (text
+   buttons, a link) at its right end. */
 .app-card__title {
   margin: 0 0 var(--app-space-lg);
   font-size: var(--app-text-xl);
-  line-height: 1.35;
+  line-height: var(--app-lh-heading);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -205,22 +214,38 @@ summary:focus-visible,
 .app-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--app-space-sm);
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: var(--app-space-lg);
 }
 .app-toolbar__spacer {
   flex: 1;
 }
+/* The home page's courses, each a box the reader opens (the one grid of
+   boxes the app keeps: a course is operable, not a feature). */
 .app-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: var(--app-space-lg);
+}
+/* A list's rows, parted by rules rather than set in boxes: the list's first
+   row has a rule above it and every row one below; a row the reader opens
+   is tinted under the pointer, and keeps its › at its end. Used where a
+   section lists what it holds as rows of its own (not a table). */
+.app-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: var(--app-rule);
+}
+.app-rows > * {
+  border-bottom: var(--app-rule);
 }
 /* A row of a list that is not published (a material, an assignment): a 3 px
-   line in the amber of what waits, at its left, beside its pill, so that the
-   one among published rows is found at a glance (docs/CONVENTIONS.md, "Tags").
-   A table's row (row-class-name) draws it on its first cell. */
+   line in the amber of what waits, square-ended, at its left, beside its
+   tag, so that the one among published rows is found at a glance
+   (docs/CONVENTIONS.md, "Tags"). A table's row (row-class-name) draws it on
+   its first cell. */
 .app-row-unpublished:not(tr) {
   position: relative;
 }
@@ -228,10 +253,9 @@ summary:focus-visible,
   content: '';
   position: absolute;
   left: 0;
-  top: 8px;
-  bottom: 8px;
+  top: var(--app-space-sm);
+  bottom: var(--app-space-sm);
   width: 3px;
-  border-radius: 2px;
   background: var(--app-wait-fg);
 }
 tr.app-row-unpublished > td:first-child {

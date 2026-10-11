@@ -186,9 +186,7 @@ function onGraded() {
             query: own ? {} : { assignment: s.assignment_id },
           }"
         >
-          <template #tags>
-            <StatusTag vocab="submissionState" :value="s.state" size="default" />
-          </template>
+          <!-- The work's state is said once, in its facts below, not again beside its title. -->
           <template #subtitle>
             <span class="submission-view__subtitle">
               <span v-if="isGroup">{{ s.group_name ?? t('groupGrading.members.groupWork') }}</span>
@@ -351,6 +349,7 @@ function onGraded() {
                 <StatusTag vocab="submissionState" :value="x.state" />
                 <span v-if="x.submitted_at" class="app-muted"><TimeText :value="x.submitted_at" /></span>
                 <span v-if="x.id === s.id" class="attempts__current">{{ t('submissions.detail.current') }}</span>
+                <el-icon v-else class="attempts__go"><ArrowRight /></el-icon>
               </router-link>
             </li>
           </ul>
@@ -488,22 +487,24 @@ function onGraded() {
   margin: 0;
   font-size: var(--app-text-sm);
 }
+/* The attempts, rows between rules; the one shown has the navy line at its left. */
 .attempts {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  border-top: var(--app-rule);
+}
+.attempts > li {
+  border-bottom: var(--app-rule);
 }
 .attempts__row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 8px 12px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: var(--app-space-sm) var(--app-space-sm) var(--app-space-sm) var(--app-space-md);
   color: inherit;
   text-decoration: none;
 }
@@ -511,8 +512,7 @@ function onGraded() {
   background: var(--el-fill-color-light);
 }
 .attempts__row.is-current {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-color-primary-light-9);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
 }
 .attempts__n {
   font-weight: 500;
@@ -521,5 +521,11 @@ function onGraded() {
   margin-left: auto;
   font-size: var(--app-text-xs);
   color: var(--el-color-primary);
+}
+/* Another attempt opens, as the › at its end says: the one shown says so instead. */
+.attempts__go {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 </style>

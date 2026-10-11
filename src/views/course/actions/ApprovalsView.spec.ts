@@ -403,3 +403,54 @@ describe('ApprovalsView, a seat whose decisions themselves need approval', () =>
     expect(tag!.props('content')).toContain(words)
   })
 })
+
+describe('ApprovalsView, the queue’s one solid button', () => {
+  /** A TA's proposed grade, which the instructor decides. */
+  const grade = (id: string) => ({ ...proposal(id, true, 'grade.submit'), actor_id: 'actor-ta', member_id: 'm-ta' })
+  /** The solid primary buttons in the queue: neither words (text, link), nor a choice pressed in (its tint). */
+  const solids = () =>
+    [...document.body.querySelectorAll<HTMLElement>('.approvals__list .el-button--primary')].filter(
+      (b) => !['is-text', 'is-link', 'is-plain', 'is-chosen'].some((c) => b.classList.contains(c)),
+    )
+
+  it('is the first’s Approve, and moves to the confirm of a decision opened further down, and back', async () => {
+    answer([grade('p1'), grade('p2'), grade('p3')])
+    await mountAs('instructor')
+    const [first, second, third] = cards()
+    expect(solids()).toEqual([button(first!, 'Approve')])
+    expect(button(second!, 'Approve')!.classList).toContain('is-text')
+    expect(button(third!, 'Approve')!.classList).toContain('is-text')
+
+    // Rejecting the second, out of turn: its confirm is the solid one, and the first's Approve is words meanwhile.
+    button(second!, 'Reject')!.click()
+    await flushPromises()
+    const confirm = second!.querySelector<HTMLElement>('.decide-panel__confirm .el-button--primary')!
+    expect(confirm.textContent?.trim()).toBe('Reject')
+    expect(solids()).toEqual([confirm])
+    expect(button(first!, 'Approve')!.classList).toContain('is-text')
+
+    // Then approving the third as well: the decision opened last leads, and the second's confirm is words.
+    button(third!, 'Approve')!.click()
+    await flushPromises()
+    expect(solids()).toEqual([button(third!, 'Approve now')])
+    expect(confirm.classList).toContain('is-text')
+
+    // Both put away: the first's Approve again.
+    button(third!, 'Cancel')!.click()
+    await flushPromises()
+    expect(solids()).toEqual([confirm])
+    button(second!, 'Cancel')!.click()
+    await flushPromises()
+    expect(solids()).toEqual([button(first!, 'Approve')])
+  })
+
+  it('stays with the first while the first’s own decision is open', async () => {
+    answer([grade('p1'), grade('p2')])
+    await mountAs('instructor')
+    const [first, second] = cards()
+    button(first!, 'Reject')!.click()
+    await flushPromises()
+    expect(solids()).toEqual([first!.querySelector('.decide-panel__confirm .el-button--primary')])
+    expect(button(second!, 'Approve')!.classList).toContain('is-text')
+  })
+})

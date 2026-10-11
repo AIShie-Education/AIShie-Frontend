@@ -861,7 +861,8 @@ defineExpose({ reload })
       <p class="my-work__kept-hint">{{ t('groupWork.work.keptHint') }}</p>
       <pre class="my-work__kept-text" tabindex="0">{{ keptText }}</pre>
       <div class="my-work__kept-actions">
-        <el-button size="small" type="primary" @click="copyKept">
+        <!-- Indigo words: the draft's Hand in, below, is the panel's one solid button. -->
+        <el-button size="small" type="primary" text @click="copyKept">
           <el-icon><component :is="keptCopied ? 'Check' : 'DocumentCopy'" /></el-icon>
           <span>{{ keptCopied ? t('common.actions.copied') : t('common.actions.copy') }}</span>
         </el-button>
@@ -921,7 +922,7 @@ defineExpose({ reload })
               <el-button size="small" :disabled="conflict.body === null" @click="onLoadTheirs">
                 {{ t('groupWork.work.loadTheirs') }}
               </el-button>
-              <el-button size="small" type="primary" :disabled="conflict.body === null" @click="onKeepMine">
+              <el-button size="small" type="primary" text :disabled="conflict.body === null" @click="onKeepMine">
                 {{ t('groupWork.work.keepMine') }}
               </el-button>
             </div>
@@ -1188,7 +1189,7 @@ defineExpose({ reload })
   flex-wrap: wrap;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .my-work__saved {
   display: inline-flex;
@@ -1240,12 +1241,13 @@ defineExpose({ reload })
 .my-work__conflict-body {
   margin: 4px 0;
 }
+/* The text kept from a draft the group's change took away: a block between
+   rules, not a box, its text the one box in it. */
 .my-work__kept {
   margin: 0 0 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .my-work__kept-title {
   margin: 0 0 4px;
@@ -1268,10 +1270,9 @@ defineExpose({ reload })
   font-family: inherit;
   font-size: var(--app-text-sm);
   line-height: var(--app-lh-text);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  color: var(--app-ink);
   user-select: text;
 }
 .my-work__kept-actions {
@@ -1280,15 +1281,14 @@ defineExpose({ reload })
   gap: 8px;
   margin-top: 8px;
 }
+/* What the others saved, quoted in the warning: a rule at its left, not a box in the alert's box. */
 .my-work__theirs {
   margin: 6px 0;
-  padding: 8px 12px;
+  padding: 2px 0 2px var(--app-space-md);
   max-height: 240px;
   overflow: auto;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-bg-color);
-  color: var(--el-text-color-primary);
+  border-left: 2px solid var(--app-line-strong);
+  color: var(--app-ink);
 }
 .my-work__conflict-actions {
   display: flex;
@@ -1332,7 +1332,7 @@ defineExpose({ reload })
   gap: 8px 16px;
   flex-wrap: wrap;
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .my-work__attempt-main,

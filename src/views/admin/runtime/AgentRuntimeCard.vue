@@ -197,7 +197,7 @@ function forget() {
           <el-button
             v-if="c.live"
             type="danger"
-            plain
+            text
             size="small"
             class="agent-runtime-card__revoke"
             :loading="revoking === c.id"
@@ -300,7 +300,7 @@ function forget() {
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 1px 5px;
   white-space: nowrap;
 }
@@ -319,7 +319,7 @@ function forget() {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .agent-runtime-card__item:last-child {
   border-bottom: none;

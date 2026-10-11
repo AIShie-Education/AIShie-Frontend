@@ -143,6 +143,8 @@ describe('AgentConversationLog', () => {
     expect(drawer.textContent).toContain('Conversation log: Course tutor')
     const rows = [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
     expect(rows.map((r) => r.querySelector('.log-row__name')!.textContent)).toEqual(['Ken', 'Yuki'])
+    // Each opens its conversation, as the › at its end says: a row between rules, without a box to say it.
+    expect(rows.map((r) => !!r.querySelector('.log-row__go'))).toEqual([true, true])
     expect(drawer.textContent).not.toContain('Other agent')
 
     rows[1]!.click()

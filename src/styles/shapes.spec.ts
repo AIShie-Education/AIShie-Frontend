@@ -415,7 +415,8 @@ describe('the shapes', () => {
     // Style sheets as they are written, not the empty text a test is otherwise given for one (vite.config.ts).
     expect(sources['/src/styles/main.css']).toContain('.app-card')
     const radii = Object.entries(sources).flatMap(([file, text]) => declarationsIn(file, text, RADIUS))
-    expect(radii.length).toBeGreaterThan(150)
+    // Only that the scan reads the sources at all: design wave 3 took about 70 corners out of the screens.
+    expect(radii.length).toBeGreaterThan(100)
     expect(
       Object.entries(sources).flatMap(([file, text]) => declarationsIn(file, text, SHADOW)).length,
     ).toBeGreaterThan(20)

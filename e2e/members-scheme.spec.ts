@@ -46,7 +46,10 @@ test.describe.serial('members and the grading scheme', () => {
     const header = page.locator('.page-header')
     await expect(header).toContainText(NAME)
     await expect(header).toContainText('Teaching assistant')
-    await expect(header).toContainText('Active')
+    // Active is the usual state: said in the seat's facts, not beside the name.
+    const facts = page.locator('.member__desc')
+    await expect(facts).toContainText('Active')
+    await expect(header).not.toContainText('Active')
     await expect(page.getByText('All as the preset “Teaching assistant” gave them.')).toBeVisible()
 
     // Change one permission: the TA may post grades, subject to approval.
@@ -76,7 +79,8 @@ test.describe.serial('members and the grading scheme', () => {
     const resumeBox = page.getByRole('dialog', { name: 'Resume this seat?' })
     await resumeBox.getByRole('button', { name: 'Resume' }).click()
     await expectToasted(page, `${NAME} is resumed`)
-    await expect(header).toContainText('Active')
+    await expect(header).not.toContainText('Paused')
+    await expect(facts).toContainText('Active')
     await expect(header.getByRole('button', { name: 'Pause' })).toBeVisible()
     // Resuming gives the seat back as it was, the changed permission included.
     await expect(postRow).toContainText('Needs approval')
@@ -85,7 +89,8 @@ test.describe.serial('members and the grading scheme', () => {
     await openCourseTab(page, 'Members')
     const row = page.locator('.el-table__row').filter({ hasText: NAME })
     await expect(row).toContainText('Teaching assistant')
-    await expect(row).toContainText('Active')
+    // Active again, the usual state: nothing beside it says otherwise (a Status column shows only while a row departs).
+    await expect(row).not.toContainText('Paused')
   })
 
   test('while editing a seat’s permissions, the rows changed are marked', async ({ page }) => {

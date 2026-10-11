@@ -560,7 +560,6 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                 v-if="archivedList.length"
                 v-model="showArchivedGroups"
                 :label="t('groups.set.showArchived', { n: archivedList.length }, archivedList.length)"
-                border
               />
               <el-button v-if="readsMembers" @click="historyOpen = true">
                 <el-icon aria-hidden="true"><Clock /></el-icon>
@@ -733,9 +732,11 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
   color: var(--app-ink-2);
   font-size: var(--app-text-sm);
 }
+/* The students in no group: a place to drop a student, so a box (dashed,
+   2 px corners), as a group is. */
 .set-view__none {
-  border: 1px dashed var(--app-line);
-  border-radius: var(--app-radius-card);
+  border: 1px dashed var(--app-line-strong);
+  border-radius: var(--app-radius);
   padding: var(--app-space-md);
   margin-bottom: var(--app-space-md);
 }

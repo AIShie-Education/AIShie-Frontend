@@ -181,16 +181,16 @@ describe('DepartmentsView', () => {
     w.unmount()
   })
 
-  it('closes its columns up further where its card is as narrow as on a phone, its toolbar 542 px or less', async () => {
-    // 542 px is the toolbar a window of 640 px leaves without the side bar: there, as before, the administrators'
+  it('closes its columns up further where its section is as narrow as on a phone, its toolbar 592 px or less', async () => {
+    // 592 px is the toolbar a window of 640 px leaves without the side bar: there, as before, the administrators'
     // count and the menu take less, so that a row's courses stay in sight beside its menu.
-    const sizes = fakeContainerWidths({ '.app-toolbar': 543 })
+    const sizes = fakeContainerWidths({ '.app-toolbar': 593 })
     const engineering = node('F', 'Engineering', 'U', 2, { administers: true, appointed: true, course_count: 1, admin_count: 1 })
     const w = await mountView(false, { max_depth: 8, departments: [engineering] })
     const widths = () => w.findAll('.el-table__header colgroup col').map((c) => c.attributes('width'))
     // Narrow already (under 746), not yet a phone's: Courses 80, Administrators 130, the menu 64.
     expect(widths()).toEqual(expect.arrayContaining(['80', '130', '64']))
-    await sizes.resize('.app-toolbar', 542)
+    await sizes.resize('.app-toolbar', 592)
     await flushPromises()
     expect(widths()).toEqual(expect.arrayContaining(['80', '110', '56']))
     expect(widths()).not.toContain('130')

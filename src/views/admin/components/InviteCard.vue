@@ -72,7 +72,7 @@ function closed() {
         <router-link :to="{ name: 'account' }">{{ t('admin.invite.blocked.selfLink') }}</router-link>
       </div>
       <div v-else-if="blocker === 'noEmail'" class="invite__blocked-action">
-        <el-button size="small" type="primary" plain @click="emit('edit')">
+        <el-button size="small" type="primary" text @click="emit('edit')">
           <el-icon><Edit /></el-icon>
           <span>{{ t('admin.invite.blocked.giveEmail') }}</span>
         </el-button>

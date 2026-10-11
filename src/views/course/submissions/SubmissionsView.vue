@@ -33,7 +33,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useDeletedFilter } from '@/views/course/assignments/components/useDeletedFilter'
 import { useWorkNames } from '@/views/course/assignments/components/useWorkNames'
@@ -153,6 +153,16 @@ const emptyText = computed(() =>
 // takes from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 592)
+/**
+ * Whether any work listed is in a state other than handed in, the usual one:
+ * only then does the list say each one's state, in a Status column or on each
+ * card. A column that says Submitted on every row says nothing
+ * (docs/CONVENTIONS.md, "Tags"), as the members' Status does not.
+ */
+const stateVaries = computed(() => list.items.value.some((row) => row.state !== 'submitted'))
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+// The table is laid out again as the Status column comes and goes.
+useTableRelayout(tableRef, stateVaries)
 
 function open(row: SubmissionSummary) {
   void router.push({ name: 'course-submission', params: { courseId: props.courseId, submissionId: row.id } })
@@ -263,27 +273,37 @@ function open(row: SubmissionSummary) {
               :to="{ name: 'course-submission', params: { courseId, submissionId: row.id } }"
               class="submission-cards__item"
             >
-              <div class="submission-cards__top">
-                <span class="submission-cards__title">
-                  {{ course.assignmentTitle(row.assignment_id) ?? '' }}
-                  <IdText v-if="!course.assignmentTitle(row.assignment_id)" :id="row.assignment_id" />
-                </span>
-                <StatusTag vocab="submissionState" :value="row.state" />
+              <div class="submission-cards__body">
+                <div class="submission-cards__top">
+                  <span class="submission-cards__title">
+                    {{ course.assignmentTitle(row.assignment_id) ?? '' }}
+                    <IdText v-if="!course.assignmentTitle(row.assignment_id)" :id="row.assignment_id" />
+                  </span>
+                  <StatusTag v-if="stateVaries" vocab="submissionState" :value="row.state" />
+                </div>
+                <div class="submission-cards__meta">
+                  <template v-if="row.group_id">
+                    <strong>{{ row.group_name }}</strong>
+                    <span v-if="!isStudent && row.members?.length">{{ namesOf(row.members) }}</span>
+                  </template>
+                  <MemberName v-else-if="!isStudent" :id="row.student_member_id" />
+                  <span>{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
+                  <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
+                  <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
+                </div>
               </div>
-              <div class="submission-cards__meta">
-                <template v-if="row.group_id">
-                  <strong>{{ row.group_name }}</strong>
-                  <span v-if="!isStudent && row.members?.length">{{ namesOf(row.members) }}</span>
-                </template>
-                <MemberName v-else-if="!isStudent" :id="row.student_member_id" />
-                <span>{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
-                <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
-                <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
-              </div>
+              <el-icon class="submission-cards__go"><ArrowRight /></el-icon>
             </router-link>
           </li>
         </ul>
-        <el-table v-else :data="list.items.value" row-key="id" class="submissions-table" @row-click="open">
+        <el-table
+          v-else
+          ref="tableRef"
+          :data="list.items.value"
+          row-key="id"
+          class="submissions-table"
+          @row-click="open"
+        >
           <el-table-column
             v-if="!isStudent"
             :label="anyGroupWork ? t('groupWork.list.whose') : t('submissions.columns.student')"
@@ -311,7 +331,7 @@ function open(row: SubmissionSummary) {
           <el-table-column :label="t('submissions.columns.attempt')" width="90" align="center">
             <template #default="{ row }">{{ row.attempt }}</template>
           </el-table-column>
-          <el-table-column :label="t('submissions.columns.state')" min-width="110">
+          <el-table-column v-if="stateVaries" :label="t('submissions.columns.state')" min-width="110">
             <template #default="{ row }">
               <StatusTag vocab="submissionState" :value="row.state" />
             </template>
@@ -341,9 +361,6 @@ function open(row: SubmissionSummary) {
 .submissions-filter {
   width: 260px;
   max-width: 100%;
-}
-.submissions-card {
-  padding: 8px 12px;
 }
 .submissions-table :deep(.el-table__row) {
   cursor: pointer;
@@ -382,23 +399,37 @@ function open(row: SubmissionSummary) {
   flex: none;
   margin-top: 3px;
 }
+/* On a phone, a row each between rules, not a box each, opening the work as
+   the table's rows do, with the › at its end that says so. */
 .submission-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.submission-cards > li {
+  border-bottom: var(--app-rule);
 }
 .submission-cards__item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  align-items: center;
+  gap: var(--app-space-sm);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
+}
+.submission-cards__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.submission-cards__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .submission-cards__item:active,
 .submission-cards__item:hover {

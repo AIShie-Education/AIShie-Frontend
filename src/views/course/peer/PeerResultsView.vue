@@ -255,7 +255,6 @@ function exportCsv() {
 .peer-results__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 16px;
 }
 .peer-results__group + .peer-results__group {
   margin-top: 20px;
@@ -263,14 +262,9 @@ function exportCsv() {
   border-top: 1px solid var(--el-border-color);
 }
 /* Two columns while the main one keeps 420 px or more beside the 320 px one. */
-@container (max-width: 759px) {
+@container (max-width: 775px) {
   .peer-results__layout {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-@media (max-width: 640px) {
-  .app-card {
-    padding: 14px;
   }
 }
 </style>

@@ -70,18 +70,12 @@ const expanded = ref(false)
   position: relative;
   overflow-wrap: anywhere;
 }
+/* A long description is cut at 220 px, a dashed rule where it is cut (not a
+   fade: no gradient), its Show more under it. */
 .about__desc.is-folded {
   max-height: 220px;
   overflow: hidden;
-}
-.about__desc.is-folded::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 56px;
-  background: linear-gradient(to bottom, transparent, var(--el-bg-color));
+  border-bottom: 1px dashed var(--app-line-strong);
 }
 .about__toggle {
   margin-top: 4px;

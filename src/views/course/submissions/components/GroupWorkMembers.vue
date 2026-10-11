@@ -168,7 +168,7 @@ function onCorrected() {
   gap: var(--app-space-xs) var(--app-space-sm);
   flex-wrap: wrap;
   padding: var(--app-space-xs) 0;
-  border-bottom: 1px solid var(--el-border-color-extra-light);
+  border-bottom: var(--app-rule);
 }
 .group-work__name {
   font-weight: var(--app-weight-strong);

@@ -254,7 +254,6 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
           <el-dropdown trigger="click" :disabled="!writable" @command="(cmd: string) => onCommand(row.node, cmd)">
             <el-button
               text
-              circle
               size="small"
               :disabled="!writable"
               :aria-label="t('scheme.actions.more', { name: nameOf(row.node) })"
@@ -382,7 +381,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   column-gap: 8px;
   min-height: 44px;
   padding: 4px 4px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .st-row:last-child {
   border-bottom: none;
@@ -394,12 +393,11 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   min-height: 36px;
   font-size: var(--app-text-xs);
   font-weight: var(--app-weight-strong);
-  color: var(--el-text-color-secondary);
-  border-bottom-color: var(--el-border-color-light);
+  color: var(--app-ink-3);
+  border-bottom-color: var(--app-line-strong);
 }
+/* The course's total, the tree's root: its figure in the strong weight, its row as the others, no grey box. */
 .st-row.is-root {
-  background: var(--el-fill-color-light);
-  border-radius: var(--app-radius-control);
   font-weight: var(--app-weight-strong);
 }
 .st-row.is-zero .st-title {
@@ -451,7 +449,6 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   flex: 1 1 auto;
   max-width: 64px;
   height: 6px;
-  border-radius: 2px;
   background: var(--el-fill-color-dark);
   overflow: hidden;
 }
@@ -459,7 +456,6 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   display: block;
   height: 100%;
   background: var(--el-color-primary);
-  border-radius: 2px;
 }
 .st-bar--assignment .st-bar__fill {
   background: var(--el-color-success);
@@ -476,7 +472,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
   height: 20px;
   padding: 0;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--el-text-color-secondary);
   cursor: pointer;

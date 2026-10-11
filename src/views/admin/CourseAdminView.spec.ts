@@ -101,5 +101,8 @@ describe('a course’s administration', () => {
     await flushPromises()
     expect(cellsInRow()).toBe(2)
     expect(w.find('.course-admin__desc').text()).not.toContain(COURSE)
+    // Active, the usual state, is said in the facts alone, not again beside the title.
+    expect(w.find('.course-admin__desc').text()).toContain('Active')
+    expect(w.find('.page-header__title').text()).not.toContain('Active')
   })
 })

@@ -263,8 +263,7 @@ defineExpose({ clear })
   width: 100%;
   padding: 6px 12px;
   border: 1px solid var(--el-border-color);
-  border-radius: var(--el-border-radius-base);
-  background: var(--el-fill-color-lighter);
+  border-radius: var(--app-radius);
 }
 .participant-picker__who {
   display: inline-flex;

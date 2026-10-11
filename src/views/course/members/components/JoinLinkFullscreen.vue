@@ -174,7 +174,6 @@ onBeforeUnmount(() => {
   position: relative;
   padding: 8px;
   background: #ffffff;
-  border-radius: 12px;
 }
 .is-ended .join-fs__qr :deep(.qr-code) {
   opacity: 0.1;

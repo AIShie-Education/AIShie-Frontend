@@ -33,13 +33,13 @@ const session = useSessionStore()
 // administrator's presets, whatever the window (the side bar takes from the
 // page): with less, the IDs are left out, the presets go under the name, and
 // the rest close up. The card is measured by its toolbar, as wide as the tree.
-// Where the card is as narrow as on a phone (its toolbar 542 px or less, the
+// Where the section is as narrow as on a phone (its toolbar 592 px or less, the
 // width it has in a window of 640 px without the side bar), the columns close
 // up further, as they always have, so that a row's courses stay in sight
 // beside its menu.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, () => (session.isAdmin ? 945 : 745))
-const phone = useContainerNarrow(toolbar, 542)
+const phone = useContainerNarrow(toolbar, 592)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, [narrow, phone])
 const departments = useDepartmentTree({ immediate: false })
@@ -215,7 +215,7 @@ watch(
           <el-table-column :label="narrow ? '' : t('common.labels.actions')" :width="phone ? 56 : narrow ? 64 : 96" align="center" fixed="right">
             <template #default="{ row }">
               <el-dropdown v-if="actionsFor(row).length" trigger="click" @command="(a: Action) => onAction(row, a)">
-                <el-button text circle :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
+                <el-button text :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>

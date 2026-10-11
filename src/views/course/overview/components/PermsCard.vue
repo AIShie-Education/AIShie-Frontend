@@ -117,8 +117,8 @@ const ceilings = computed(() => ceilingsOf(course.membership))
   color: var(--el-color-warning);
 }
 .perms__group {
-  padding: 8px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
 }
 .perms__group-head {
   display: flex;
@@ -128,7 +128,7 @@ const ceilings = computed(() => ceilingsOf(course.membership))
 }
 .perms__group-help {
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .perms__names {
   list-style: none;
@@ -136,16 +136,16 @@ const ceilings = computed(() => ceilingsOf(course.membership))
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--app-space-xs) var(--app-space-lg);
 }
+/* A permission's name is words, not a chip: a dotted underline says its
+   tooltip tells what it allows. */
 .perms__name {
-  display: inline-block;
   font-size: var(--app-text-sm);
-  padding: 2px 8px;
-  border-radius: var(--app-radius-pill);
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  cursor: default;
+  color: var(--app-ink);
+  text-decoration: underline dotted var(--app-ink-3);
+  text-underline-offset: 3px;
+  cursor: help;
 }
 .perms__denied {
   margin: 8px 0 0;

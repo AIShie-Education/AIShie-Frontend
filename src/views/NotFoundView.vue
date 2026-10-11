@@ -16,10 +16,15 @@ const { t } = useI18n()
 </template>
 
 <style scoped>
+/* What went wrong, at the page's top left, as a page's text starts: not centred in the window. */
 .not-found {
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  padding: var(--app-space-2xl) var(--app-space-lg);
+  max-width: calc(var(--app-measure) + 2 * var(--app-space-lg));
+}
+.not-found :deep(.el-result) {
+  align-items: flex-start;
+  text-align: left;
+  padding: 0;
 }
 </style>

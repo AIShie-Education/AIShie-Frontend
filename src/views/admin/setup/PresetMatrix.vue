@@ -20,6 +20,8 @@ const rows = computed<Row[]>(() => [
 ])
 
 const levels = computed(() => new Map(props.presets.map((p) => [p.id, fullPerms(p.perms)])))
+/** Whether built-in and a department's own presets are side by side: only then does a column say which it is. */
+const mixed = computed(() => props.presets.some(isBuiltin) && props.presets.some((p) => !isBuiltin(p)))
 
 function metaLabel(key: string): string {
   if (key === 'role') return t('adminSetup.presets.role')
@@ -71,11 +73,12 @@ function rowClass({ row }: { row: Row }): string {
       <template #header>
         <button type="button" class="matrix-head" @click="emit('open', p)">
           <span class="matrix-head__name">{{ presetLabel(p) }}</span>
-          <span class="matrix-head__where">
-            {{ isBuiltin(p) ? t('adminSetup.presets.builtin') : (deptName(p.dept_id) ?? t('adminSetup.presets.own')) }}
-            <template v-if="hasOwnLabel(p)"
-              >{{ t('common.sep') }}<code class="matrix-head__key">{{ p.name }}</code></template
-            >
+          <span v-if="mixed || hasOwnLabel(p)" class="matrix-head__where">
+            <template v-if="mixed">{{
+              isBuiltin(p) ? t('adminSetup.presets.builtin') : (deptName(p.dept_id) ?? t('adminSetup.presets.own'))
+            }}</template
+            ><template v-if="mixed && hasOwnLabel(p)">{{ t('common.sep') }}</template
+            ><code v-if="hasOwnLabel(p)" class="matrix-head__key">{{ p.name }}</code>
           </span>
         </button>
       </template>
@@ -126,7 +129,7 @@ function rowClass({ row }: { row: Row }): string {
   background: none;
   border: none;
   padding: 2px 4px;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   cursor: pointer;
   font: inherit;
   color: var(--el-color-primary);

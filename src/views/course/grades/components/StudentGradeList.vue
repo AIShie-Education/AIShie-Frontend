@@ -205,7 +205,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   padding: 0;
 }
 .sgl__item {
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .sgl__head {
   display: flex;
@@ -223,7 +223,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__head:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 .sgl__who {
   flex: 1;
@@ -240,7 +240,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   display: inline-block;
   margin-left: 6px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   font-weight: 400;
   line-height: 16px;
@@ -367,7 +367,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__flag {
   display: inline-block;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 17px;
   font-weight: 400;

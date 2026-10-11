@@ -59,8 +59,10 @@ test.describe.serial('course material', () => {
     await expect(page.getByRole('button', { name: 'Publish this version' })).toHaveCount(0)
     await expect(page.locator('.doc-content__meta')).toContainText('Published')
 
+    // In the list, published is the usual state, which says nothing: the row loses Not published and its amber line.
     await openCourseTab(page, 'Materials')
-    await expect(row).toContainText('Published')
+    await expect(row).not.toContainText('Not published')
+    await expect(row).not.toHaveClass(/app-row-unpublished/)
   })
 
   test('Yuki sees the published material and reads it, but not the unpublished Week 2', async ({ page }) => {

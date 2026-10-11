@@ -138,7 +138,7 @@ const closed = computed(() => c.value?.status === 'closed')
   grid-template-columns: minmax(96px, 30%) minmax(0, 1fr);
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   align-items: baseline;
 }
 .answer-proposal__facts dt {
@@ -168,13 +168,12 @@ const closed = computed(() => c.value?.status === 'closed')
 .answer-proposal__message {
   max-height: 360px;
   overflow: auto;
-  padding: 8px 12px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
 }
+/* The answer proposed, quoted in the indigo: the question in the line's ink. */
 .answer-proposal__message--reply {
-  border-left: 3px solid var(--el-color-primary);
+  border-left-color: var(--app-indigo);
 }
 .answer-proposal__meta {
   font-size: var(--app-text-xs);

@@ -677,15 +677,15 @@ async function submit() {
   gap: 24px;
   align-items: start;
 }
+/* The rubric beside the grading, parted from it by a rule, not set in a
+   tinted box within the section. */
 .grade-panel__rubric {
   position: sticky;
   top: 16px;
   max-height: calc(100vh - 32px);
   overflow: auto;
-  padding: 14px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  padding: 0 0 0 var(--app-space-xl);
+  border-left: var(--app-rule);
 }
 .grade-panel__block {
   width: 100%;
@@ -711,12 +711,12 @@ async function submit() {
 .grade-panel__score-input {
   width: 140px;
 }
+/* The draft's files that wait to be handed in: the amber line of what waits at
+   its left, not an amber box. */
 .grade-panel__draft-files {
   margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: var(--app-radius-control);
-  border: 1px solid var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 3px solid var(--app-wait-fg);
   font-size: var(--app-text-sm);
   line-height: var(--app-lh-ui);
 }
@@ -736,8 +736,6 @@ async function submit() {
 .grade-panel__drafter {
   display: flex;
   align-items: center;
-  /* The light at the avatar's corner is ringed in the note's ground. */
-  --agent-avatar-ring: var(--el-color-info-light-9);
 }
 .grade-panel__drafter-name {
   vertical-align: middle;
@@ -789,6 +787,9 @@ async function submit() {
     order: -1;
     position: static;
     max-height: 360px;
+    padding: 0 0 var(--app-space-lg);
+    border-left: none;
+    border-bottom: var(--app-rule);
   }
 }
 </style>

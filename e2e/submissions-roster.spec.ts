@@ -121,7 +121,8 @@ test('the instructor sees who has not started on an assignment, and marks them m
   // The missing work has a page of its own, where it can be graded.
   await ken.click()
   await expect(page).toHaveURL(/\/submissions\/[0-9a-f-]{36}$/)
-  await expect(page.locator('.page-header')).toContainText('Missing')
+  // Its state is said once, in its facts, not beside its title.
+  await expect(page.locator('.facts')).toContainText('Missing')
   await expect(page.getByText('this is recorded as missing, when the due date passed or by hand')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save draft grade' })).toBeVisible()
 })

@@ -16,6 +16,8 @@ const { t } = useI18n()
 const rows = computed(() =>
   [...props.seats].sort((a, b) => `${a.code}${a.section}`.localeCompare(`${b.code}${b.section}`)),
 )
+/** Whether the reader's roles differ among their seats: only then does each say its role (a tag that never varies says nothing). */
+const rolesVary = computed(() => new Set(props.seats.map((s) => s.role)).size > 1)
 </script>
 
 <template>
@@ -36,8 +38,9 @@ const rows = computed(() =>
             <span class="seat__title">{{ s.title }}</span>
           </router-link>
           <div class="seat__tags">
-            <StatusTag vocab="role" :value="s.role" />
-            <StatusTag vocab="memberStatus" :value="s.status" />
+            <!-- The role only where the reader's roles differ, the seat's state only where it is not active. -->
+            <StatusTag v-if="rolesVary" vocab="role" :value="s.role" />
+            <StatusTag v-if="s.status !== 'active'" vocab="memberStatus" :value="s.status" />
             <StatusTag v-if="s.course_status !== 'active'" vocab="courseStatus" :value="s.course_status" />
           </div>
           <div class="seat__meta">
@@ -86,7 +89,7 @@ const rows = computed(() =>
     'meta meta';
   gap: 6px 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .seat:first-child {
   padding-top: 0;

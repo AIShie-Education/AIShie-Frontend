@@ -179,9 +179,9 @@ async function submit() {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: var(--app-space-sm) var(--app-space-lg);
   margin: 0 0 var(--app-space-sm);
-  padding: var(--app-space-sm) var(--app-space-md);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .adjust-dialog__now dt {
   font-size: var(--app-text-xs);
