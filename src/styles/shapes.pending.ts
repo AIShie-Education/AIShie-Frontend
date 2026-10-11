@@ -11,7 +11,7 @@
 
 export const PENDING = {
   /** The shared components (tags and badges, the agent's avatar, notes, empty places, chips). */
-  components: ['/src/components/AgentAvatar.vue', '/src/components/VersionFileList.vue'] as string[],
+  components: [] as string[],
 
   /** The screens (cards to rules, no card in a card). */
   screens: [
