@@ -146,16 +146,19 @@ watch(open, (v) => {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  border-top: var(--app-rule);
 }
+.agent-log__rows > li {
+  border-bottom: var(--app-rule);
+}
+/* A conversation, a row between rules that opens it: not a box each. */
 .log-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 9px var(--app-space-sm);
+  border: 0;
   background: transparent;
   color: inherit;
   font: inherit;

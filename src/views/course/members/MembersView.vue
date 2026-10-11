@@ -47,7 +47,6 @@ const session = useSessionStore()
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
-useTableRelayout(tableRef, [narrow, statusVaries])
 const presets = usePresets()
 
 const PAGE = 100
@@ -98,6 +97,8 @@ const rows = computed(() =>
 const statusVaries = computed(() =>
   rows.value.some((m) => m.status !== 'active' || isExpired(m.expires_at)),
 )
+// The table is laid out again as its columns change: by its width, and as the Status column comes and goes.
+useTableRelayout(tableRef, [narrow, statusVaries])
 // member.list has no kind filter, so People and Agents are picked out of the
 // pages loaded so far. Nobody of that kind among them says nothing about the
 // pages not yet loaded: then the empty state says so and offers the rest.
