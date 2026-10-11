@@ -193,10 +193,12 @@ async function reactivate() {
     >
       <template #tags>
         <template v-if="actor">
-          <!-- An agent, owned or not, is marked "AI" (and whose it is); a person or the system by kind. -->
+          <!-- An agent, owned or not, is marked "AI" (and whose it is); the system by kind. A person's kind and
+               an active standing are the usual, said in the facts below alone; beside the name, only what departs
+               from them (docs/CONVENTIONS.md, "Tags"). -->
           <AgentBadge v-if="actor.kind === 'agent'" :owner-name="actor.owner_name ?? undefined" size="default" />
-          <StatusTag v-else vocab="actorKind" :value="actor.kind" size="default" />
-          <StatusTag vocab="actorStatus" :value="actor.status" size="default" />
+          <StatusTag v-else-if="actor.kind !== 'human'" vocab="actorKind" :value="actor.kind" size="default" />
+          <StatusTag v-if="actor.status !== 'active'" vocab="actorStatus" :value="actor.status" size="default" />
           <StatusTag v-if="actor.platform_role" vocab="platformRole" :value="actor.platform_role" size="default" />
         </template>
       </template>

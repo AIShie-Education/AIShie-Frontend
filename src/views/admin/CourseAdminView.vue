@@ -123,8 +123,9 @@ function onSeated(_memberId: string, actorId: string) {
       <template v-if="course" #subtitle
         >{{ course.code }}<template v-if="course.section"><span class="app-sep">·</span>{{ course.section }}</template></template
       >
+      <!-- An active course's state is said in its facts alone; beside its title, only a state that departs from it. -->
       <template #tags>
-        <StatusTag v-if="course" vocab="courseStatus" :value="course.status" size="default" />
+        <StatusTag v-if="course && course.status !== 'active'" vocab="courseStatus" :value="course.status" size="default" />
       </template>
       <template v-if="course">
         <router-link v-if="seat" :to="{ name: 'course-overview', params: { courseId: id } }">
