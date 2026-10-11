@@ -91,7 +91,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
       :title="t('materials.title')"
       :subtitle="readsDrafts ? t('materials.hintDrafts') : t('materials.hintReader')"
     >
-      <el-checkbox v-if="readsDrafts" v-model="includeArchived" :label="t('materials.includeArchived')" border />
+      <el-checkbox v-if="readsDrafts" v-model="includeArchived" :label="t('materials.includeArchived')" />
       <div v-if="canWrite" class="materials__create">
         <el-button type="primary" :disabled="!course.writable" @click="openCreate()">
           <el-icon><Plus /></el-icon>
@@ -122,7 +122,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
         @retry="list.reload"
       >
         <template #empty>
-          <el-button v-if="takesFiles" type="primary" plain @click="openCreate()">
+          <el-button v-if="takesFiles" type="primary" text @click="openCreate()">
             <el-icon><Plus /></el-icon>
             <span>{{ t('materials.newMaterial') }}</span>
           </el-button>
@@ -155,10 +155,8 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
                 <AppTag v-else-if="d.status === 'archived'">
                   {{ t('enums.documentStatus.archived') }}
                 </AppTag>
-                <!-- Only those who read drafts see anything that is not published. -->
-                <AppTag v-else-if="d.published_version_id && readsDrafts" variant="quiet">
-                  {{ t('materials.published') }}
-                </AppTag>
+                <!-- Published is the usual state, and says nothing: only what is not is tagged, and only those
+                     who read drafts see anything that is not published. -->
                 <AppTag v-else-if="!d.published_version_id" tone="wait">
                   {{ t('materials.unpublished') }}
                 </AppTag>
@@ -191,7 +189,6 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   gap: 8px;
 }
 .materials__card {
-  padding: 8px;
   position: relative;
 }
 /* Files dragged over the page: the list is where they go. */
@@ -220,7 +217,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   min-height: 176px;
 }
 .materials__drop-hint {
-  margin: 8px 12px 4px;
+  margin: var(--app-space-sm) 0 0;
   font-size: var(--app-text-xs);
   color: var(--app-ink-3);
 }
@@ -230,20 +227,21 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
     display: none;
   }
 }
+/* Rows between rules, not boxes. */
 .material-list {
   list-style: none;
   margin: 0;
   padding: 0;
+  border-top: var(--app-rule);
 }
-.material-list li + li {
-  border-top: 1px solid var(--el-border-color-lighter);
+.material-list li {
+  border-bottom: var(--app-rule);
 }
 .material-row {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: var(--app-radius-item);
   color: inherit;
   text-decoration: none;
   min-width: 0;
@@ -252,21 +250,16 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   background: var(--el-fill-color-light);
 }
 .material-row.is-archived .material-row__title {
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
+/* Where the material comes in the course, a figure of the list's own: plain,
+   in the third ink, without a box around it. */
 .material-row__order {
   flex-shrink: 0;
-  min-width: 28px;
-  height: 28px;
-  padding: 0 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color);
-  color: var(--el-text-color-secondary);
-  font-size: var(--app-text-xs);
-  font-weight: var(--app-weight-strong);
+  min-width: 2ch;
+  text-align: right;
+  color: var(--app-ink-3);
+  font-size: var(--app-text-sm);
   font-variant-numeric: tabular-nums;
 }
 .material-row__main {
@@ -284,7 +277,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
 }
 .material-row__meta {
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   display: inline-flex;
   gap: 4px;
   align-items: center;
@@ -295,7 +288,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
   flex-shrink: 0;
 }
 .material-row__chevron {
-  color: var(--el-text-color-placeholder);
+  color: var(--app-ink-3);
   flex-shrink: 0;
 }
 @media (max-width: 480px) {
