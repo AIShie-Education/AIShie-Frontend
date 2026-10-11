@@ -179,11 +179,12 @@ function onUploaded(f: UploadedFile) {
   flex-direction: column;
   gap: 4px;
 }
+/* The new document's fields, held together by a rule at their left, not a
+   dashed box around a drop zone that is a box of its own. */
 .doc-choice__new {
   gap: 8px;
-  padding: 12px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: var(--app-radius-item);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
 }
 .doc-choice__select {
   width: 100%;

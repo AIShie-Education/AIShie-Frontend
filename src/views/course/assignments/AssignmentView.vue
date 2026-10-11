@@ -361,7 +361,7 @@ function refresh() {
           <span>
             <el-button
               type="danger"
-              plain
+              text
               :disabled="!course.writable || started || unpublishProposed"
               :loading="unpublishW.pending.value"
               @click="unpublish"
@@ -442,7 +442,6 @@ function refresh() {
                   class="assignment-view__doclink"
                 >
                   {{ t('assignments.detail.openDocument') }}
-                  <el-icon><ArrowRight /></el-icon>
                 </router-link>
               </h2>
               <p v-if="!assignment.instructions_document_id" class="app-muted assignment-view__none">
