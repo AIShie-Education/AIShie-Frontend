@@ -161,16 +161,20 @@ function proceed() {
 
 <template>
   <div class="app-auth-page welcome">
-    <div class="app-auth-page__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
-      </el-select>
-    </div>
+    <header class="app-auth-page__head">
+      <div class="app-auth-page__bar">
+        <AppWordmark class="app-auth-page__wordmark" decorative />
+        <div class="app-auth-page__lang">
+          <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+          </el-select>
+        </div>
+      </div>
+    </header>
     <div class="app-auth-page__card welcome__card">
       <div class="welcome__brand">
-        <AppWordmark class="app-auth-page__wordmark" decorative />
-        <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
-        <p class="welcome__tagline">{{ t('common.tagline') }}</p>
+        <h1 class="app-auth-page__title welcome__title">{{ t('auth.invite.title') }}</h1>
+        <p class="app-auth-page__sub welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-result v-if="done" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
@@ -254,40 +258,24 @@ function proceed() {
 </template>
 
 <style scoped>
-.welcome__card {
-  max-width: 440px;
-}
 .welcome__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
   margin-bottom: 20px;
-}
-.welcome__title {
-  margin: 0;
-  font-size: var(--app-text-2xl);
-  line-height: 1.3;
-}
-.welcome__tagline {
-  margin: 0;
-  font-size: var(--app-text-sm);
-  color: var(--el-text-color-secondary);
 }
 .welcome__intro {
   margin: 0 0 16px;
+  max-width: var(--app-measure);
   font-size: var(--app-text-md);
   line-height: var(--app-lh-text);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
 }
 .welcome__alert {
   margin-bottom: 16px;
 }
-.welcome__submit {
-  width: 100%;
-}
+/* A result (done, or the link not whole): its words and its one button at the column's left, as the page's are. */
 .welcome__result {
   padding: 8px 0 0;
+  align-items: flex-start;
+  text-align: left;
 }
 .welcome__done {
   margin: 0;

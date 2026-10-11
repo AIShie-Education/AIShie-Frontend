@@ -164,7 +164,6 @@ defineExpose({ clearPasswords })
 
 <style scoped>
 .join-register__submit {
-  width: 100%;
   margin-top: 4px;
 }
 </style>

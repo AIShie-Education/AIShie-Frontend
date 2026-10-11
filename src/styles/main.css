@@ -106,42 +106,75 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
-/* The pages before the app (signing in, an invitation, a join link, a password of one's own): one card
-   on the flat ground, as aishie.app sets its pages, the language at the top right. */
+/* The pages before the app (signing in, an invitation, a join link, a password of one's own), set as
+   aishie.app sets its pages: a header of one row, the wordmark at its left and the language at its right, ruled
+   under (56 px with its rule); and under it one column, at most 400 px, left-aligned at the wordmark's edge, on the
+   page's own ground: no card, no shadow. Both lie in the site's content column, 1152 px at most and its gutters
+   (24 px, 16 px on a phone). */
 .app-auth-page {
-  position: relative;
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 56px 16px 24px;
-  background: var(--app-ground);
+  flex-direction: column;
+  background: var(--app-page);
+  --app-auth-gutter: var(--app-space-xl);
 }
-.app-auth-page__lang {
-  position: absolute;
-  top: 16px;
-  right: 16px;
+@media (max-width: 600px) {
+  .app-auth-page {
+    --app-auth-gutter: var(--app-space-lg);
+  }
 }
+.app-auth-page__head {
+  flex-shrink: 0;
+  border-bottom: var(--app-rule);
+}
+.app-auth-page__bar,
 .app-auth-page__card {
-  width: 100%;
-  max-width: 420px;
-  background: var(--app-card);
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
-  padding: 32px 28px 24px;
-  box-shadow: var(--app-shadow-raised);
+  width: min(1152px, 100% - 2 * var(--app-auth-gutter));
+  margin-inline: auto;
 }
-.app-auth-page__wordmark {
-  margin-bottom: 16px;
+.app-auth-page__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-lg);
+  height: 55px;
 }
 /* Over the wordmark's own (scoped) 24 px height. */
 .app-auth-page .app-wordmark.app-auth-page__wordmark {
-  height: 32px;
+  flex-shrink: 0;
+  height: 28px;
 }
-@media (max-width: 480px) {
-  .app-auth-page__card {
-    padding: 24px 18px 20px;
+@media (max-width: 600px) {
+  .app-auth-page .app-wordmark.app-auth-page__wordmark {
+    height: 24px;
   }
+}
+.app-auth-page__card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 56px 0 48px;
+}
+.app-auth-page__card > * {
+  width: 100%;
+  max-width: 400px;
+}
+@media (max-width: 600px) {
+  .app-auth-page__card {
+    padding: 32px 0 32px;
+  }
+}
+/* The page's title and what follows it, as a page's header has them: the title, then a line under it. */
+.app-auth-page__title {
+  margin: 0;
+  font-size: var(--app-text-2xl);
+  line-height: var(--app-lh-heading);
+}
+.app-auth-page__sub {
+  margin: var(--app-space-sm) 0 0;
+  font-size: var(--app-text-md);
+  line-height: var(--app-lh-text);
+  color: var(--app-ink-3);
 }
 
 /* A card that holds a section of a page. */
@@ -267,7 +300,8 @@ tr.app-row-unpublished > td:first-child {
     max-width: calc(100vw - 24px);
   }
 }
-/* The app's navigation, when it is a drawer on a narrow screen. */
+/* The app's navigation, when it is a drawer on a narrow screen: on the paper, as the side bar is, ruled at its
+   right edge (styles/overlays.css), square. */
 .app-nav-drawer .el-drawer__body {
   padding: 0;
   background: var(--app-ground);

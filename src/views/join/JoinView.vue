@@ -237,14 +237,17 @@ function goToCourse(courseId: string) {
 
 <template>
   <div class="app-auth-page join">
-    <div class="app-auth-page__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
-      </el-select>
-    </div>
+    <header class="app-auth-page__head">
+      <div class="app-auth-page__bar">
+        <AppWordmark class="app-auth-page__wordmark" decorative />
+        <div class="app-auth-page__lang">
+          <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+          </el-select>
+        </div>
+      </div>
+    </header>
     <main class="app-auth-page__card join__card" :aria-busy="loading || leaving">
-      <AppWordmark class="app-auth-page__wordmark" decorative />
-
       <div v-if="loading" v-loading="true" class="join__loading" />
 
       <el-result
@@ -364,7 +367,7 @@ function goToCourse(courseId: string) {
                 <router-link :to="signInRoute" class="join__path">
                   <el-button type="primary" size="large" class="join__primary">{{ t('join.page.signIn') }}</el-button>
                 </router-link>
-                <el-button v-if="mayRegister" size="large" class="join__primary" @click="registering = true">
+                <el-button v-if="mayRegister" text size="large" class="join__primary" @click="registering = true">
                   {{ t('join.page.register') }}
                 </el-button>
               </div>
@@ -403,9 +406,6 @@ function goToCourse(courseId: string) {
 </template>
 
 <style scoped>
-.join__card {
-  max-width: 460px;
-}
 .join__loading {
   min-height: 160px;
 }
@@ -414,47 +414,46 @@ function goToCourse(courseId: string) {
   font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
+/* The course, then its facts: rows between rules, no box. */
 .join__course {
-  margin: 4px 0 16px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: var(--app-indigo-tint);
+  margin: 8px 0 16px;
+  padding: 12px 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .join__code {
   font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.02em;
-  color: var(--el-color-primary);
+  color: var(--app-indigo);
   word-break: break-word;
 }
 .join__title {
   margin: 4px 0 0;
   font-size: var(--app-text-2xl);
-  line-height: 1.3;
+  line-height: var(--app-lh-heading);
   word-break: break-word;
 }
 .join__what {
   margin: 0 0 12px;
+  max-width: var(--app-measure);
   line-height: var(--app-lh-text);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
 }
-.join__time {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  margin: -4px 0 12px;
-  font-size: var(--app-text-sm);
-  font-variant-numeric: tabular-nums;
-  color: var(--el-text-color-regular);
-}
+.join__time,
 .join__domains {
   display: flex;
   gap: 6px;
   align-items: flex-start;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
+  padding-bottom: 12px;
+  border-bottom: var(--app-rule);
   font-size: var(--app-text-sm);
   line-height: var(--app-lh-ui);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
+}
+.join__time {
+  align-items: center;
+  font-variant-numeric: tabular-nums;
 }
 .join__domains .el-icon {
   margin-top: 3px;
@@ -479,12 +478,13 @@ function goToCourse(courseId: string) {
   margin-bottom: 12px;
 }
 .join__primary {
-  width: 100%;
   margin: 0;
 }
+/* Signing in (the one solid button), then registering as words, each as wide as its words. */
 .join__paths {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
 }
 .join__path {
@@ -493,18 +493,21 @@ function goToCourse(courseId: string) {
 .join__subtitle {
   margin: 8px 0 12px;
   font-size: var(--app-text-lg);
+  line-height: var(--app-lh-heading);
 }
 .join__switch {
   margin: 14px 0 0;
   font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
-  text-align: center;
 }
 .join__instead {
   margin-top: 6px;
 }
+/* A result (the link not valid, closed, not read): its words and its button at the column's left. */
 .join__result {
   padding: 8px 0 0;
+  align-items: flex-start;
+  text-align: left;
 }
 .join__result--closed {
   padding-top: 0;

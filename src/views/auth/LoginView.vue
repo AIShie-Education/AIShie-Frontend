@@ -178,16 +178,20 @@ function sso(m: SsoMethod) {
 
 <template>
   <div class="app-auth-page login">
-    <div class="app-auth-page__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
-      </el-select>
-    </div>
+    <header class="app-auth-page__head">
+      <div class="app-auth-page__bar">
+        <AppWordmark class="app-auth-page__wordmark login__wordmark" />
+        <div class="app-auth-page__lang">
+          <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+          </el-select>
+        </div>
+      </div>
+    </header>
     <main class="app-auth-page__card login__card">
       <div class="login__brand">
-        <AppWordmark class="app-auth-page__wordmark login__wordmark" />
-        <p class="login__tagline">{{ t('common.tagline') }}</p>
-        <h1 class="login__title">{{ t('auth.title') }}</h1>
+        <h1 class="app-auth-page__title login__title">{{ t('auth.title') }}</h1>
+        <p class="app-auth-page__sub login__tagline">{{ t('common.tagline') }}</p>
       </div>
 
       <el-alert v-if="serverDown" type="warning" :title="t('auth.serverDown')" :closable="false" show-icon class="login__alert" />
@@ -199,6 +203,7 @@ function sso(m: SsoMethod) {
           v-for="(m, i) in ssoMethods"
           :key="m.start"
           :type="i === 0 ? 'primary' : undefined"
+          :text="i > 0"
           size="large"
           class="login__submit login__sso"
           @click="sso(m)"
@@ -262,24 +267,7 @@ function sso(m: SsoMethod) {
 
 <style scoped>
 .login__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
   margin-bottom: 24px;
-}
-.login__wordmark {
-  margin-bottom: 4px;
-}
-.login__tagline {
-  margin: 0 0 20px;
-  font-size: var(--app-text-sm);
-  color: var(--app-ink-3);
-}
-.login__title {
-  margin: 0;
-  font-size: var(--app-text-2xl);
-  line-height: 1.3;
 }
 .login__alert {
   margin-bottom: 16px;
@@ -287,27 +275,29 @@ function sso(m: SsoMethod) {
 .login__waiting {
   min-height: 96px;
 }
-.login__submit {
-  width: 100%;
-}
+/* The one solid button, as wide as its words: single sign-on's first method, or signing in. */
 .login__sso-list {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   gap: 10px;
 }
-/* The link below keeps its own margins: centred under the buttons, as it is under the password form. */
-.login__sso-list .el-button + .el-button:not(.login__other) {
+.login__sso-list .el-button + .el-button {
   margin-left: 0;
 }
-/* A long name keeps to the card's width. */
+/* A long name keeps to the column's width. */
+.login__sso {
+  max-width: 100%;
+}
 .login__sso :deep(span) {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* The other way in: words in the indigo, under the button, at the column's left. */
 .login__other {
   display: flex;
   width: fit-content;
-  margin: 16px auto 0;
+  margin: 16px 0 0;
 }
 </style>
