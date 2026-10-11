@@ -664,8 +664,38 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 ## Building a view
 
 - Every page starts with `<PageHeader :title :subtitle :back>` with its primary actions in the
-  default slot, then content in `.app-card` sections (`.app-card__title` for a section heading).
-  Actions that are all `v-if`'d away leave no empty row. Its title is the page's one `<h1>`: nothing
+  default slot, then content in sections, `.app-card` (`.app-card__title` for a section heading,
+  18 px in the serif, its row's actions at its right end). Actions that are all `v-if`'d away leave
+  no empty row. **A section is a rule and room, never a card** (design wave 3, after aishie.app,
+  whose sections are parted that way: rounded cards, and the rows boxed again inside them, are what
+  made the app read as a generated dashboard beside the site). It is a 1 px rule above it in the
+  site's line (`--app-rule`), 24 px under the rule and 32 px to the next section (16 and 24 on a
+  phone), and nothing else: no ground, no frame, no corners and no padding at its sides, so that
+  nothing laid in it can read as a card in a card, and what it holds is as wide as the page. What a
+  section lists, it lists as rows between rules (a rule above the first, one under each; the site's
+  line, not Element Plus's softer one), tinted under the pointer where the row opens something,
+  and keeping its › at its end there; a mark a row carries (not published, waiting on the reader,
+  new, the one shown) is a 3 px line at its left, square-ended, never a tinted box. A box (the
+  site's line, 2 px corners, no ground of its own, no shadow) is kept for one thing the reader
+  operates as a whole: a proposal with its decision in the approvals queue, a course on the home
+  page, a file, a group in a set and the place for the students in none, the chat's composer; never
+  a stack of boxed rows, and never a box in a box. Quoted words (an agent's message, a proposed
+  answer, a total's comment) have a 2 px rule at their left; a block set apart in a dialog (what will
+  be posted, what is fixed) lies between rules; figures that stand side by side (a work's counts,
+  the runtime's totals) are parted by a vertical rule, not set in tiles; choices with words under
+  each are plain radios on rows between rules. No icon stands beside a section's title or repeats a
+  fact's words (the kind's glyph that tells a list's rows apart stays, at the text's size, without a
+  circle behind it), no › follows a text link (All assignments, Details), and a heading over a
+  group of rows is a plain sub-heading in the second ink, in the case it is written in, never small
+  grey capitals. A status a list would show the same on every row is not shown (Published on each
+  material, the members' Status column while every seat is active, Built in on each preset while
+  no department's are beside them, a role tag where the reader's roles do not differ), and a page
+  says its thing's state once, in its facts, not again beside its title. `npm run lint` refuses
+  Element Plus's card, a bordered checkbox or radio, and a button made outlined, a pill or a disc
+  (`plain`, `round`, `circle`) wherever a template writes one (`eslint.config.js`, ELEMENT_LOOK,
+  with `src/lint/elementLook.spec.ts`); `e2e/screens-style.spec.ts` reads every screen's computed
+  styles for a section drawn as a card, a box in a box, a corner over 4 px, a shadow, an eyebrow and
+  a second solid primary. Its title is the page's one `<h1>`: nothing
   else the app draws on a page is one (headings inside rendered material, a document's or an
   assignment's Markdown, are the author's, and are left as they wrote them).
 - **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
@@ -854,10 +884,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   end, as undoing final grades is beside posting them.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
-  it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
+  it lies on its section, on the page (`styles/element.css`), white being a field's alone, its rows
+  ruled in the site's line, and a column of figures is
   right-aligned, where its digits line up (`tabular-nums`; `data-num` elsewhere). `el-descriptions`
-  with `border` is drawn as rows parted by a thin line on the card, not a boxed grid, and a collapse
-  (`el-collapse`: All permissions, an action's raw JSON) lies on its card, its header and what it
+  with `border` is drawn as rows parted by a thin line on the page, not a boxed grid, and a collapse
+  (`el-collapse`: All permissions, an action's raw JSON) lies on its section, its header and what it
   opens on without Element Plus's white band.
 - **The whole class's gradebook** (`/gradebook` for staff before a student is chosen: `ClassGradebook`
   in `views/course/grades/components/`; a student, or a chosen student, has `GradebookView` as before)
@@ -1021,8 +1052,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - A page's two columns follow the page's own width, not the window's, since the side bar takes from it
   (the chat's window floats over the page, and takes nothing): the view's root is an inline-size container (`container-type:
   inline-size`), and an `@container (max-width: …)` stacks the columns where the main one would be
-  left less than about 420 px (the overview at 800 px of page, an assignment at 740, two cards of an
-  actor's page at 856). A course's tabs keep to one row at any width, never wrapped: as many as fit
+  left less than about 420 px beside the other and the 32 px between them (the overview at 816 px of
+  page, an assignment at 756, two sections of an actor's page at 872). A course's tabs keep to one row at any width, never wrapped: as many as fit
   by the strip's own width show (`fitTabs`, from each tab's width laid out unseen), and only those
   that do not fit are under More (更多 ▾) in the last place, each still a link (its address to open
   in a new tab or to copy), More marked as the tab chosen while the page is one of them. On a phone,
@@ -1037,11 +1068,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   prices and quotas per person, the gradebook) or leaves out no more than an ID (the departments,
   the terms) or when a course was created, which its own page shows (the courses). A phone's
   layout, a card per row, or a fold that leaves out more, switches where the page is as narrow as
-  in a window of 640 px without the side bar: 592 px of page, 542 of a card's content (the members,
-  a member's page, My actions and the people, which switched at 767 px, at 719 and 669). Measure a
-  part as wide as the card that no `el-table` changes the size of, its title or its toolbar, never
-  the card around an `el-table`, which lays itself out again from a `ResizeObserver` of its own
-  (the card would change height in that observer's callback, a loop the browser reports). What the
+  in a window of 640 px without the side bar: 592 px of page, as much of a section's, which has no
+  padding of its own (the members, a member's page, My actions and the people, which switched at
+  767 px, at 719). Measure a part as wide as the section that no `el-table` changes the size of,
+  its title or its toolbar, never the section around an `el-table`, which lays itself out again
+  from a `ResizeObserver` of its own (the section would change height in that observer's callback,
+  a loop the browser reports). What the
   switch itself changes in the measured part is safe, a toolbar's row that wraps, say: the switch
   is never made in an observer's callback, but a task later or on the window's `resize`. A table
   whose columns, or their widths, follow the switch is given it with `useTableRelayout(table,
@@ -1051,12 +1083,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   out again in its callback, a loop the browser reports (as the side bar opens on the members, at
   900 px of window). The unit tests give elements widths with `fakeContainerWidths()`
   (`@/composables/containerWidthFakes`), and without it jsdom shows the wide layout. A dialog's
-  breakpoints, and a phone's CSS (a card's padding, a filter taking the toolbar's whole row, at
-  640 px and narrower), stay `@media` queries on the window. Columns of
-  cards use the shared `.app-columns` (the grid) and `.app-column` (a stack of cards, 16 px apart)
-  from `styles/main.css`: side by side, both columns are as tall as their row and the last card of
-  each grows to fill it, so that they end on one line, with what each card holds at its top;
-  stacked, nothing grows. Leave `align-items` off such a grid, or it wins over `.app-columns`.
+  breakpoints, and a phone's CSS (a section's room, a filter taking the toolbar's whole row, at
+  640 px and narrower), stay `@media` queries on the window. Columns of sections use the shared
+  `.app-columns` (the grid, its columns 32 px apart) and `.app-column` (a stack of sections, 32 px
+  apart) from `styles/main.css`: a view's grid sets its columns and its container query, never its
+  gap. Side by side, each column is as tall as what it holds: with no boxes there is no edge to
+  end on one line, and no rule between the columns but room.
 - Short ids: `shortId(id)` / `<IdText>` show the *end* of an id. Core's ids are UUIDv7, whose
   first characters are a timestamp shared by everything made in the same moment.
   `<IdText>` is quiet (the smallest step, `--app-text-xs`, the third ink, its copy button on
