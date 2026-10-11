@@ -105,14 +105,17 @@ watch(open, (v) => {
           <ul class="agent-log__rows">
             <li v-for="c in items" :key="c.id">
               <button type="button" class="log-row" @click="shown = c.id">
-                <span class="log-row__line">
-                  <span class="log-row__name">{{ c.opener.display_name }}</span>
-                  <span class="log-row__time"><TimeText :value="c.last_message_at ?? c.created_at" relative /></span>
+                <span class="log-row__body">
+                  <span class="log-row__line">
+                    <span class="log-row__name">{{ c.opener.display_name }}</span>
+                    <span class="log-row__time"><TimeText :value="c.last_message_at ?? c.created_at" relative /></span>
+                  </span>
+                  <span class="log-row__line">
+                    <span class="log-row__title">{{ c.title || t('chat.history.untitled') }}</span>
+                    <StatusTag vocab="conversationState" :value="stateOf(c)" />
+                  </span>
                 </span>
-                <span class="log-row__line">
-                  <span class="log-row__title">{{ c.title || t('chat.history.untitled') }}</span>
-                  <StatusTag vocab="conversationState" :value="stateOf(c)" />
-                </span>
+                <el-icon class="log-row__go"><ArrowRight /></el-icon>
               </button>
             </li>
           </ul>
@@ -151,11 +154,12 @@ watch(open, (v) => {
 .agent-log__rows > li {
   border-bottom: var(--app-rule);
 }
-/* A conversation, a row between rules that opens it: not a box each. */
+/* A conversation, a row between rules that opens it, as the › at its end
+   says: not a box each. */
 .log-row {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  gap: var(--app-space-sm);
   width: 100%;
   padding: 9px var(--app-space-sm);
   border: 0;
@@ -168,6 +172,17 @@ watch(open, (v) => {
 .log-row:hover,
 .log-row:focus-visible {
   background: var(--el-fill-color-light);
+}
+.log-row__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.log-row__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .log-row__line {
   display: flex;

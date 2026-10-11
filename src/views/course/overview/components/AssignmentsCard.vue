@@ -130,27 +130,30 @@ const groups = computed(() => [
             class="assignments__row"
             :class="{ 'is-urgent': r.urgent }"
           >
-            <span class="assignments__main">
-              <span class="assignments__name">{{ r.a.title }}</span>
-              <span class="assignments__meta">
-                <span>{{ t('overview.assignments.due') }}</span>
-                <TimeText :value="r.a.due_at" relative cutoff />
-                <span class="assignments__dot">·</span>
-                <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
+            <span class="assignments__body">
+              <span class="assignments__main">
+                <span class="assignments__name">{{ r.a.title }}</span>
+                <span class="assignments__meta">
+                  <span>{{ t('overview.assignments.due') }}</span>
+                  <TimeText :value="r.a.due_at" relative cutoff />
+                  <span class="assignments__dot">·</span>
+                  <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
+                </span>
+              </span>
+              <span class="assignments__tags">
+                <AppTag v-if="!r.a.published_at" tone="wait">
+                  {{ t('overview.assignments.unpublished') }}
+                </AppTag>
+                <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
+                <AppTag
+                  v-else-if="r.standing?.none"
+                  :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
+                >
+                  {{ t(`overview.assignments.${r.standing.none}`) }}
+                </AppTag>
               </span>
             </span>
-            <span class="assignments__tags">
-              <AppTag v-if="!r.a.published_at" tone="wait">
-                {{ t('overview.assignments.unpublished') }}
-              </AppTag>
-              <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
-              <AppTag
-                v-else-if="r.standing?.none"
-                :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
-              >
-                {{ t(`overview.assignments.${r.standing.none}`) }}
-              </AppTag>
-            </span>
+            <el-icon class="assignments__go"><ArrowRight /></el-icon>
           </router-link>
         </div>
       </template>
@@ -186,17 +189,30 @@ const groups = computed(() => [
   margin: 0;
   font-size: var(--app-text-sm);
 }
-/* Rows between rules; one due within days has the amber line at its left. */
+/* Rows between rules, each opening its assignment, as the › at its end
+   says (a tint under the pointer alone is not seen on a touch screen); one
+   due within days has the amber line at its left. */
 .assignments__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--app-space-md);
-  flex-wrap: wrap;
   padding: var(--app-space-md) var(--app-space-sm) var(--app-space-md) var(--app-space-md);
   border-bottom: var(--app-rule);
   color: var(--app-ink);
   text-decoration: none;
+}
+.assignments__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm) var(--app-space-md);
+  flex-wrap: wrap;
+}
+.assignments__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .assignments__row:first-of-type {
   border-top: var(--app-rule);

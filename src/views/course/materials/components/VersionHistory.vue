@@ -162,7 +162,7 @@ function linkTo(v: DocumentVersion) {
   gap: 4px;
 }
 .version-item.is-shown {
-  box-shadow: inset 2px 0 0 var(--app-indigo);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
 }
 .version-item__head {
   display: flex;

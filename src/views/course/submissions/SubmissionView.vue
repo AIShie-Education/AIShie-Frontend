@@ -349,6 +349,7 @@ function onGraded() {
                 <StatusTag vocab="submissionState" :value="x.state" />
                 <span v-if="x.submitted_at" class="app-muted"><TimeText :value="x.submitted_at" /></span>
                 <span v-if="x.id === s.id" class="attempts__current">{{ t('submissions.detail.current') }}</span>
+                <el-icon v-else class="attempts__go"><ArrowRight /></el-icon>
               </router-link>
             </li>
           </ul>
@@ -511,7 +512,7 @@ function onGraded() {
   background: var(--el-fill-color-light);
 }
 .attempts__row.is-current {
-  box-shadow: inset 2px 0 0 var(--app-indigo);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
 }
 .attempts__n {
   font-weight: 500;
@@ -520,5 +521,11 @@ function onGraded() {
   margin-left: auto;
   font-size: var(--app-text-xs);
   color: var(--el-color-primary);
+}
+/* Another attempt opens, as the › at its end says: the one shown says so instead. */
+.attempts__go {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 </style>

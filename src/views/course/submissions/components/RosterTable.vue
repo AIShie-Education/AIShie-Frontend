@@ -276,21 +276,24 @@ const emptyText = computed(() =>
             :to="submissionRoute(row)"
             class="roster-cards__item roster-cards__link"
           >
-            <div class="roster-cards__top">
-              <span class="roster-cards__name">
-                <span v-if="row.display_name">{{ row.display_name }}</span>
-                <MemberName v-else :id="row.student_member_id" />
-                <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
-              </span>
-              <WorkStateTag :value="row.state" />
+            <div class="roster-cards__body">
+              <div class="roster-cards__top">
+                <span class="roster-cards__name">
+                  <span v-if="row.display_name">{{ row.display_name }}</span>
+                  <MemberName v-else :id="row.student_member_id" />
+                  <StatusTag v-if="showsSeatStatus(row)" vocab="memberStatus" :value="row.member_status" />
+                </span>
+                <WorkStateTag :value="row.state" />
+              </div>
+              <div class="roster-cards__meta">
+                <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
+                <span v-if="otherWorkText(row)">{{ otherWorkText(row) }}</span>
+                <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
+                <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
+                <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
+              </div>
             </div>
-            <div class="roster-cards__meta">
-              <span v-if="groupMode && groupOf(row)">{{ groupOf(row) }}</span>
-              <span v-if="otherWorkText(row)">{{ otherWorkText(row) }}</span>
-              <span v-if="row.attempt">{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
-              <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
-              <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
-            </div>
+            <el-icon class="roster-cards__go"><ArrowRight /></el-icon>
           </router-link>
           <div v-else class="roster-cards__item">
             <div class="roster-cards__top">
@@ -468,6 +471,24 @@ const emptyText = computed(() =>
   padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
+}
+/* A student's row that opens their work: the › at its end says so, as a
+   tint under the pointer cannot on a touch screen. */
+.roster-cards__link {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--app-space-sm);
+}
+.roster-cards__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.roster-cards__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .roster-cards__link:active,
 .roster-cards__link:hover {
