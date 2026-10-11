@@ -803,9 +803,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
-- **Ink** comes in three steps, 1.5:1 or more apart: `--app-ink` for text, `--app-ink-2` for what is
-  secondary to it, `--app-ink-3` for the meta beside it (a time, a column's heading, a hint, a
-  permission's key); the placeholder's ink is quieter still, for a field's placeholder. The three
+- **Ink** comes in three steps, aishie.app's three in the light theme: `--app-ink` (#1c1c1c, the site's
+  `--ink`) for headings, names and the interface's words; `--app-ink-2` (#3a3a3a, `--ink-body`) for
+  running text, a note's, rendered Markdown's, a chat's answer's, a description's, and what is
+  secondary to the ink; `--app-ink-3` (#5a5d68, `--ink-3`) for the meta beside them (a time, a
+  column's heading, a hint, a permission's key). The first two are 1.4:1 or more apart, the second and
+  third 1.5:1 (the dark theme keeps its own third, #a19f98: the site's is 1.41:1 from its second). The
+  placeholder's ink is quieter still, for a field's placeholder. The three
   inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
   fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
   fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
@@ -815,6 +819,42 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
   (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
   colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
+  It also writes out what the app shares with aishie.app's `:root` (navy, amber, paper, line, the
+  field's edge, the inks, the state colours, the corner, the rule, the leading, the measure), by the
+  site's names, and fails when one side changes alone; a value the app keeps of its own is listed there
+  with why. The page column (its header and its page) is read on `--app-page`, the ivory, and the paper
+  (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
+  paper, would add to the warm paper, the serif and the amber dot, which the app is not to add to. The
+  brand is the navy; the amber (`--app-light`) is the logo's dot alone, never an avatar's, an empty
+  place's or the chat's (the wait colour is a state's, not the amber).
+- **Shapes** are aishie.app's, an academic publication's: straight corners and thin rules, never the
+  rounded cards on shadows and the pills that read as a generated app beside the site. Every box has
+  2 px corners (`var(--app-radius)`): a control, a field, a tag, a chip, a badge, a dialog, a menu, a
+  tooltip, a box around one thing the reader operates as a whole; a section of a page, a drawer, a
+  phone's sheet and the docked chat have none (`--app-radius-card`). Nothing is rounder than 4 px but a
+  mark as wide as it is tall: a person's avatar, a dot (`AskableDot`, the activity's live dot, an unread
+  dot), a radio's circle, a timeline's point. Sections are parted by a rule (`var(--app-rule)`, the
+  site's 1 px line) and room, not by cards; a box (a 1 px line, 2 px corners, no ground of its own)
+  is kept for one thing operated as a whole (a proposal with its decision, a course on the home page, a
+  file, a group in the groups' editor, the chat's composer), a list of such things is rows between
+  rules, and nothing is a box in a box. Nothing casts a shadow and nothing is frosted: what floated on
+  a shadow is docked, or parted from the page by its edge. A line may be drawn as a shadow (blur 0: a
+  field's inset edge, a one-sided rule as the unpublished row's, a ring of 2 px or less). No gradient
+  fills anything; the two that say something are the course tabs' fade at an end with more tabs (a
+  mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
+  (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
+  doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
+  anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
+  for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
+  the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
+  outside `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two
+  named; in `tokens.css` every corner is 4 px or less and every shadow none. While design wave 3 is
+  under way, `src/styles/shapes.pending.ts` lists what its parts still convert, a file or a file's one
+  rule, and fails on an entry that no longer offends, so that it only shrinks. `e2e/styleAudit.ts`
+  measures the same as the browser draws it (`shapeOffences`), with `soloPrimary`, the solid buttons of
+  a page and of each dialog over it, and `e2e/shapes.spec.ts` holds Element Plus's overlays to it in
+  both themes; `scripts/style-audit.mjs` photographs the main screens with what it finds, for a
+  change's before and after.
 - Markdown: `<MarkdownView :source />` to show, `<MarkdownEditor v-model />` to write. Never use
   `v-html` with anything else. Images load only from this origin (or inline `data:`); one from
   elsewhere is shown as a link to it, so a text cannot tell another host who read it.
@@ -830,15 +870,25 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
   a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
   line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
-  2em (a heading in rendered Markdown), never smaller: the text around may be Chinese at 13 px. Strong
+  2em, never smaller: the text around may be Chinese at 13 px. Strong
   text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
   Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
   no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
   rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
   is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
-  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (an empty place's line), `--app-lh-text`
-  (1.6; 1.75) for a paragraph (a note, where data goes) and `--app-lh-prose` (1.7; 1.85) for rendered
-  Markdown. A token read is a token set: `src/styles/customProperties.spec.ts` fails on a
+  `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (a label, a cell, a button, an empty
+  place's line); `--app-lh-text` for a paragraph (a note, where data goes) and `--app-lh-prose` for
+  rendered Markdown and a chat's answers, both 1.7 in every language, the site's (its spec found
+  Chinese at about 1.9 too loose: design wave 2 had 1.75 and 1.85 in Chinese, 1.6 and 1.7 in
+  English); and `--app-lh-heading`, 1.25, the site's too, for a page's, a section's, a dialog's and a
+  drawer's title and the headings of rendered Markdown. Running text stops at `var(--app-measure)`,
+  34em of its own size, as every paragraph of the site does: rendered Markdown's paragraphs, items and
+  quotations (a table and a listing run the column's width), a note, a page's subtitle; a line of 70
+  Han characters across a laptop's page is hard to read. An author's headings in rendered Markdown
+  are a step under the page's title, whatever level they were written at: `#` 18 px (`-xl`), `##` 16
+  (`-lg`), `###` the text's 15 in the strong weight, so that the page's own `h1` stays its largest
+  heading (`#` was 1.6em, 24 px, as large as the title). A token read is a token set:
+  `src/styles/customProperties.spec.ts` fails on a
   `var(--app-…)` that no style sheet, component or script sets, which a browser would take for
   nothing and leave the element to inherit. Element Plus's sizes are mapped
   onto the same steps (`styles/element.css`): its six, its components' own variables, and every rule
