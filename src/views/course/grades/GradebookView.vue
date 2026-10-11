@@ -920,10 +920,8 @@ watch(
 }
 .gradebook__comment {
   margin-top: 10px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--el-color-primary-light-5);
-  background: var(--el-fill-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-indigo-line);
 }
 .gradebook__comment-label {
   display: flex;

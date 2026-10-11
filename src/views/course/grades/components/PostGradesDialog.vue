@@ -114,10 +114,11 @@ async function submit() {
   margin: 0 0 12px;
   line-height: var(--app-lh-text);
 }
+/* What will be posted: a block between rules, not a grey box in the dialog. */
 .post-dialog__what {
-  background: var(--el-fill-color-light);
-  border-radius: var(--app-radius-item);
-  padding: 10px 12px;
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   margin-bottom: 16px;
 }
 .post-dialog__what-title {

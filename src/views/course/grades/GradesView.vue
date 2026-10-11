@@ -643,18 +643,12 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
-}
-/* On a phone, the chat's round button floats at the screen's bottom right,
-   where the toolbar's ⋯ would be under it when the page opens: the toolbar
-   keeps clear of that column (the button's size and its 16 px inset). */
-.has-chat-fab .grades-view__post {
-  padding-right: calc(var(--app-fab-size, 48px) + 16px);
 }
 .grades-view__post-hint {
   margin: 0;

@@ -439,10 +439,13 @@ function meanHint(col: MatrixColumn): string {
 
 <style scoped>
 /*
- * The table scrolls in a box of its own, so that its header row stays at
+ * The table scrolls in a place of its own, so that its header row stays at
  * the top and the names at the left as it scrolls either way, and the
  * averages at its foot. Rows are a fixed 44 px, which the drawing of only
- * the rows near the screen relies on.
+ * the rows near the screen relies on. It is drawn in rules alone, as every
+ * table is: a rule between rows, a stronger one under the header and above
+ * the foot, and one at the right of the names held in place; no frame
+ * around it and no grid of cells.
  */
 .matrix {
   position: relative;
@@ -451,8 +454,6 @@ function meanHint(col: MatrixColumn): string {
   overflow: auto;
   /* Until it is measured (fit): about what is above it in a window of 1280. */
   max-height: max(360px, calc(100dvh - 440px));
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
   overscroll-behavior: contain;
 }
 .matrix:focus-visible {
@@ -469,9 +470,8 @@ function meanHint(col: MatrixColumn): string {
 .matrix__table th,
 .matrix__table td {
   padding: 0 8px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  border-right: 1px solid var(--el-border-color-extra-light);
-  background: var(--app-card, var(--el-bg-color));
+  border-bottom: var(--app-rule);
+  background: var(--app-page);
   box-sizing: border-box;
 }
 .matrix__row {
@@ -499,7 +499,7 @@ function meanHint(col: MatrixColumn): string {
   padding-bottom: 6px;
   text-align: left;
   font-weight: 500;
-  border-bottom: 1px solid var(--el-border-color);
+  border-bottom: 1px solid var(--app-line-strong);
 }
 .matrix__table tbody th,
 .matrix__table tfoot th {
@@ -508,19 +508,19 @@ function meanHint(col: MatrixColumn): string {
   z-index: 1;
   text-align: left;
   font-weight: 400;
-  border-right: 1px solid var(--el-border-color);
+  border-right: 1px solid var(--app-line-strong);
 }
 .matrix__table thead th.matrix__corner {
   left: 0;
   z-index: 3;
-  border-right: 1px solid var(--el-border-color);
+  border-right: 1px solid var(--app-line-strong);
 }
 .matrix__table tfoot th,
 .matrix__table tfoot td {
   position: sticky;
   bottom: 0;
   height: 40px;
-  border-top: 1px solid var(--el-border-color);
+  border-top: 1px solid var(--app-line-strong);
   border-bottom: 0;
   background: var(--el-fill-color-light);
   font-weight: var(--app-weight-strong);
@@ -625,7 +625,7 @@ function meanHint(col: MatrixColumn): string {
 .matrix__status {
   flex-shrink: 0;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 16px;
   border: 1px solid currentColor;
@@ -711,7 +711,7 @@ function meanHint(col: MatrixColumn): string {
   display: inline-block;
   overflow: clip;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 17px;
   white-space: nowrap;
