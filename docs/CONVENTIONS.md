@@ -696,8 +696,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no ground of its own, no shadow) is kept for one thing the reader operates as a whole: a proposal
   with its decision in the approvals queue, a course on the home page, a file, a group in a set and
   the place for the students in none, the chat's composer; never a stack of boxed rows, and never
-  a box in a box. The queue has one solid button: the first proposal's Approve (oldest first, it is
-  the next to decide), and, once a decision is opened on any proposal, that decision's confirm
+  a box in a box. The queue has one solid button: the Approve of the first proposal the reader can
+  decide (oldest first, it is the next to decide; one of their own or their own agent's, one whose
+  decision of theirs waits for approval, and any in an archived course, whose buttons are off or
+  not there, lead nobody to it: `DecidePanel`'s `decidable`), and, once a decision is opened on any proposal, that decision's confirm
   instead, the first's Approve turning to indigo words meanwhile (`DecidePanel`'s `lead`, which
   `ApprovalsView` moves to the decision opened last). Quoted words (an agent's message, a proposed
   answer, a total's comment) have a 2 px rule at their left; a block set apart in a dialog (what will

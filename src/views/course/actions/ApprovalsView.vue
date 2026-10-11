@@ -70,9 +70,12 @@ function count(list: { items: { value: unknown[] }; hasMore: { value: boolean } 
 
 /**
  * A queue has one solid button (docs/CONVENTIONS.md, "Buttons"). While no
- * decision is open it is the first's Approve: the queue is oldest first, so
- * that one is the next to decide. Once one is opened, wherever in the queue,
- * it is that decision's confirm, and the first's Approve is indigo words
+ * decision is open it is the Approve of the first proposal the reader can
+ * decide: the queue is oldest first, so that one is the next to decide, and
+ * one they cannot (their own, their own agent's, one whose decision of theirs
+ * waits for approval, any in an archived course: its buttons off or not
+ * there) leads nobody to it. Once one is opened, wherever in the queue, it is
+ * that decision's confirm, and the first's Approve is indigo words
  * meanwhile, as the others' are; with several open, the one opened last.
  * The decisions open, in the order they were opened, by their action's id.
  */
@@ -80,9 +83,16 @@ const opened = ref<string[]>([])
 function choosing(id: string, isOpen: boolean) {
   opened.value = [...opened.value.filter((x) => x !== id), ...(isOpen ? [id] : [])]
 }
+/** The proposals the reader cannot decide, as each one's panel says (DecidePanel's decidable). */
+const undecidable = reactive(new Set<string>())
+function decidable(id: string, can: boolean) {
+  if (can) undecidable.delete(id)
+  else undecidable.add(id)
+}
 function leads(items: ActionRow[], i: number): boolean {
   const latest = [...opened.value].reverse().find((id) => items.some((a) => a.id === id))
-  return latest ? items[i]!.id === latest : i === 0
+  if (latest) return items[i]!.id === latest
+  return i === items.findIndex((a) => !undecidable.has(a.id))
 }
 
 interface Recent {
@@ -331,8 +341,8 @@ function toggleRules() {
             @retry="reloadProposed"
           >
             <div class="approvals__list">
-              <!-- One solid button in the queue (leads): the first's Approve, the queue being oldest first, or the
-                   confirm of the decision opened last. -->
+              <!-- One solid button in the queue (leads): the Approve of the first the reader can decide, the queue
+                   being oldest first, or the confirm of the decision opened last. -->
               <ActionCard
                 v-for="(a, i) in proposed.items.value"
                 :key="a.id"
@@ -343,6 +353,7 @@ function toggleRules() {
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'proposed')"
                 @choosing="(open) => choosing(a.id, open)"
+                @decidable="(can) => decidable(a.id, can)"
               />
             </div>
             <LoadMore :has-more="proposed.hasMore.value" :loading="proposed.loading.value" @more="proposed.loadMore" />
@@ -375,6 +386,7 @@ function toggleRules() {
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'review')"
                 @choosing="(open) => choosing(a.id, open)"
+                @decidable="(can) => decidable(a.id, can)"
               />
             </div>
             <LoadMore :has-more="review.hasMore.value" :loading="review.loading.value" @more="review.loadMore" />
