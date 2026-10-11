@@ -9,8 +9,8 @@ import { coursePath, demo, signIn, signInAsRoot } from './support'
 // only a stroke (an inset line, or a ring with no blur and no offset); no button but the one main action
 // and a confirmation's last step has a ground, and none has an edge (a text button's is none); an agent's
 // avatar carries no light of the brand's; a note and where data goes have no ground and no box, a rule at
-// their left; an empty place draws no picture. Element Plus's own round marks (a radio, a dot) are not
-// these components, and are left to A's audit of every element.
+// their left; an empty place draws no picture (an action in its slot keeps its icon). Element Plus's own
+// round marks (a radio, a dot) are not these components, and are left to the audit of every element.
 
 /** What breaks the look, by element; an empty list where nothing does. */
 function offences(page: Page): Promise<string[]> {
@@ -87,7 +87,7 @@ function offences(page: Page): Promise<string[]> {
       if (cs.borderLeftStyle === 'none') out.push(`${name(el)}: no rule at its left`)
     }
     for (const el of document.querySelectorAll('.app-empty')) {
-      if (visible(el) && el.querySelector('svg, img')) out.push(`${name(el)}: a picture`)
+      if (visible(el) && el.querySelector(':scope > svg, :scope > img')) out.push(`${name(el)}: a picture`)
     }
     return out
   })
