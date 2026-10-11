@@ -308,8 +308,9 @@ type ShadowWord = { px: number } | 'colour' | 'unread'
  * what it may be (a length, the largest it may be; a colour; neither, where
  * its values are of both kinds, or it is set nowhere and has no fallback); a
  * calc(), min(), max() or clamp() worked out as a corner's is; else the
- * colour (a name, a hex, rgb(), color-mix()). A value of more than one word
- * in a word's place cannot be read.
+ * colour (a name, a hex, rgb(), color-mix()). A number in a unit the scan
+ * does not read (vh, vw, pt, cm, ch, ex) cannot be read, nor can a value of
+ * more than one word in a word's place: neither is taken for the colour.
  */
 function shadowWord(word: string, file: string, from: Sources, depth: number): ShadowWord {
   if (depth > 10 || split(word, /\s/).length > 1) return 'unread'
@@ -329,6 +330,8 @@ function shadowWord(word: string, file: string, from: Sources, depth: number): S
     const c = corner(word, file, from, depth + 1)
     return c.round || c.unread.length ? 'unread' : { px: c.px }
   }
+  // A number lengthPx cannot read is a length all the same (2vh, 3pt, 0.5ch): no colour begins with a digit.
+  if (/^[-+]?(?:\d|\.\d)/.test(word)) return 'unread'
   return 'colour'
 }
 
@@ -449,6 +452,7 @@ el.style.backdropFilter = 'blur(8px)'
 <script setup lang="ts">
 const look = { 'borderRadius': '12px', "boxShadow": '0 3px 0 red' }
 el.style.webkitBoxShadow = '0 0 6px red'
+el.style.boxShadow = '0 0 1vw'
 el.style.setProperty('text-shadow', '1px 1px 0 red')
 el.style.WebkitBackdropFilter = 'blur(2px)'
 </script>
@@ -465,6 +469,8 @@ el.style.WebkitBackdropFilter = 'blur(2px)'
   box-shadow: 0 0 0 calc(2px + 6px) red;
   box-shadow: 0 0 var(--planted-blur) red;
   box-shadow: 0 0 0 calc(var(--app-radius) - 1px) var(--app-focus);
+  box-shadow: 0 0 2vh;
+  text-shadow: 0 2pt 0;
   --planted-blur: 6px;
 }
 </style>`,
@@ -559,7 +565,8 @@ describe('the shapes', () => {
     expect(shadowFault('0 1px 4px rgb(0 0 0 / 14%)', file)).toMatch(/blurred/)
     expect(shadowFault('inset 0 0 4px red', file)).toMatch(/blurred/)
     // A length in a var() or a calc() is worked out, a var() of a colour is the colour, and what is neither is
-    // not read: never passed as though it were not there.
+    // not read: never passed as though it were not there. A length in a unit the scan does not read is not
+    // read either, with a colour or without (where it would otherwise be taken for the colour).
     expect(shadowFault('0 0 0 calc(2px + 6px) red', file)).toMatch(/ring/)
     expect(shadowFault('0 0 var(--planted-blur) red', '/src/Prefixed.vue', PLANTED)).toMatch(/blurred/)
     expect(shadowFault('0 var(--app-radius) 0 var(--app-line)', file)).toMatch(/offset/)
@@ -570,10 +577,26 @@ describe('the shapes', () => {
       '0 0 0 1px red blue',
       '0 0 0 1px var(--planted-pair)',
       'var(--nowhere)',
+      '0 0 2vh',
+      '0 0 1vw',
+      '0 0 0 10vw',
+      '0 0 0 3pt',
+      '0 0 6pt',
+      '0 4pt 0',
+      '0 0 8pt red',
+      'inset 0 0 1cm',
+      'inset 0 0 1vw',
+      '0 0 0 1px, 0 0 2vmin',
+      '0 0 0.5ch',
+      '0 0 1ex',
+      '0 -.5vh 0',
+      '0 0 0 2',
+      '0 0 var(--planted-vh)',
     ])
-      expect(shadowFault(unread, '/src/Pair.vue', { '/src/Pair.vue': '--planted-pair: 2px 4px;' }), unread).toBe(
-        'cannot be read',
-      )
+      expect(
+        shadowFault(unread, '/src/Pair.vue', { '/src/Pair.vue': '--planted-pair: 2px 4px; --planted-vh: 0.5vh;' }),
+        unread,
+      ).toBe('cannot be read')
     // A shadow's token is read only where the tokens are set, whatever its name.
     expect(shadowFault('var(--planted-shadow)', file)).toMatch(/token/)
     expect(shadowFault('0 0 0 1px red, var(--el-box-shadow-light)', file)).toMatch(/token/)
@@ -603,7 +626,8 @@ describe('the shapes', () => {
       '/src/Planted.vue: .b: background-image: radial-gradient( (a gradient, and not one listed in GRADIENTS)',
       '/src/Planted.vue: .b: filter: drop-shadow( (casts a shadow)',
       '/src/Planted.vue: background: linear-gradient( (a gradient, and not one listed in GRADIENTS)',
-      // Prefixed, quoted camel-cased keys, letters' shadows, lengths in a var() or a calc(), and one not read.
+      // Prefixed, quoted camel-cased keys, letters' shadows, lengths in a var() or a calc(), and those not read:
+      // through a var() set nowhere, or in a unit the scan does not read, with no colour to give them away.
       '/src/Prefixed.vue: -webkit-border-radius: 10px (10 px, over 4)',
       '/src/Prefixed.vue: border-radius: 12px (12 px, over 4)',
       '/src/Prefixed.vue: .c: -webkit-border-radius: 8px (8 px, over 4)',
@@ -611,13 +635,16 @@ describe('the shapes', () => {
       '/src/Prefixed.vue: -webkit-box-shadow: 0 2px 4px red (casts a shadow (it is blurred))',
       '/src/Prefixed.vue: box-shadow: 0 3px 0 red (casts a shadow (it is offset outside))',
       '/src/Prefixed.vue: -webkit-box-shadow: 0 0 6px red (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: box-shadow: 0 0 1vw (cannot be read)',
       '/src/Prefixed.vue: .c: -webkit-box-shadow: 0 2px 6px black (casts a shadow (it is blurred))',
       '/src/Prefixed.vue: .c: box-shadow: 0 0 var(--nowhere) red (cannot be read)',
       '/src/Prefixed.vue: .c: box-shadow: 0 0 0 calc(2px + 6px) red (is a ring wider than 2 px)',
       '/src/Prefixed.vue: .c: box-shadow: 0 0 var(--planted-blur) red (casts a shadow (it is blurred))',
+      '/src/Prefixed.vue: .c: box-shadow: 0 0 2vh (cannot be read)',
       '/src/Prefixed.vue: text-shadow: 0 1px 2px black (casts a shadow (it is blurred))',
       '/src/Prefixed.vue: text-shadow: 1px 1px 0 red (casts a shadow (it is offset outside))',
       '/src/Prefixed.vue: .c: text-shadow: 0 1px 0 white (casts a shadow (it is offset outside))',
+      '/src/Prefixed.vue: .c: text-shadow: 0 2pt 0 (cannot be read)',
       '/src/Prefixed.vue: -webkit-backdrop-filter: blur(2px) (frosted glass)',
       '/src/Prefixed.vue: .c: -webkit-backdrop-filter: blur(4px) (frosted glass)',
     ])
