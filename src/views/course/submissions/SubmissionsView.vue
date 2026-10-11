@@ -33,7 +33,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useCourseStore } from '@/stores/course'
 import { useDeletedFilter } from '@/views/course/assignments/components/useDeletedFilter'
 import { useWorkNames } from '@/views/course/assignments/components/useWorkNames'
@@ -153,6 +153,16 @@ const emptyText = computed(() =>
 // takes from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
 const narrow = useContainerNarrow(toolbar, 592)
+/**
+ * Whether any work listed is in a state other than handed in, the usual one:
+ * only then does the list say each one's state, in a Status column or on each
+ * card. A column that says Submitted on every row says nothing
+ * (docs/CONVENTIONS.md, "Tags"), as the members' Status does not.
+ */
+const stateVaries = computed(() => list.items.value.some((row) => row.state !== 'submitted'))
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+// The table is laid out again as the Status column comes and goes.
+useTableRelayout(tableRef, stateVaries)
 
 function open(row: SubmissionSummary) {
   void router.push({ name: 'course-submission', params: { courseId: props.courseId, submissionId: row.id } })
@@ -269,7 +279,7 @@ function open(row: SubmissionSummary) {
                     {{ course.assignmentTitle(row.assignment_id) ?? '' }}
                     <IdText v-if="!course.assignmentTitle(row.assignment_id)" :id="row.assignment_id" />
                   </span>
-                  <StatusTag vocab="submissionState" :value="row.state" />
+                  <StatusTag v-if="stateVaries" vocab="submissionState" :value="row.state" />
                 </div>
                 <div class="submission-cards__meta">
                   <template v-if="row.group_id">
@@ -286,7 +296,14 @@ function open(row: SubmissionSummary) {
             </router-link>
           </li>
         </ul>
-        <el-table v-else :data="list.items.value" row-key="id" class="submissions-table" @row-click="open">
+        <el-table
+          v-else
+          ref="tableRef"
+          :data="list.items.value"
+          row-key="id"
+          class="submissions-table"
+          @row-click="open"
+        >
           <el-table-column
             v-if="!isStudent"
             :label="anyGroupWork ? t('groupWork.list.whose') : t('submissions.columns.student')"
@@ -314,7 +331,7 @@ function open(row: SubmissionSummary) {
           <el-table-column :label="t('submissions.columns.attempt')" width="90" align="center">
             <template #default="{ row }">{{ row.attempt }}</template>
           </el-table-column>
-          <el-table-column :label="t('submissions.columns.state')" min-width="110">
+          <el-table-column v-if="stateVaries" :label="t('submissions.columns.state')" min-width="110">
             <template #default="{ row }">
               <StatusTag vocab="submissionState" :value="row.state" />
             </template>

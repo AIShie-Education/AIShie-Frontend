@@ -303,6 +303,32 @@ describe('the submissions', () => {
     expect(w.find('.submissions-table').exists()).toBe(false)
   })
 
+  it('say each one’s state only while some work listed is not handed in, in the table and on the cards', async () => {
+    answers['submission.list'] = () => ({
+      submissions: [submission, { ...submission, id: 's2', student_member_id: 'm-ken' }],
+      next: null,
+    })
+    const sizes = fakeContainerWidths({ '.app-toolbar': 593 })
+    const w = await mountPage(SubmissionsView, '/submissions')
+    expect(w.findAll('.submissions-table th').map((th) => th.text())).not.toContain('State')
+    expect(w.find('.submissions-table .el-table__body').text()).not.toContain('Submitted')
+    await sizes.resize('.app-toolbar', 592)
+    await flushPromises()
+    expect(w.find('.submission-cards').text()).not.toContain('Submitted')
+
+    answers['submission.list'] = () => ({
+      submissions: [submission, { ...submission, id: 's2', state: 'draft', submitted_at: null }],
+      next: null,
+    })
+    const again = fakeContainerWidths({ '.app-toolbar': 593 })
+    const v = await mountPage(SubmissionsView, '/submissions')
+    expect(v.findAll('.submissions-table th').map((th) => th.text())).toContain('State')
+    expect(v.find('.submissions-table .el-table__body').text()).toContain('Draft')
+    await again.resize('.app-toolbar', 592)
+    await flushPromises()
+    expect(v.find('.submission-cards').text()).toContain('Draft')
+  })
+
   it('and an assignment’s roster a card each where its summary is 592 px or less (its section as wide as the page)', async () => {
     answers['submission.roster'] = () => ({
       students: [
