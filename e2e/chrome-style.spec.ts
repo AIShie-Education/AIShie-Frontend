@@ -151,7 +151,7 @@ async function nothingFloats(page: Page, what: string) {
 /**
  * The page before the app at this address: its header one row with the wordmark at its left, ruled under; its
  * column left-aligned at the wordmark's edge, in the window's left quarter at 1280 px, with no frame, ground of its
- * own or shadow; its solid button as wide as its words.
+ * own or shadow, its h1 first, nothing written over it; its solid button as wide as its words.
  */
 async function expectAuthPage(page: Page, path: string, what: string, title: RegExp) {
   await page.goto(path)
@@ -164,6 +164,11 @@ async function expectAuthPage(page: Page, path: string, what: string, title: Reg
     const cs = getComputedStyle(column)
     const page = getComputedStyle(document.querySelector('.app-auth-page')!)
     const button = column.querySelector('.el-button--primary')?.getBoundingClientRect()
+    // Words in the column over its title: a small line over a heading, which the site never has.
+    const over = [...column.querySelectorAll('*')]
+      .filter((el) => [...el.childNodes].some((n) => n.nodeType === Node.TEXT_NODE && n.textContent!.trim()))
+      .filter((el) => el.getBoundingClientRect().bottom <= h1.top + 0.5)
+      .map((el) => el.textContent!.trim())
     return {
       headHeight: Math.round(head.getBoundingClientRect().height),
       headRule: `${getComputedStyle(head).borderBottomWidth} ${getComputedStyle(head).borderBottomStyle}`,
@@ -174,13 +179,14 @@ async function expectAuthPage(page: Page, path: string, what: string, title: Reg
       ownGround: cs.backgroundColor !== 'rgba(0, 0, 0, 0)' && cs.backgroundColor !== page.backgroundColor,
       buttonWidth: button ? Math.round(button.width) : null,
       columnWidth: Math.round(h1.width),
+      over,
     }
   })
   expect(look.headHeight, what).toBeLessThanOrEqual(56)
   expect(look.headRule, what).toBe('1px solid')
   expect(look.titleLeft, `${what}: the column at the wordmark's edge`).toBe(look.markLeft)
   expect(look.titleLeft, `${what}: in the window's left quarter`).toBeLessThan(1280 / 4)
-  expect(look, what).toMatchObject({ frame: 'none', shadow: 'none', ownGround: false })
+  expect(look, what).toMatchObject({ frame: 'none', shadow: 'none', ownGround: false, over: [] })
   if (look.buttonWidth !== null) {
     expect(look.buttonWidth, `${what}: the button as wide as its words`).toBeLessThan(look.columnWidth)
   }
@@ -213,12 +219,20 @@ test.describe('the pages before the app', () => {
     await expectAuthPage(page, '/login', 'sign-in', /^Sign in$/)
     await photograph(page, 'chrome-sign-in-1280')
     await expectAuthPage(page, `/join/${link.token}`, 'a join link', /Introduction to Programming/)
-    // The course and its facts: rows between rules, no tinted box.
+    // The course, its title the h1 and its code under it, ruled off from its facts: rows between rules, no tinted
+    // box, and no line over the title.
     const course = await page.locator('.join__course').evaluate((el) => {
       const cs = getComputedStyle(el)
-      return { top: cs.borderTopStyle, bottom: cs.borderBottomStyle, ground: cs.backgroundColor, radius: cs.borderRadius }
+      return {
+        first: el.firstElementChild!.tagName,
+        top: cs.borderTopStyle,
+        bottom: cs.borderBottomStyle,
+        ground: cs.backgroundColor,
+        radius: cs.borderRadius,
+      }
     })
-    expect(course).toEqual({ top: 'solid', bottom: 'solid', ground: 'rgba(0, 0, 0, 0)', radius: '0px' })
+    expect(course).toEqual({ first: 'H1', top: 'none', bottom: 'solid', ground: 'rgba(0, 0, 0, 0)', radius: '0px' })
+    await expect(page.locator('.join__code')).toHaveText('CS101 · A')
     await expectAuthPage(page, `/welcome#token=${invite.token}`, 'an invitation', /./)
     await context.close()
   })

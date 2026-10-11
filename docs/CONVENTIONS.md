@@ -75,8 +75,10 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   The column holds the page's `h1` (`__title`), the public site's line under it (`__sub`,
   `common.tagline`, in the third ink: under the title as a page's subtitle is, never a grey line
   over it), the fields, and the one solid button as wide as its words, the other way in as words in
-  the indigo under it. A join link's course and its facts (the time left, the email domains) are
-  rows between rules, not a tinted box. On a phone's screen (390 × 844) the wordmark, the title,
+  the indigo under it. Nothing is written over the `h1`: on a join link it is the course's title,
+  first in the column, its code under it, ruled off from its facts (the time left, the email
+  domains), which are rows between rules, not a tinted box (the 「你獲邀加入」 that stood over the
+  course was such a line, and is gone). On a phone's screen (390 × 844) the wordmark, the title,
   both fields and the button show without scrolling (`e2e/chrome-style.spec.ts`).
 - **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
   `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and

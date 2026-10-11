@@ -94,7 +94,6 @@ export default {
   seeWho: 'See who',
   page: {
     title: 'Join a course',
-    lead: 'You have been invited to join',
     asStudent: 'You will join as a student, straight away.',
     timeLeft: 'This link works for another {t}.',
     domains: 'Only people with an email at {domains} can join through this link.',

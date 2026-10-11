@@ -87,7 +87,6 @@ export default {
   seeWho: '查看名單',
   page: {
     title: '加入課程',
-    lead: '你獲邀加入',
     asStudent: '你會立即以學生身分加入。',
     timeLeft: '此連結尚餘{t}有效。',
     domains: '只有電子郵件屬於{domains}的人，才能透過此連結加入。',

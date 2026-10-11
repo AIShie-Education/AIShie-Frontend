@@ -87,7 +87,6 @@ export default {
   seeWho: '查看名单',
   page: {
     title: '加入课程',
-    lead: '你受邀加入',
     asStudent: '你会立即以学生身份加入。',
     timeLeft: '此链接还剩{t}有效。',
     domains: '只有邮箱属于{domains}的人，才能通过此链接加入。',

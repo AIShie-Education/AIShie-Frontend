@@ -277,10 +277,10 @@ function goToCourse(courseId: string) {
       </el-result>
 
       <template v-else>
-        <p class="join__lead">{{ t('join.page.lead') }}</p>
+        <!-- The course's title is the page's h1, first in the column, its code under it: nothing over it. -->
         <section class="join__course" :aria-label="t('join.page.title')">
-          <div class="join__code">{{ courseLine }}</div>
-          <h1 class="join__title">{{ preview.course.title }}</h1>
+          <h1 class="app-auth-page__title join__title">{{ preview.course.title }}</h1>
+          <p v-if="courseLine" class="join__code">{{ courseLine }}</p>
         </section>
 
         <!-- Nobody can join through it now -->
@@ -409,28 +409,21 @@ function goToCourse(courseId: string) {
 .join__loading {
   min-height: 160px;
 }
-.join__lead {
-  margin: 0;
-  font-size: var(--app-text-sm);
-  color: var(--el-text-color-secondary);
-}
-/* The course, then its facts: rows between rules, no box. */
+/* The course, then its facts: rows between rules, no box. Its title first, as a page's h1 is, its code under it
+   as a page's subtitle is, never a small line over it. */
 .join__course {
-  margin: 8px 0 16px;
-  padding: 12px 0;
-  border-top: var(--app-rule);
+  margin: 0 0 16px;
+  padding: 0 0 12px;
   border-bottom: var(--app-rule);
 }
+.join__title {
+  word-break: break-word;
+}
 .join__code {
+  margin: 4px 0 0;
   font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
   color: var(--app-indigo);
-  word-break: break-word;
-}
-.join__title {
-  margin: 4px 0 0;
-  font-size: var(--app-text-2xl);
-  line-height: var(--app-lh-heading);
   word-break: break-word;
 }
 .join__what {
