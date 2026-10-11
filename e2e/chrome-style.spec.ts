@@ -25,7 +25,8 @@ import {
 // side bar, the header, the account's menu, the phone's menu, dialogs, message
 // boxes, drawers and lists cast no shadow, and nothing in them is rounder
 // than 4 px but a mark as wide as it is tall (a person's initial, a dot, a
-// radio).
+// radio). With the shadows gone, the keyboard's focus ring is the one mark of
+// focus: a text button's is the focus colour, as every other button's is.
 
 const STAMP = Date.now().toString(36)
 
@@ -131,6 +132,28 @@ async function oneRowHeader(page: Page, what: string) {
   expect(header, what).toMatchObject({ rule: '1px solid', shadow: 'none', inRow: true })
 }
 
+/**
+ * The keyboard's focus ring on what has focus, and the focus colour (--app-focus) it is to be drawn in: 2 px of
+ * the navy, never Element Plus's pale primary (2.1 to 2.5:1 on the page's grounds).
+ */
+async function focusRing(page: Page) {
+  return page.evaluate(() => {
+    const el = document.activeElement as HTMLElement
+    const cs = getComputedStyle(el)
+    const probe = document.createElement('span')
+    probe.style.color = 'var(--app-focus)'
+    document.body.append(probe)
+    const focus = getComputedStyle(probe).color
+    probe.remove()
+    return {
+      what: el.textContent?.trim() || el.getAttribute('aria-label'),
+      text: el.classList.contains('is-text'),
+      ring: `${cs.outlineWidth} ${cs.outlineStyle} ${cs.outlineColor}`,
+      want: `2px solid ${focus}`,
+    }
+  })
+}
+
 /** Nothing on a phone's page is fixed or sticky over it but the header (overlays, lists and tooltips aside). */
 async function nothingFloats(page: Page, what: string) {
   const pinned = await page.evaluate(() =>
@@ -233,6 +256,12 @@ test.describe('the pages before the app', () => {
     })
     expect(course).toEqual({ first: 'H1', top: 'none', bottom: 'solid', ground: 'rgba(0, 0, 0, 0)', radius: '0px' })
     await expect(page.locator('.join__code')).toHaveText('CS101 · A')
+    // Its other way in, a text button, takes the keyboard's ring in the focus colour, as the solid one before it.
+    await page.locator('.join__path .el-button--primary').focus()
+    await page.keyboard.press('Tab')
+    const ring = await focusRing(page)
+    expect(ring).toMatchObject({ what: 'Create an account', text: true })
+    expect(ring.ring).toBe(ring.want)
     await expectAuthPage(page, `/welcome#token=${invite.token}`, 'an invitation', /./)
     await context.close()
   })
@@ -317,6 +346,16 @@ test.describe('the frame', () => {
     const width = (await panel.boundingBox())!.width
     expect(Math.round((await page.locator('.app-main-wrap').boundingBox())!.width)).toBe(Math.round(closed - width))
     expect(await offences(page, '#chat-panel')).toEqual([])
+    // Its head row's Minimize and Close, text buttons, take the keyboard's ring in the focus colour.
+    await panel.locator('.chat-panel__close').focus()
+    await page.keyboard.press('Shift+Tab')
+    const minimize = await focusRing(page)
+    expect(minimize).toMatchObject({ what: 'Minimize the chat', text: true })
+    expect(minimize.ring).toBe(minimize.want)
+    await page.keyboard.press('Tab')
+    const close = await focusRing(page)
+    expect(close).toMatchObject({ what: 'Close the chat', text: true })
+    expect(close.ring).toBe(close.want)
   })
 
   test('beside the side bar and the docked chat, a course’s way up stays on one row in Chinese, and the page keeps 420 px', async ({

@@ -79,7 +79,12 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   first in the column, its code under it, ruled off from its facts (the time left, the email
   domains), which are rows between rules, not a tinted box (the 「你獲邀加入」 that stood over the
   course was such a line, and is gone). On a phone's screen (390 × 844) the wordmark, the title,
-  both fields and the button show without scrolling (`e2e/chrome-style.spec.ts`).
+  both fields and the button show without scrolling (`e2e/chrome-style.spec.ts`). A text button
+  (a second single sign-on, 建立帳戶, the strip's 重新載入 and 稍後, the side bar's 新增代理, the
+  chat's Minimize and Close) takes the keyboard's ring in the focus colour as every button does
+  (`styles/element.css`): with the shadows gone it is the one mark of focus, and Element Plus's own
+  for a text button, its pale primary, is 2.1 to 2.5:1 on the page's grounds, under the 3:1 a focus
+  indicator needs.
 - **Exporting conversations for audit** is *匯出對話* (`/admin/conversation-exports`, `admin-export`,
   `ExportView.vue`, and its parts in `src/views/admin/export/`), for platform administrators and
   department administrators alike (meta `admin: 'departments'`, the side bar's last entry), through
