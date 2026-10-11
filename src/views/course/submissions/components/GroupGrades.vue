@@ -280,20 +280,20 @@ function onAdjusted(out: WriteOutcome<ToolOut<'grade.adjust'>>) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-sm);
+  border-top: var(--app-rule);
 }
-/* The card's own width lays each member's line out, not the window's. */
+/* The section's own width lays each member's line out, not the window's. */
 .group-grades {
   container-type: inline-size;
 }
+/* A member's line, between rules. */
 .group-grades__item {
   display: grid;
   grid-template-columns: minmax(140px, 1fr) minmax(110px, auto) minmax(0, 2fr) auto;
   align-items: center;
   gap: var(--app-space-xs) var(--app-space-md);
-  padding: var(--app-space-sm) var(--app-space-md);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: var(--app-space-sm) 0;
+  border-bottom: var(--app-rule);
 }
 .group-grades__who {
   display: flex;

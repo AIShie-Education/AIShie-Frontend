@@ -484,13 +484,17 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
 .roster-action--end {
   justify-content: flex-end;
 }
+/* On a phone, a row each between rules, not a box each. */
 .group-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.group-cards > li {
+  border-bottom: var(--app-rule);
 }
 .group-cards > li {
   display: flex;
@@ -501,9 +505,7 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
 }

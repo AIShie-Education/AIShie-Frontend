@@ -379,21 +379,23 @@ function open(row: SubmissionSummary) {
   flex: none;
   margin-top: 3px;
 }
+/* On a phone, a row each between rules, not a box each. */
 .submission-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.submission-cards > li {
+  border-bottom: var(--app-rule);
 }
 .submission-cards__item {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
 }

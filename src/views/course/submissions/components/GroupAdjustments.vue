@@ -178,19 +178,19 @@ const outOf = computed(() =>
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--app-space-sm);
+  border-top: var(--app-rule);
 }
+/* A member's line, between rules; one whose points will not do has the red line at its left. */
 .group-adjust__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 180px;
   align-items: center;
   gap: var(--app-space-xs) var(--app-space-md);
-  padding: var(--app-space-sm) var(--app-space-md);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: var(--app-space-sm) 0 var(--app-space-sm) var(--app-space-md);
+  border-bottom: var(--app-rule);
 }
 .group-adjust__item.is-bad {
-  border-color: var(--el-color-danger-light-5);
+  box-shadow: inset 3px 0 0 var(--app-danger-fg);
 }
 .group-adjust__head {
   display: flex;
