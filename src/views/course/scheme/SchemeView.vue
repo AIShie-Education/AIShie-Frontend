@@ -241,7 +241,6 @@ function collapseAll() {
         <section class="app-card">
           <h2 class="app-card__title">
             <span class="scheme-view__heading">
-              <el-icon><Trophy /></el-icon>
               {{ t('scheme.glance.title') }}
             </span>
           </h2>
@@ -274,7 +273,6 @@ function collapseAll() {
         <section class="app-card">
           <h2 class="app-card__title">
             <span class="scheme-view__heading">
-              <el-icon><Share /></el-icon>
               {{ t('scheme.tree.title') }}
               <span class="app-muted scheme-view__count">{{
                 t('scheme.tree.count', { n: componentCount }, componentCount)
@@ -336,7 +334,6 @@ function collapseAll() {
         <section v-if="scheme.uncounted.length" class="app-card">
           <h2 class="app-card__title">
             <span class="scheme-view__heading">
-              <el-icon><Tickets /></el-icon>
               {{ t('scheme.uncounted.title') }}
             </span>
           </h2>

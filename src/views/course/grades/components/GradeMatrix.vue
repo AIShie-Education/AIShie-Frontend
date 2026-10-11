@@ -556,7 +556,7 @@ function meanHint(col: MatrixColumn): string {
 .matrix__sort:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 1px;
-  border-radius: 2px;
+  border-radius: var(--app-radius);
 }
 .matrix__head-title {
   display: -webkit-box;

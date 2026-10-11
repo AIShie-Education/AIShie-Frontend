@@ -242,7 +242,6 @@ async function openById() {
               t('admin.registered.human.inviteButton')
             }}</span>
             <span v-else>{{ t('admin.registered.human.emailButton') }}</span>
-            <el-icon class="el-icon--right"><Right /></el-icon>
           </el-button>
         </router-link>
       </div>
