@@ -433,6 +433,19 @@ html.dark .el-card {
     align-items: center;
     min-height: 40px;
   }
+  /* A checkbox or a radio with its words is a control a finger presses (a
+     list's Show archived, a role to choose), as tall as a button beside it:
+     Element Plus draws one 32 px tall (24 small) without a border, and only
+     a bordered one took the control's height. One in a table's cell keeps
+     the row's height. */
+  .el-checkbox:not(.el-table .el-checkbox),
+  .el-radio:not(.el-table .el-radio) {
+    min-height: var(--el-component-size);
+  }
+  .el-checkbox--small:not(.el-table .el-checkbox),
+  .el-radio--small:not(.el-table .el-radio) {
+    min-height: var(--el-component-size-small);
+  }
   /* A number field's steps at its right end are two halves of 15 px, which no
      finger hits: here the field is one to type into, with the screen's keypad,
      as a field without steps is (docs/CONVENTIONS.md, Forms). */
@@ -547,6 +560,13 @@ html.dark .el-card {
 .el-radio__original:focus-visible + .el-radio__inner,
 .el-checkbox__original:focus-visible + .el-checkbox__inner,
 .el-switch__input:focus-visible ~ .el-switch__core {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+}
+/* A text button's ring is the same: Element Plus rings it in its type's
+   pale step (2.1:1 on the page for a red one), by a rule of its own that
+   outranks the one above. */
+.el-button.is-text:not(.is-disabled):focus-visible {
   outline: 2px solid var(--app-focus);
   outline-offset: 2px;
 }

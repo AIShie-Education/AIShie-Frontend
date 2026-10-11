@@ -159,11 +159,14 @@ function goReach() {
   flex-wrap: wrap;
   gap: 8px 24px;
 }
+/* A role is a plain radio, with no border, but as tall a row as it was with
+   one: 8 px above and below its words, and a finger's height on a touch
+   screen (styles/element.css). */
 .role-dialog__role {
   margin-right: 0;
   height: auto;
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding-top: 8px;
+  padding-bottom: 8px;
 }
 .role-dialog__role :deep(.el-radio__label) {
   display: inline-flex;
