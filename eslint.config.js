@@ -77,7 +77,7 @@ const ELEMENT_LOOK = {
   'el-empty': {
     allowedIn: [],
     message:
-      'Nothing to show is an AppEmpty (one line in a card, or the line icon where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
+      'Nothing to show is an AppEmpty (one line in a section, or its words at the page’s left where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
   },
   // A button is solid (the view's one primary) or words; nothing is outlined, a pill or a disc.
   'el-button': {

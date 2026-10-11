@@ -10,7 +10,13 @@
    needs, and the -rgb triplets repeat the colours they name. Success,
    warning and danger are the pills' colours: the colour is the pill's text
    (done, waiting, refused), light-9 its ground, and the steps between are
-   mixed the same way. Info is the neutral pill's, the third ink. */
+   mixed the same way. Info is the neutral pill's, the third ink.
+
+   Its shapes are the app's (styles/tokens.css, "Shapes"): every corner it
+   draws is 2 px but a mark's that is round (an avatar, a radio, a dot), and
+   nothing it draws casts a shadow, in either theme: its four shadows are
+   none, and what floated on one (a dialog, a menu, a tooltip, a drawer) is
+   parted from the page by its edge. */
 
 :root {
   --el-color-white: #ffffff;
@@ -99,18 +105,21 @@
 
   --el-mask-color: rgb(246 243 236 / 90%);
   --el-mask-color-extra-light: rgb(246 243 236 / 30%);
-  --el-overlay-color: rgb(27 29 36 / 80%);
-  --el-overlay-color-light: rgb(27 29 36 / 70%);
-  --el-overlay-color-lighter: rgb(27 29 36 / 45%);
+  /* The ink, dimmed, under a dialog. */
+  --el-overlay-color: rgb(28 28 28 / 80%);
+  --el-overlay-color-light: rgb(28 28 28 / 70%);
+  --el-overlay-color-lighter: rgb(28 28 28 / 45%);
 
-  --el-box-shadow: 0 24px 48px -12px rgb(27 29 36 / 22%), 0 4px 12px rgb(27 29 36 / 8%);
-  --el-box-shadow-light: var(--app-shadow-pop);
-  --el-box-shadow-lighter: 0 2px 8px rgb(27 29 36 / 8%);
-  --el-box-shadow-dark: 0 32px 64px -16px rgb(27 29 36 / 30%), 0 8px 16px -8px rgb(27 29 36 / 16%);
+  --el-box-shadow: none;
+  --el-box-shadow-light: none;
+  --el-box-shadow-lighter: none;
+  --el-box-shadow-dark: none;
 
-  --el-border-radius-base: var(--app-radius-control);
-  --el-border-radius-small: 4px;
-  --el-border-radius-round: var(--app-radius-pill);
+  /* A control's, a small one's and a round one's corner are the one 2 px; a
+     circle (an avatar, a radio) stays one. */
+  --el-border-radius-base: var(--app-radius);
+  --el-border-radius-small: var(--app-radius);
+  --el-border-radius-round: var(--app-radius);
 
   --el-font-family: var(--app-font-sans);
 }
@@ -206,25 +215,30 @@ html.dark {
   --el-overlay-color-light: rgb(0 0 0 / 70%);
   --el-overlay-color-lighter: rgb(0 0 0 / 55%);
 
-  --el-box-shadow: 0 24px 48px -12px rgb(0 0 0 / 60%), 0 4px 12px rgb(0 0 0 / 35%);
-  --el-box-shadow-light: var(--app-shadow-pop);
-  --el-box-shadow-lighter: 0 2px 8px rgb(0 0 0 / 35%);
-  --el-box-shadow-dark: 0 32px 64px -16px rgb(0 0 0 / 70%), 0 8px 16px -8px rgb(0 0 0 / 50%);
+  /* Over Element Plus's dark theme, which casts its own. */
+  --el-box-shadow: none;
+  --el-box-shadow-light: none;
+  --el-box-shadow-lighter: none;
+  --el-box-shadow-dark: none;
 }
 html.dark .el-card {
   --el-card-bg-color: var(--app-card);
 }
 
-/* Shapes: 8px for a control (the base radius), 16px for a card and for
-   whatever stands on the page as one, a dialog. */
+/* Shapes: 2 px for a control (the base radius) and for whatever stands
+   over the page as a box of its own, a dialog, a message box, a
+   notification; a card, a section of a page, has none. */
 .el-card {
   --el-card-border-radius: var(--app-radius-card);
 }
 .el-dialog {
-  --el-dialog-border-radius: var(--app-radius-card);
+  --el-dialog-border-radius: var(--app-radius);
 }
 .el-message-box {
-  --el-messagebox-border-radius: var(--app-radius-card);
+  --el-messagebox-border-radius: var(--app-radius);
+}
+.el-notification {
+  --el-notification-radius: var(--app-radius);
 }
 
 /* Type: Element Plus's sizes are the scale's (styles/tokens.css), so that
@@ -458,31 +472,62 @@ html.dark .el-card {
   }
 }
 
-/* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page:
+/* Buttons, by rank (docs/CONVENTIONS.md, "Buttons"), the same on every page.
+   None has an outline, and none but the one main action and a
+   confirmation's last step has a ground:
    - primary: solid indigo, at most one to a view or a dialog: approve,
-     publish, save. It darkens on hover. A plain primary one is the ghost,
-     an indigo outline.
-   - secondary, a button without a type: outlined in a control's edge (3:1
-     on a card and on the ground) with the ink's text, taking the indigo's
-     tint on hover: reject, cancel, everything else.
-   - danger on a page (plain): an outline in the danger colour on no ground,
-     as the ghost is: archive, remove, revoke. It asks before it does
-     anything, in a confirmation, whose last step alone is solid red.
+     publish, save. It darkens on hover.
+   - a button without a type: a text button, the ink's words on no ground
+     and no edge, its icon a step quieter; the indigo's words on its tint on
+     hover, a step darker pressed: reject, request changes, cancel, refresh,
+     everything else. It is as tall as the others (36 px; 44 large, 28
+     small; a finger's on a touch screen), so that it is as easy to hit.
+   - primary as text or as a link (or, until the screens are swept, plain):
+     the indigo's words as a text button: a list item's own main action
+     (approve in a queue after its first, open), one that reads as a link.
+   - danger as text or a link (or plain, until the sweep): the danger's
+     words and icon, no outline, its ground on hover: archive, remove,
+     revoke. It asks before it does anything, in a confirmation, whose last
+     step alone is solid red.
    - solid danger: only the last step of a confirmation, in a dialog or a
      message box: delete, undo the final grade.
-   - disabled, of any rank: the ground's second shade, the disabled ink and
-     the line, with no hue: nothing about it says it can be pressed.
-   A link turns darker, never paler, on hover, so that it keeps its
-   contrast; so do the others' fills. Success, warning and info are no
-   button's: their colours are outcomes', in tags. */
+   - disabled, of any rank: the disabled ink, with no hue, no ground and no
+     edge; a solid one keeps the ground's second shade, so that the place of
+     the main action still reads.
+   An icon alone is a square of its height with the app's 2 px corners, even
+   one asked to be round (Element Plus's circle). A link turns darker, never
+   paler, on hover, so that it keeps its contrast; so do the others' fills.
+   Success, warning and info are no button's: their colours are outcomes',
+   in tags. */
 .el-button:not(.el-button--primary, .el-button--success, .el-button--warning, .el-button--danger, .el-button--info) {
-  --el-button-border-color: var(--app-control-border);
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
   --el-button-text-color: var(--app-ink);
   --el-button-hover-text-color: var(--app-indigo);
   --el-button-hover-bg-color: var(--app-indigo-tint);
-  --el-button-hover-border-color: var(--app-indigo-line);
-  --el-button-active-border-color: var(--app-indigo);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-text-color: var(--app-indigo-dark);
+  --el-button-active-bg-color: var(--el-color-primary-light-8);
+  --el-button-active-border-color: transparent;
   --el-button-hover-link-text-color: var(--app-ink);
+}
+/* At rest, a text button's icon is a step quieter than its words (the second ink beside the ink), whatever
+   colour a page gives the words; hovered, pressed or focused, the words' own. */
+:where(
+    .el-button:not(
+      .el-button--primary,
+      .el-button--success,
+      .el-button--warning,
+      .el-button--danger,
+      .el-button--info,
+      .is-disabled,
+      :hover,
+      :active,
+      :focus-visible
+    )
+  )
+  .el-icon {
+  color: color-mix(in srgb, currentColor 80%, transparent);
 }
 .el-button--primary {
   --el-button-hover-bg-color: var(--app-indigo-dark);
@@ -491,29 +536,50 @@ html.dark .el-card {
   --el-button-active-border-color: var(--app-indigo-dark);
   --el-button-hover-link-text-color: var(--app-indigo-dark);
 }
-.el-button--primary.is-plain {
-  --el-button-bg-color: transparent;
-  --el-button-border-color: var(--app-indigo);
+.el-button--primary:is(.is-text, .is-link, .is-plain) {
   --el-button-text-color: var(--app-indigo);
-  --el-button-hover-bg-color: var(--app-indigo-tint);
-  --el-button-hover-border-color: var(--app-indigo);
-  --el-button-hover-text-color: var(--app-indigo);
-  --el-button-active-bg-color: var(--app-indigo-tint);
-  --el-button-active-border-color: var(--app-indigo-dark);
-  --el-button-active-text-color: var(--app-indigo-dark);
-  border-width: 1.5px;
-}
-.el-button--danger.is-plain {
   --el-button-bg-color: transparent;
-  --el-button-border-color: var(--app-danger-fg);
+  --el-button-border-color: transparent;
+  --el-button-hover-text-color: var(--app-indigo);
+  --el-button-hover-bg-color: var(--app-indigo-tint);
+  --el-button-hover-border-color: transparent;
+  --el-button-active-text-color: var(--app-indigo-dark);
+  --el-button-active-bg-color: var(--el-color-primary-light-8);
+  --el-button-active-border-color: transparent;
+}
+.el-button--danger:is(.is-text, .is-link, .is-plain) {
   --el-button-text-color: var(--app-danger-fg);
-  --el-button-hover-bg-color: var(--app-danger-bg);
-  --el-button-hover-border-color: var(--app-danger-fg);
+  --el-button-bg-color: transparent;
+  --el-button-border-color: transparent;
   --el-button-hover-text-color: var(--app-danger-fg);
-  --el-button-active-bg-color: var(--app-danger-bg);
-  --el-button-active-border-color: var(--el-color-danger-dark-2);
+  --el-button-hover-bg-color: var(--app-danger-bg);
+  --el-button-hover-border-color: transparent;
   --el-button-active-text-color: var(--el-color-danger-dark-2);
-  border-width: 1.5px;
+  --el-button-active-bg-color: var(--el-color-danger-light-8);
+  --el-button-active-border-color: transparent;
+}
+/* A text button has no edge at all, so that nothing of one shows: a link keeps Element Plus's, transparent, which
+   its padding is measured with. */
+.el-button:not(
+  .el-button--primary,
+  .el-button--success,
+  .el-button--warning,
+  .el-button--danger,
+  .el-button--info,
+  .is-link
+),
+.el-button:is(.el-button--primary, .el-button--danger):is(.is-text, .is-plain) {
+  border-style: none;
+}
+/* Element Plus hovers and presses a text button in its own greys: here, in the rank's own. */
+.el-button.is-text:not(.is-disabled):hover {
+  background-color: var(--el-button-hover-bg-color);
+}
+.el-button.is-text:not(.is-disabled):active {
+  background-color: var(--el-button-active-bg-color);
+}
+.el-button.is-circle {
+  border-radius: var(--app-radius);
 }
 .el-button--success {
   --el-button-hover-bg-color: var(--el-color-success-dark-2);
@@ -540,22 +606,69 @@ html.dark .el-card {
   --el-button-hover-border-color: var(--el-color-info-dark-2);
   --el-button-hover-link-text-color: var(--el-color-info-dark-2);
 }
-/* Disabled, whatever its rank or type: no hue. Element Plus gives each type
-   a pale step of its own colour, which still reads as pressable. */
-.el-button.is-disabled:not(.is-link, .is-text),
-.el-button.is-disabled:not(.is-link, .is-text):is(:hover, :focus, :active) {
+/* Disabled, whatever its rank or type: the disabled ink, no hue, no ground and no edge. Element Plus gives each
+   type a pale step of its own colour, which still reads as pressable. A solid one keeps the ground's second
+   shade under its words. */
+.el-button.is-disabled,
+.el-button.is-disabled:is(:hover, :focus, :active),
+.el-button.is-disabled:is(.is-text, .is-link, .is-plain),
+.el-button.is-disabled:is(.is-text, .is-link, .is-plain):is(:hover, :focus, :active) {
   color: var(--app-ink-disabled);
-  background-color: var(--app-ground-2);
-  border-color: var(--app-line);
+  background-color: transparent;
+  border-color: transparent;
 }
-.el-button.is-disabled:is(.is-link, .is-text),
-.el-button.is-disabled:is(.is-link, .is-text):is(:hover, :focus, :active) {
-  color: var(--app-ink-disabled);
+.el-button.is-disabled:is(
+    .el-button--primary,
+    .el-button--success,
+    .el-button--warning,
+    .el-button--danger,
+    .el-button--info
+  ):not(.is-text, .is-link, .is-plain),
+.el-button.is-disabled:is(
+    .el-button--primary,
+    .el-button--success,
+    .el-button--warning,
+    .el-button--danger,
+    .el-button--info
+  ):not(.is-text, .is-link, .is-plain):is(:hover, :focus, :active) {
+  background-color: var(--app-ground-2);
+}
+
+/* Segmented controls and badges. A segmented control (an el-radio-group of
+   buttons, for a view's mode, never a filter) is one frame in a control's
+   edge, 2 px at its ends, a rule between its parts and no ground. The
+   chosen part is not a second solid button on the screen: it is marked as
+   a course's chosen tab is, by a 2 px bar in the indigo at its foot, with
+   the indigo's words on its tint. The bar is what says which is chosen
+   without its hue, to a reader who cannot tell the indigo's words from the
+   ink's or its tint from the page (1.3:1 or less apart, in either theme):
+   it is 6:1 or more on the tint, and the others have none. A badge (a count on a tab or a button) is a
+   rectangle with the app's corners; a badge that is a dot alone stays
+   round, a mark. */
+.el-radio-button {
+  --el-radio-button-checked-bg-color: var(--app-indigo-tint);
+  --el-radio-button-checked-text-color: var(--app-indigo);
+  /* What Element Plus rings a part focused from the keyboard in: the focus colour. The frame is each part's
+     outline in the control's edge, the chosen one's too. */
+  --el-radio-button-checked-border-color: var(--app-focus);
+  --el-button-disabled-bg-color: transparent;
+}
+.el-radio-button__inner {
+  background: transparent;
+}
+/* The bar, inset, not Element Plus's shadow cast to its left; important over its own, which takes every shadow
+   off the first part. */
+.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner {
+  box-shadow: inset 0 -2px 0 var(--app-indigo) !important;
+}
+.el-badge {
+  --el-badge-radius: var(--app-radius);
 }
 
 /* Focus: a ring in the focus colour (the indigo), clear of the control, on
-   whatever takes focus from the keyboard. A field shows its indigo edge and
-   a halo around it. */
+   whatever takes focus from the keyboard. A field, as aishie.app's form
+   does, turns its edge navy and doubles it with a 1 px outline on it, with
+   no halo: its edge is Element Plus's inset line, the outline the second. */
 .el-button:focus-visible,
 .el-radio__original:focus-visible + .el-radio__inner,
 .el-checkbox__original:focus-visible + .el-checkbox__inner,
@@ -573,31 +686,64 @@ html.dark .el-card {
 .el-input__wrapper.is-focus,
 .el-textarea__inner:focus,
 .el-select__wrapper.is-focused {
-  box-shadow:
-    0 0 0 1px var(--el-color-primary) inset,
-    0 0 0 3px rgba(var(--el-color-primary-rgb), 0.18);
+  box-shadow: 0 0 0 1px var(--app-focus) inset;
+  outline: 1px solid var(--app-focus);
+  outline-offset: 0;
+}
+/* A radio focused by the pointer, not the keyboard: Element Plus glows it. */
+.el-radio:focus:not(:focus-visible):not(.is-focus):not(:active):not(.is-disabled) .el-radio__inner {
+  box-shadow: none;
 }
 
-/* Tags are pills: rounded full, in the pills' colours (each type's colour on
-   its light-9, above), without an outline unless they are plain. */
+/* Tags are rectangles with the app's 2 px corners, never pills: a state on
+   its tone's tint without an edge (each type's colour on its light-9,
+   above), an identity on an outline (AppTag), a faint line that says it is
+   a label. A small one is 20 px tall in the smallest step, a default one
+   24 px in the next. A filter's chip (el-check-tag, FilterChips) is a
+   rectangle too, but one pressed: on no ground, the ink's words inside a
+   control's edge, 3:1 as a field's is, never the outline's faint line, so
+   that a row of chips over a list of role tags reads as controls over
+   labels; hovered, the lightest fill and the hovered edge. Chosen, it is
+   marked as a segmented control's part is (above): the indigo's words on
+   its tint, with a 2 px bar in the indigo at its foot. */
 .el-tag {
-  --el-tag-border-radius: var(--app-radius-pill);
+  --el-tag-border-radius: var(--app-radius);
+  --el-tag-border-radius-rounded: var(--app-radius);
   font-weight: 500;
 }
 .el-tag:not(.el-tag--plain) {
   --el-tag-border-color: transparent;
 }
 .el-tag--small {
-  padding: 0 8px;
+  padding: 0 6px;
+}
+.el-tag--default {
+  --el-tag-font-size: var(--app-text-sm);
 }
 .el-check-tag {
-  border-radius: var(--app-radius-pill);
+  border-radius: var(--app-radius);
+  background-color: transparent;
+  color: var(--app-ink);
+  box-shadow: inset 0 0 0 1px var(--app-control-border);
+}
+.el-check-tag:hover {
+  background-color: var(--el-fill-color-light);
+  box-shadow: inset 0 0 0 1px var(--app-control-border-hover);
+}
+.el-check-tag.el-check-tag--primary.is-checked,
+.el-check-tag.el-check-tag--primary.is-checked:hover {
+  background-color: var(--app-indigo-tint);
+  color: var(--app-indigo);
+  box-shadow:
+    inset 0 -2px 0 var(--app-indigo),
+    inset 0 0 0 1px var(--app-control-border);
 }
 
-/* Surfaces: alerts and popovers are items, 12px; menus and tooltips, 8px,
-   their entries 6px within them. */
+/* Surfaces: what floats over the page (a popover, a menu, a tooltip, a
+   select's options) is a box with 2 px corners and an edge, its entries 2 px
+   within it; an alert lies on the page as a band, with no corners. */
 .el-alert {
-  --el-alert-border-radius-base: var(--app-radius-item);
+  --el-alert-border-radius-base: 0;
   --el-alert-padding: 10px 16px;
 }
 /* An alert is a warning or an error (an explanation is an AppNote): its
@@ -614,10 +760,10 @@ html.dark .el-card {
   margin-right: 8px;
 }
 .el-popover.el-popper {
-  --el-popover-border-radius: var(--app-radius-item);
+  --el-popover-border-radius: var(--app-radius);
 }
 .el-popper {
-  --el-popper-border-radius: var(--app-radius-control);
+  --el-popper-border-radius: var(--app-radius);
 }
 .el-dropdown-menu,
 .el-select-dropdown__list {
@@ -625,7 +771,7 @@ html.dark .el-card {
 }
 .el-dropdown-menu__item,
 .el-select-dropdown__item {
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 .el-dialog {
   --el-dialog-padding-primary: 24px;
@@ -647,11 +793,16 @@ html.dark .el-card {
 
 /* Tables: no ground of their own. A table lies on the card it is in, as the
    card's text does (white is a field's alone, the one surface that asks for
-   input); its headings are in the third ink over a stronger line, and a row
-   turns to the ground's shade on hover. A column fixed to an edge is laid
-   on the card's colour (the overlay's, in a dialog or a drawer), or what
-   scrolls under it would show through. */
+   input); its rows are parted by the site's line, its headings are in the
+   third ink over a stronger line, and a row turns to the ground's shade on
+   hover. A column fixed to an edge is laid on the card's colour (the
+   overlay's, in a dialog or a drawer), or what scrolls under it would show
+   through, and while the rest scrolls under it a rule at its edge, not
+   Element Plus's shadow, says so. */
 .el-table {
+  --el-table-border-color: var(--app-line);
+  --el-table-fixed-left-column: inset 1px 0 0 var(--app-line-strong);
+  --el-table-fixed-right-column: inset -1px 0 0 var(--app-line-strong);
   --el-table-bg-color: transparent;
   --el-table-tr-bg-color: transparent;
   --el-table-header-bg-color: transparent;
@@ -723,4 +874,37 @@ html.dark .el-card {
 .el-collapse {
   --el-collapse-header-bg-color: transparent;
   --el-collapse-content-bg-color: transparent;
+}
+
+/* Element Plus's own round shapes, squared to the app's corner. A switch is
+   a 2 px track and a knob with a 1 px corner, square as a checkbox is. In a
+   date picker, today and the chosen day, month or year are 2 px squares,
+   and a range is a band whose ends are square, not round. A scroll bar's
+   thumb is 2 px, and a progress bar's track and fill have no corners. */
+.el-switch__core,
+.el-switch--small .el-switch__core,
+.el-switch--large .el-switch__core {
+  border-radius: var(--app-radius);
+}
+.el-switch__core .el-switch__action {
+  border-radius: 1px;
+}
+.el-date-table td .el-date-table-cell .el-date-table-cell__text,
+.el-date-table td.selected .el-date-table-cell,
+.el-date-table td.selected .el-date-table-cell__text,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td .el-date-table-cell__text,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td.current:not(.disabled) .el-date-table-cell {
+  border-radius: var(--app-radius);
+}
+.el-date-table td:is(.start-date, .end-date) .el-date-table-cell,
+.el-date-table.is-week-mode .el-date-table__row:hover td:is(:first-child, :last-child) .el-date-table-cell,
+:is(.el-month-table, .el-quarter-table, .el-year-table) td:is(.start-date, .end-date) .el-date-table-cell {
+  border-radius: 0;
+}
+.el-scrollbar__thumb {
+  border-radius: var(--app-radius);
+}
+.el-progress-bar__outer,
+.el-progress-bar__inner {
+  border-radius: 0;
 }

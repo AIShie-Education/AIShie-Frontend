@@ -133,24 +133,15 @@ html.dark {
   background-color: var(--hl-del-bg);
 }
 
-/* Fenced code with its tools (MarkdownView's code-tools, the chat's): a box
-   with a bar over it naming the language and a button that copies it, the
-   code scrolling sideways inside, never the text around it. */
-:root {
-  --md-code-bg: #f7f5f0;
-  --md-code-bar: #eeeae1;
-  --md-code-line: #e2ddd1;
-}
-html.dark {
-  --md-code-bg: #0f131c;
-  --md-code-bar: #171c28;
-  --md-code-line: #2b3245;
-}
+/* Fenced code with its tools (MarkdownView's code-tools, the chat's): a
+   listing, ruled above and below as in print (main.css's pre), with no
+   ground and no frame; under the rule above it, a line naming the language
+   and a button that copies it; the code scrolls sideways inside, never the
+   text around it. */
 .markdown-body .md-code {
   margin: 0 0 1em;
-  border: 1px solid var(--md-code-line);
-  border-radius: 8px;
-  background: var(--md-code-bg);
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   overflow: hidden;
 }
 .markdown-body .md-code__bar {
@@ -159,9 +150,7 @@ html.dark {
   justify-content: space-between;
   gap: 8px;
   min-height: 30px;
-  padding: 0 4px 0 12px;
-  border-bottom: 1px solid var(--md-code-line);
-  background: var(--md-code-bar);
+  padding: 0;
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   line-height: 1;
@@ -177,7 +166,7 @@ html.dark {
   flex-shrink: 0;
   padding: 4px 8px;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   font-family: var(--app-font-sans);
@@ -186,7 +175,7 @@ html.dark {
   cursor: pointer;
 }
 .markdown-body .md-code__copy:hover {
-  background: var(--md-code-line);
+  background: var(--el-fill-color-light);
   color: var(--app-ink);
 }
 .markdown-body .md-code__copy:focus-visible {
@@ -197,7 +186,8 @@ html.dark {
 }
 .markdown-body .md-code pre {
   margin: 0;
-  padding: 12px 14px;
+  padding: 0 0 10px;
+  border: 0;
   border-radius: 0;
   background: transparent;
   overflow-x: auto;

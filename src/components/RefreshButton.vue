@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // Reading a list again (docs/CONVENTIONS.md, "Refresh"): always at the right
-// end of its card's toolbar (.app-toolbar, or the card's title row where it
-// has no toolbar), never in a page's header, which holds what creates or
-// goes elsewhere. A secondary button with its words, "Refresh" on every page;
-// on a phone's screen (600 px or narrower) a round button of its icon alone,
-// its words in its tooltip and its name.
+// end of its section's toolbar (.app-toolbar, or the section's title row
+// where it has no toolbar), never in a page's header, which holds what
+// creates or goes elsewhere. A text button with its words, "Refresh" on every
+// page; on a phone's screen (600 px or narrower) a square of its icon alone,
+// as tall as any button and as wide, its words in its tooltip and its name.
 import { useI18n } from 'vue-i18n'
 import { Refresh } from '@element-plus/icons-vue'
 import { useMediaQuery } from '@/composables/useMediaQuery'
@@ -22,7 +22,6 @@ const phone = useMediaQuery('(max-width: 600px)')
       v-bind="$attrs"
       class="refresh-button"
       :class="{ 'is-icon': phone }"
-      :circle="phone"
       :loading="loading"
       :disabled="disabled"
       :aria-label="phone ? t('common.actions.refresh') : undefined"
@@ -38,5 +37,10 @@ const phone = useMediaQuery('(max-width: 600px)')
 /* At the right end of its row, however the row is laid out. */
 .el-button.refresh-button {
   margin-inline-start: auto;
+}
+/* Its icon alone: a square, 36 px or a finger's 44. */
+.el-button.refresh-button.is-icon {
+  width: var(--el-component-size);
+  padding: 0;
 }
 </style>

@@ -3,13 +3,15 @@
 // model's provider, under the school's key or an owner's own, or into files
 // someone downloads. The same to everyone it concerns, administrators
 // offering a model, owners choosing one, and whoever asks in the chat: a
-// shield before the words, on an outline in the indigo's line, never the
-// amber of a warning nor the grey of an aside, so that it is read as what it
-// is, a fact about where things go. A title, where it has one, is in the ink
-// above, a heading of the level given (`heading`) where it heads a part of a
-// page or a dialog. `compact` is the one line that says it under the chat's
-// composer: the shield before words the size and colour of those around
-// them, with no outline, so that it stays a line.
+// shield before the words, which says what kind of fact it is, and a 2 px
+// rule in the indigo's line at its left, as a note's (AppNote), with no box
+// around it; never the amber of a warning nor the grey of an aside, so that
+// it is read as what it is, a fact about where things go. Its words stop at
+// the measure. A title, where it has one, is in the ink above, a heading of
+// the level given (`heading`) where it heads a part of a page or a dialog.
+// `compact` is the one line that says it under the chat's composer: the
+// shield before words the size and colour of those around them, with no
+// rule, so that it stays a line.
 withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId?: string; compact?: boolean }>(), {
   title: undefined,
   heading: undefined,
@@ -49,10 +51,9 @@ withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  padding: 10px 14px;
-  border: 1px solid var(--app-indigo-line);
-  border-radius: var(--app-radius-item);
-  background: transparent;
+  max-width: var(--app-measure);
+  padding: 2px 0 2px var(--app-space-lg);
+  border-left: 2px solid var(--app-indigo-line);
   color: var(--app-ink-2);
   font-size: var(--app-text-md);
   line-height: var(--app-lh-text);
@@ -86,12 +87,12 @@ withDefaults(defineProps<{ title?: string; heading?: 'h2' | 'h3' | 'h4'; titleId
 .data-flow__body > :deep(:last-child) {
   margin-bottom: 0;
 }
-/* A line among others: their size and colour, the shield the size of its words. */
+/* A line among others: their size and colour, the shield the size of its words, no rule and no measure. */
 .data-flow.is-compact {
   gap: 6px;
+  max-width: none;
   padding: 0;
   border: 0;
-  border-radius: 0;
   color: inherit;
   font-size: inherit;
   line-height: inherit;

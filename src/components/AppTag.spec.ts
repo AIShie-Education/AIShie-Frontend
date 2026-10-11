@@ -8,8 +8,13 @@ const global = { plugins: [ElementPlus] }
 const tag = (props: Record<string, unknown> = {}, slot = 'Words') =>
   mount(AppTag, { props, slots: { default: slot }, global })
 
+// The component's own style, as written (docs/CONVENTIONS.md, "Tags"): every tag is a rectangle.
+const style = Object.values(
+  import.meta.glob<string>('./AppTag.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
+
 describe('AppTag', () => {
-  it('draws a state as a tinted solid pill in its tone’s colours', () => {
+  it('draws a state, the default, on its tone’s tint', () => {
     for (const [tone, type] of [
       ['done', 'success'],
       ['danger', 'danger'],
@@ -18,9 +23,24 @@ describe('AppTag', () => {
       ['indigo', 'primary'],
     ] as const) {
       const t = tag({ tone }).find('.el-tag')
-      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag', 'app-tag--pill', `is-${tone}`, `el-tag--${type}`]))
+      expect(t.classes()).toEqual(
+        expect.arrayContaining(['app-tag', 'app-tag--state', `is-${tone}`, `el-tag--${type}`]),
+      )
       expect(t.classes()).toContain('el-tag--light')
     }
+  })
+
+  it('draws a state given by its older name, pill, as a state, until the cleanup', () => {
+    const t = tag({ variant: 'pill', tone: 'wait' }).find('.el-tag')
+    expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--state', 'is-wait', 'el-tag--warning']))
+    expect(t.classes()).not.toContain('app-tag--pill')
+  })
+
+  it('is never round: no variant asks Element Plus for its rounded tag, and none sets a corner of its own', () => {
+    for (const variant of ['state', 'pill', 'outline', 'count'] as const)
+      expect(tag({ variant }).find('.el-tag').classes()).not.toContain('is-round')
+    // Its corner is element.css's, the app's 2 px, for every tag alike.
+    expect(style).not.toMatch(/radius/)
   })
 
   it('draws an identity or an attribute as an outline with its icon, in no tone', () => {
@@ -31,9 +51,13 @@ describe('AppTag', () => {
     expect(t.find('.app-tag__icon').attributes('aria-hidden')).toBe('true')
   })
 
-  it('is dark only as a count', () => {
-    expect(tag({ variant: 'count', tone: 'indigo' }, '3').find('.el-tag').classes()).toContain('el-tag--dark')
-    for (const variant of ['pill', 'outline'])
+  it('is solid only as a count, and a count is the indigo whatever tone it is given', () => {
+    for (const tone of ['indigo', 'danger', 'neutral'] as const) {
+      const t = tag({ variant: 'count', tone }, '3').find('.el-tag')
+      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--count', 'el-tag--dark', 'el-tag--primary']))
+      expect(t.classes()).not.toContain(`is-${tone}`)
+    }
+    for (const variant of ['state', 'outline'])
       expect(tag({ variant }).find('.el-tag').classes()).not.toContain('el-tag--dark')
   })
 
