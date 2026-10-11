@@ -1539,7 +1539,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the rows differ in it, so that a student's course agents say neither and an instructor's own
   agents not 「你的代理」; and where two or more of the course's agents are listed, that they answer
   others too is said once over the list (`chat.respondents.sharedHintAll`), not under each
-  (`AgentPicker`; one agent alone says what it is).
+  (`AgentPicker`; one agent alone says what it is), and a row's note in the size, leading and ink
+  of the note over the list, so that the sentence looks the same however many agents are listed.
   An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
   working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps

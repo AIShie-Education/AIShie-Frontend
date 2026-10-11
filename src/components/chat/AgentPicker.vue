@@ -172,14 +172,16 @@ defineExpose({ refresh })
   font-weight: var(--app-weight-strong);
   overflow-wrap: anywhere;
 }
-.resp-row__note {
-  font-size: var(--app-text-xs);
-  line-height: 1.4;
-  color: var(--el-text-color-secondary);
+/* A row's notes in the size, the leading and the ink of the note said once over the list: the same sentence
+   (that a course agent may repeat what is written) looks the same whether one agent is listed or several. Not
+   running, which wants its owner, keeps the wait colour. */
+.resp-row__note,
+.resp-row__warn {
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
+  color: var(--app-ink-2);
 }
 .resp-row__warn {
-  font-size: var(--app-text-xs);
-  line-height: 1.4;
   color: var(--el-color-warning-dark-2);
 }
 .resp-row__go {
