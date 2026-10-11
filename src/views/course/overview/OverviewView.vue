@@ -45,14 +45,13 @@ const course = useCourseStore()
 .overview__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
-  gap: 16px;
 }
 .overview__main,
 .overview__side {
   min-width: 0;
 }
 /* Two columns while the main one keeps 420 px or more beside the 360 px one. */
-@container (max-width: 799px) {
+@container (max-width: 815px) {
   .overview__grid {
     grid-template-columns: minmax(0, 1fr);
   }

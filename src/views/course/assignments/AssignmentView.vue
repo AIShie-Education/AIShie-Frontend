@@ -657,7 +657,6 @@ function refresh() {
 .assignment-view__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 16px;
 }
 .assignment-view__doclink {
   display: inline-flex;
@@ -712,7 +711,7 @@ function refresh() {
   margin-top: 12px;
 }
 /* Two columns while the main one keeps 420 px or more beside the 300 px one. */
-@container (max-width: 739px) {
+@container (max-width: 755px) {
   .assignment-view__layout {
     grid-template-columns: minmax(0, 1fr);
   }

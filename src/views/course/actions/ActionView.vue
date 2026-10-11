@@ -646,10 +646,9 @@ const errorTitle = computed(() => {
 .action-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
-  gap: 16px;
 }
 /* Two columns while the main one keeps 420 px or more beside the 360 px one. */
-@container (max-width: 799px) {
+@container (max-width: 815px) {
   .action-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }

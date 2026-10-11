@@ -345,7 +345,6 @@ function onBrought() {
 .agent-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
 }
 .agent-view__desc :deep(.el-descriptions__label) {
   white-space: nowrap;
@@ -360,7 +359,7 @@ function onBrought() {
   margin-top: 16px;
 }
 /* Two columns (3 : 2) while the main one keeps 420 px or more. */
-@container (max-width: 719px) {
+@container (max-width: 735px) {
   .agent-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }

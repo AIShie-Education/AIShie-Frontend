@@ -242,14 +242,13 @@ function onSeated(_memberId: string, actorId: string) {
 .course-admin__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
   margin-top: 4px;
 }
 .course-admin__grid > .app-card + .app-card {
   margin-top: 0;
 }
 /* Two columns (3 : 2) while the details keep room for their own two (a card of 590 px). */
-@container (max-width: 999px) {
+@container (max-width: 1015px) {
   .course-admin__grid {
     grid-template-columns: minmax(0, 1fr);
   }

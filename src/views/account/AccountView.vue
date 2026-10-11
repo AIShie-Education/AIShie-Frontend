@@ -107,7 +107,6 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
 .account-view__top {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
 }
 .account-view__top > .app-card + .app-card {
   margin-top: 0;
@@ -148,7 +147,7 @@ const ownsAgents = computed(() => (me.data.value ?? session.me)?.kind === 'human
   }
 }
 /* Two columns (3 : 2) while the main one keeps 420 px or more. */
-@container (max-width: 719px) {
+@container (max-width: 735px) {
   .account-view__top {
     grid-template-columns: minmax(0, 1fr);
   }
