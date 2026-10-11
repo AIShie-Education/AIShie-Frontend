@@ -1419,7 +1419,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   way focus goes back to the chat's button. Files dropped anywhere on the pane, its head row too, go
   to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen (`--app-z-sheet`), square, a modal dialog with no edge to drag, closed with its one button,
-  Escape or back, keeping what it showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
+  Escape or back, keeping what it showed, and it gives way to a page a link in it leads to; while it
+  is open the page column under it (header and page) is `inert` (`AppLayout`), so that Tab and a
+  screen reader stay in it as its `aria-modal` says, the overlays opened from it being on the body. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
   link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
   the address the course's conversations page once had, which opens the pane on it and leaves the
