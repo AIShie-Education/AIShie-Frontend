@@ -450,10 +450,10 @@ function collapseAll() {
   margin: 0;
   font-size: var(--app-text-sm);
 }
+/* The weights as one bar of segments, square-ended: a figure, not a pill. */
 .glance-bar {
   display: flex;
   height: 14px;
-  border-radius: 7px;
   overflow: hidden;
   gap: 2px;
   background: var(--el-fill-color);
@@ -481,7 +481,7 @@ function collapseAll() {
 .glance-legend__dot {
   width: 10px;
   height: 10px;
-  border-radius: 3px;
+  border-radius: var(--app-radius);
   flex-shrink: 0;
 }
 .glance-legend__name {
@@ -506,7 +506,7 @@ function collapseAll() {
   gap: 8px;
   flex-wrap: wrap;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   font-size: var(--app-text-md);
 }
 .uncounted li:last-child {
