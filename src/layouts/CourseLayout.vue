@@ -351,7 +351,6 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
   font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
   color: var(--app-indigo);
-  letter-spacing: 0.06em;
   white-space: nowrap;
 }
 .course-head__title {

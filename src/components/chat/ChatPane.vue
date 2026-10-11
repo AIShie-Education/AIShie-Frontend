@@ -1213,7 +1213,6 @@ const closedLine = computed(() => {
 .chat-pane__course {
   font-size: var(--app-text-xs);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
 .chat-pane__name {
