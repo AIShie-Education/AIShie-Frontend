@@ -30,7 +30,8 @@ textarea {
 }
 /* The page's and its sections' titles, and every dialog's, are set in the
    serif, at the weight and tracking of the page's language, and at the
-   site's leading for a heading, 1.25; smaller headings stay in the sans. */
+   site's leading for a heading, 1.25; smaller headings stay in the sans, but
+   for an author's ### in rendered Markdown (below). */
 h1,
 h2,
 .el-dialog__title,
@@ -279,12 +280,15 @@ tr.app-row-unpublished > td:first-child {
    a paragraph, an item or a quotation stops at the measure (an image, a
    table and a listing run the column's width). The author's headings are in
    the ink and a heading's weight, and stay under the page's title whatever
-   level they were written at: an h1 is 18 px, an h2 16, an h3 and an h4 the
-   text's size, as the site's h4, so that the page's own h1, 24 px, is the
-   largest heading it has, and an author's bold words, in the text's ink,
-   never outweigh a heading. A listing is ruled above and below, as in print,
-   with no ground; a table, ruled between its rows, with no frame around it
-   and no grid; an image, framed in the line. */
+   level they were written at. Its sections are in the serif, a step apart:
+   an h1 is 20 px, an h2 18, an h3 16, so that the page's own h1, 24 px, is
+   the largest heading it has. An h4 is the site's h4, the text's size in the
+   sans, told from an author's bold words, which keep a heading's weight in
+   the text's ink, by its ink and the room above it, as the site's is from
+   its strong words. An h3, larger and in the serif, never reads as a bold
+   line, nor an h4 as an h3. A listing is ruled above and below, as in
+   print, with no ground; a table, ruled between its rows, with no frame
+   around it and no grid; an image, framed in the line. */
 .markdown-body {
   line-height: var(--app-lh-prose);
   font-size: var(--app-text-prose);
@@ -307,12 +311,17 @@ tr.app-row-unpublished > td:first-child {
   color: var(--app-ink);
 }
 .markdown-body h1 {
-  font-size: var(--app-text-xl);
+  font-size: var(--app-text-prose-h1);
 }
 .markdown-body h2 {
-  font-size: var(--app-text-lg);
+  font-size: var(--app-text-xl);
 }
-.markdown-body h3,
+/* The h1 and the h2 take the serif from the rule for every h1 and h2, above. */
+.markdown-body h3 {
+  font-size: var(--app-text-lg);
+  font-family: var(--app-font-serif);
+  letter-spacing: var(--app-heading-tracking);
+}
 .markdown-body h4 {
   font-size: var(--app-text-prose);
 }

@@ -843,7 +843,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `-lg` (16: an item's title; a field's text on a touch screen), `-xl` (18: a card's, a dialog's, the
   course's title), `-2xl` (24: a page's title, a figure that stands for a card), `-3xl` and `-4xl`
   (32, 40: a figure that stands for a page, a score, a total, a countdown); `-prose` (15) for what is
-  read at length (rendered Markdown, a chat's messages), and `-mark` (11) for Latin letters and
+  read at length (rendered Markdown, a chat's messages), `-prose-h1` (20) for an author's `#` in
+  rendered Markdown and nothing else, and `-mark` (11) for Latin letters and
   figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
   Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
   blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
@@ -866,10 +867,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   to read. What is not running text runs the column's width, and so does the paragraph, item or
   quotation that holds it: an image (a student's screenshot at 510 px is too small to read), a table,
   a listing, a displayed formula. An author's headings in rendered Markdown are a step under the
-  page's title, whatever level they were written at, and all in the ink and a heading's weight: `#`
-  18 px (`-xl`), `##` 16 (`-lg`), `###` and `####` the text's 15, as the site's `h4`, so that the
-  page's own `h1` stays its largest heading (`#` was 1.6em, 24 px, as large as the title) and an
-  author's bold words, in the text's ink, never outweigh a heading. A token read is a token set:
+  page's title, whatever level they were written at, and all in the ink and a heading's weight; its
+  sections in the serif, a step apart, `#` 20 px (`-prose-h1`), `##` 18 (`-xl`), `###` 16 (`-lg`),
+  so that the page's own `h1` stays its largest heading (`#` was 1.6em, 24 px, as large as the
+  title); `####` the text's 15 in the sans, as the site's `h4`. An author's bold words keep a
+  heading's weight, in the text's ink: a `###`, larger and in the serif, never reads as a bold line,
+  nor a `####`, in the sans, as a `###`; a `####` is told from bold words by its ink and the room
+  above it, as the site's `h4` is from its strong words. With `###` at the text's 15 in the sans,
+  the three were alike but for the ink; it could be no larger under a `##` of 16, nor `##` under a
+  `#` of 18 with no step between 18 and the title's 24, which `-prose-h1` is. Under a section's
+  title (18: an assignment's instructions, a submission's work, feedback), an author's `#` is a
+  step larger than that title, as it was at 24 before; the page's title stays the largest. A token
+  read is a token set:
   `src/styles/customProperties.spec.ts` fails on a
   `var(--app-…)` that no style sheet, component or script sets, which a browser would take for
   nothing and leave the element to inherit. Element Plus's sizes are mapped

@@ -153,6 +153,10 @@
   --app-text-4xl: 40px;
   /* Read at length, in every language: rendered Markdown, a chat's messages. */
   --app-text-prose: 15px;
+  /* An author's first heading (#) in rendered Markdown: a step under a
+     page's title (2xl), so that its ## can be xl and its ### lg, each a step
+     apart, while the text stays 15 (styles/main.css). */
+  --app-text-prose-h1: 20px;
   /* Latin letters and figures alone in a mark of a fixed size ("AI", "PDF" on
      a file, an id, a key, a file's size): never Chinese, and the same in
      every language. */

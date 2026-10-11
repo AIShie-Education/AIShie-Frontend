@@ -28,7 +28,7 @@ const sources = import.meta.glob<string>(
 type Sources = Record<string, string>
 
 /** The sizes of the scale, as `var(--app-text-<step>)` names them. */
-const STEPS = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', 'prose', 'mark']
+const STEPS = ['xs', 'sm', 'md', 'lg', 'xl', '2xl', '3xl', '4xl', 'prose', 'prose-h1', 'mark']
 const STEP = new RegExp(`^var\\(--app-text-(?:${STEPS.join('|')})\\)$`)
 
 /**
@@ -258,7 +258,7 @@ describe('the type scale', () => {
 
   it('has its steps, its leading, its strong weight and its room, in English', () => {
     const root = block(':root')
-    expect(STEPS.filter((s) => s !== 'prose' && s !== 'mark').map((s) => root[`--app-text-${s}`])).toEqual([
+    expect(STEPS.filter((s) => !/^(?:prose|mark)/.test(s)).map((s) => root[`--app-text-${s}`])).toEqual([
       '12px',
       '13px',
       '14px',
@@ -268,7 +268,12 @@ describe('the type scale', () => {
       '32px',
       '40px',
     ])
-    expect([root['--app-text-prose'], root['--app-text-mark']]).toEqual(['15px', '11px'])
+    // Rendered Markdown's text, and its # a step under a page's title (2xl), over its ## (xl).
+    expect([root['--app-text-prose'], root['--app-text-prose-h1'], root['--app-text-mark']]).toEqual([
+      '15px',
+      '20px',
+      '11px',
+    ])
     // Running text and headings take the site's leading (aishie.app's --lh-body and --lh-heading).
     expect([root['--app-lh-ui'], root['--app-lh-text'], root['--app-lh-prose'], root['--app-lh-heading']]).toEqual([
       '1.5',
@@ -301,11 +306,21 @@ describe('the type scale', () => {
     expect(zh['--app-weight-strong']).toBe('500')
     expect(zh['--app-heading-weight']).toBe('700')
     // The steps from md up, the prose's and the marks' are the same in every language.
-    for (const s of ['md', 'lg', 'xl', '2xl', '3xl', '4xl', 'prose', 'mark']) expect(zh[`--app-text-${s}`]).toBeUndefined()
+    for (const s of ['md', 'lg', 'xl', '2xl', '3xl', '4xl', 'prose', 'prose-h1', 'mark'])
+      expect(zh[`--app-text-${s}`]).toBeUndefined()
   })
 
   it('is every font-size the app writes', () => {
     expect(sizesOff()).toEqual([])
+  })
+
+  it('keeps the step of an author’s # to rendered Markdown’s h1', () => {
+    // 20 px is a heading's in a text read at length, between a card's title and a page's: not a
+    // size the interface takes.
+    const where = declarations('font-size')
+      .filter((d) => d.value.includes('--app-text-prose-h1'))
+      .map((d) => `${d.file}: ${d.selector}`)
+    expect(where).toEqual(['/src/styles/main.css: .markdown-body h1'])
   })
 
   it('gives strong text its weight, never a 600 Chinese has not got', () => {

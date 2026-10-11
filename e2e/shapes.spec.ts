@@ -13,9 +13,10 @@ import { shapeOffences, soloPrimary } from './styleAudit'
 // table is ruled between its rows in the site's line, and an author's heading
 // in rendered Markdown stays under the page's title, a listing ruled above
 // and below with no ground; its words stop at the measure, but an image, a
-// listing and a table run the column's width, and its headings are never
-// lighter than an author's bold words. The audit is checked first: it finds
-// what it is for when it is planted in a page, and lets a round mark through.
+// listing and a table run the column's width; its sections' headings are
+// stepped in the serif, and none of its headings looks like another or like
+// an author's bold words. The audit is checked first: it finds what it is
+// for when it is planted in a page, and lets a round mark through.
 
 /** Reads the app in a theme from the next page load on. */
 async function inTheme(page: Page, theme: 'light' | 'dark') {
@@ -199,14 +200,14 @@ test('a table’s rows are parted by the site’s line, and an author’s headin
     }
   })
   expect(sizes.page).toBe(24)
-  expect(sizes.h1).toBe(18)
-  expect(sizes.h2).toBe(16)
+  expect(sizes.h1).toBe(20)
+  expect(sizes.h2).toBe(18)
   expect(sizes.listing).toEqual({ top: '1px', bottom: '1px', ground: 'rgba(0, 0, 0, 0)', radius: '0px' })
   // 34em of the text's 15 px.
   expect(sizes.measure).toBe('510px')
 })
 
-test('an author’s image, and an item or a quotation that holds a listing or a table, run the column’s width, and an author’s headings outweigh their bold words', async ({
+test('an author’s image, and an item or a quotation that holds a listing or a table, run the column’s width, and an author’s headings are told from each other and from bold words', async ({
   page,
 }) => {
   const d = demo()
@@ -216,8 +217,8 @@ test('an author’s image, and an item or a quotation that holds a listing or a 
   const body = page.locator('.markdown-body').first()
   await expect(body.locator('h1')).toBeVisible()
   // As markdown-it renders them: a paragraph of words; an image written on its own line, and one
-  // in a link; a list item of words and a listing; a quotation holding a table; then a ### and a
-  // #### among paragraphs, one of them an author's bold line.
+  // in a link; a list item of words and a listing; a quotation holding a table; then a #, a ##, a
+  // ### and a #### among paragraphs, one of them an author's bold line.
   const words = 'Words of running text, long enough to fill a line at the measure and run on to the next. '.repeat(4)
   await body.evaluate((md, text) => {
     const pixel = 'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=='
@@ -227,6 +228,8 @@ test('an author’s image, and an item or a quotation that holds a listing or a 
       <p class="t-linked"><a href="#"><img src="${pixel}" alt="A diagram" width="1600" height="200"></a></p>
       <ul><li class="t-item"><p class="t-item-words">${text}</p><pre><code>${'x = 1; '.repeat(40)}</code></pre></li></ul>
       <blockquote class="t-quote"><table><tbody><tr>${'<td>A cell of a wide table</td>'.repeat(12)}</tr></tbody></table></blockquote>
+      <h1>A title</h1><p>${text}</p>
+      <h2>A section</h2><p>${text}</p>
       <h3>A subsection</h3><p>${text}</p>
       <p class="t-bold"><strong>An author’s bold line</strong></p>
       <h4>A minor heading</h4><p>${text}</p>`
@@ -257,24 +260,39 @@ test('an author’s image, and an item or a quotation that holds a listing or a 
   expect(widths.item).toBeGreaterThan(510)
   expect(widths.quote).toBe(widths.column)
 
-  // ### and #### in the ink and a heading's weight, at the text's size: never lighter than an
-  // author's bold words, which are in the text's ink; in Chinese (700 and 500 for strong text) too.
-  for (const lang of ['en', 'zh-Hant'] as const) {
+  // Every heading in the ink and a heading's weight. #, ## and ### in the serif, a step apart under
+  // the page's 24 px title; #### the text's size in the sans, as the site's h4. An author's bold
+  // words in a heading's weight too, but in the text's ink: a ### is larger and in the serif, a ####
+  // in the ink. So, in every language (Chinese's heading weight 700, its strong text 500), no two
+  // of them alike.
+  for (const lang of ['en', 'zh-Hant', 'zh-Hans'] as const) {
     const looks = await page.evaluate((l) => {
       document.documentElement.lang = l
       const md = document.querySelector('.markdown-body')!
       const look = (sel: string) => {
         const cs = getComputedStyle(md.querySelector(sel)!)
-        return `${cs.fontSize} ${cs.fontWeight} ${cs.color}`
+        // The stack's first face: Source Serif 4 or IBM Plex Sans; in Chinese, AIshie Latin Serif or AIshie Latin.
+        const face = /serif/i.test(cs.fontFamily.split(',')[0]!) ? 'serif' : 'sans'
+        return `${cs.fontSize} ${cs.fontWeight} ${cs.color} ${face}`
       }
-      return { h3: look('h3'), h4: look('h4'), bold: look('.t-bold strong'), words: look('.t-words') }
+      return {
+        h1: look('h1'),
+        h2: look('h2'),
+        h3: look('h3'),
+        h4: look('h4'),
+        bold: look('.t-bold strong'),
+        words: look('.t-words'),
+      }
     }, lang)
     const heading = lang === 'en' ? 600 : 700
     expect(looks, lang).toEqual({
-      h3: `15px ${heading} rgb(28, 28, 28)`,
-      h4: `15px ${heading} rgb(28, 28, 28)`,
-      bold: `15px ${heading} rgb(58, 58, 58)`,
-      words: '15px 400 rgb(58, 58, 58)',
+      h1: `20px ${heading} rgb(28, 28, 28) serif`,
+      h2: `18px ${heading} rgb(28, 28, 28) serif`,
+      h3: `16px ${heading} rgb(28, 28, 28) serif`,
+      h4: `15px ${heading} rgb(28, 28, 28) sans`,
+      bold: `15px ${heading} rgb(58, 58, 58) sans`,
+      words: '15px 400 rgb(58, 58, 58) sans',
     })
+    expect(new Set(Object.values(looks)).size, lang).toBe(6)
   }
 })
