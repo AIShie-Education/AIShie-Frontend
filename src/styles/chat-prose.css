@@ -35,9 +35,11 @@
 .markdown-body.chat-prose h3 {
   font-size: 1.06em;
 }
+/* An h4 is the text's size: it stands out of its message by the heading's
+   ink and the room above it, as in a document (main.css), never as a bold
+   line in the text's ink-2 would. */
 .markdown-body.chat-prose h4 {
   font-size: 1em;
-  color: var(--app-ink-2);
 }
 .markdown-body.chat-prose p,
 .markdown-body.chat-prose ul,
