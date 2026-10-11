@@ -131,15 +131,16 @@ const filtered = computed(() => {
 const shown = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
 
 /**
- * A column says something only where its rows differ (docs/CONVENTIONS.md,
- * "Building a view"), read over every action the filters leave, not one
- * page of them, so that it does not come and go from page to page. Status:
- * while they are not all in one (which the chips above say once), or one
- * of them is held for review. Decided: while someone decided one of them;
- * an action done at once has nobody, and every row would say —.
+ * A column says something only where its rows do not all say the same
+ * (docs/CONVENTIONS.md, "Building a view"), read over every action the
+ * filters leave, not one page of them, so that it does not come and go from
+ * page to page. Status: while one of them is not simply done (Executed, the
+ * usual), or is held for review, as the members' Status shows while a seat
+ * is not active; every action done at once says so in the chips above,
+ * once. Decided: while someone decided one of them; an action done at once
+ * has nobody, and every row would say —.
  */
-const statusVaries = computed(() => new Set(filtered.value.map((a) => a.status)).size > 1)
-const statusShown = computed(() => statusVaries.value || filtered.value.some((a) => a.review_state !== 'none'))
+const statusShown = computed(() => filtered.value.some((a) => a.status !== 'executed' || a.review_state !== 'none'))
 const decidedShown = computed(() => filtered.value.some((a) => !!a.decided_at || !!a.decided_by_member_id))
 // The table is laid out again as its columns change: by its width, and as Status and Decided come and go.
 useTableRelayout(tableRef, [narrow, statusShown, decidedShown])
@@ -233,7 +234,7 @@ function open(row: ActionRow) {
                   {{ outcomeNote(row) }}
                 </p>
                 <div v-if="narrow" class="my-actions__stack">
-                  <StatusTag v-if="statusVaries" vocab="actionStatus" :value="row.status" />
+                  <StatusTag v-if="statusShown" vocab="actionStatus" :value="row.status" />
                   <StatusTag v-if="row.review_state !== 'none'" vocab="reviewState" :value="row.review_state" />
                   <span class="my-actions__muted"><TimeText :value="row.created_at" relative /></span>
                 </div>
@@ -243,7 +244,7 @@ function open(row: ActionRow) {
           <el-table-column v-if="!narrow && statusShown" :label="t('actions.mine.columns.status')" min-width="150">
             <template #default="{ row }">
               <div class="my-actions__tags">
-                <StatusTag v-if="statusVaries" vocab="actionStatus" :value="row.status" />
+                <StatusTag vocab="actionStatus" :value="row.status" />
                 <StatusTag v-if="row.review_state !== 'none'" vocab="reviewState" :value="row.review_state" />
               </div>
             </template>

@@ -694,10 +694,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   group of rows is a plain sub-heading in the second ink, in the case it is written in, never small
   grey capitals. A status a list would show the same on every row is not shown (Published on each
   material, the members' Status column while every seat is active, the people's while nobody
-  listed is suspended, My actions' Status while every action listed is in one (its filter's chips
-  say which, once) and its Decided while nobody decided any, Awaiting approval on each of a
-  submission's grades waiting for approval, Built in on each preset while no department's are
-  beside them, a role tag where the reader's roles do not differ), and a page says its thing's
+  listed is suspended, My actions' Status while every action listed was simply done (Executed,
+  which its filter's chips say once) and its Decided while nobody decided any, Awaiting approval on
+  each of a submission's grades waiting for approval, Built in on each preset while no department's
+  are beside them, a role tag where the reader's roles do not differ), and a page says its thing's
   state once, in its facts, not again beside its title. `npm run lint` refuses
   Element Plus's card, a bordered checkbox or radio, and a button made outlined, a pill or a disc
   (`plain`, `round`, `circle`) wherever a template writes one (`eslint.config.js`, ELEMENT_LOOK,

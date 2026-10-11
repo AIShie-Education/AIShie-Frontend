@@ -193,7 +193,7 @@ describe('My actions, a column the same on every row', () => {
     result: undefined,
   }))
 
-  it('is not shown: no Status while every action is in one, which the chips say once, and no Decided while nobody decided one', async () => {
+  it('is not shown: no Status while every action was simply done, which the chips say once, and no Decided while nobody decided one', async () => {
     read.mockImplementation(async (tool: string) => {
       if (tool === 'action.list_mine') return { actions: done }
       if (tool === 'agent.list') return { agents: [] }
@@ -206,7 +206,7 @@ describe('My actions, a column the same on every row', () => {
     expect(w.findAll('.filter-chips .filter-chip').map((c) => c.text())).toEqual(['All 2', 'Executed 2'])
   })
 
-  it('is shown while the actions listed differ, and goes again once a chip keeps one status alone', async () => {
+  it('is shown while one action listed is not simply done, and goes again once a chip keeps those done alone', async () => {
     const w = await mountAsTa()
     expect(heads()).toEqual(['Action', 'Status', 'When', 'Decided'])
     await w
@@ -215,5 +215,16 @@ describe('My actions, a column the same on every row', () => {
       .trigger('click')
     await flushPromises()
     expect(heads()).toEqual(['Action', 'When', 'Decided'])
+  })
+
+  it('is shown for a proposal rejected, were it the only action listed', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'action.list_mine') return { actions: [{ ...ACTIONS[1], status: 'rejected', result: undefined }] }
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    await mountAsTa()
+    expect(heads()).toEqual(['Action', 'Status', 'When', 'Decided'])
+    expect(rows()[0]!.textContent).toContain('Rejected')
   })
 })

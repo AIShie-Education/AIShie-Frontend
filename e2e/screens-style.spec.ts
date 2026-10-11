@@ -426,8 +426,8 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     if (varies) await expect(heads.filter({ hasText: 'Status' })).toHaveCount(1)
     else await expect(heads.filter({ hasText: 'Status' })).toHaveCount(0)
 
-    // My actions: a Status column while the actions listed differ in it, and Decided while someone decided one;
-    // read from what the page itself was given.
+    // My actions: a Status column while an action listed is not simply done (Executed, the usual), and Decided
+    // while someone decided one; read from what the page itself was given.
     const listed = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/actions/mine'))
     await page.goto(coursePath('my-actions'))
     const mine = ((await (await listed).json()).result?.actions ?? []) as {
@@ -438,7 +438,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     const mineHeads = page.locator('.my-actions__table thead th')
     await expect(mineHeads.first()).toBeVisible()
     expect(mine.length).toBeGreaterThan(0)
-    const statusShown = new Set(mine.map((a) => a.status)).size > 1 || mine.some((a) => a.review_state !== 'none')
+    const statusShown = mine.some((a) => a.status !== 'executed' || a.review_state !== 'none')
     await expect(mineHeads.filter({ hasText: /^Status$/ })).toHaveCount(statusShown ? 1 : 0)
     await expect(mineHeads.filter({ hasText: /^Decided$/ })).toHaveCount(mine.some((a) => a.decided_at) ? 1 : 0)
 
@@ -559,10 +559,10 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
       // The overview's assignments.
       await each(coursePath(), '.assignments__row', '.assignments__go')
       if (phone) {
-        // A phone's submissions, and an assignment's roster, a row each.
+        // A phone's submissions, and an assignment's roster (the submissions of one assignment), a row each.
         await each(coursePath('submissions'), '.submission-cards__item', '.submission-cards__go')
         await each(
-          coursePath(`assignments/${d().course.assignments.hw1}`),
+          coursePath(`submissions?assignment=${d().course.assignments.hw1}`),
           '.roster-cards__link',
           '.roster-cards__go',
         )
