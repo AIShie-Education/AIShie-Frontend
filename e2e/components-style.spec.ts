@@ -299,11 +299,11 @@ test('a list that failed to load says so in red, at its left, and offers Retry w
   await page.goto(coursePath('members'))
   const failed = page.locator('.async-state__result')
   await expect(failed).toContainText('Something went wrong')
-  await expect(failed.locator('.async-state__title .async-state__glyph')).toBeVisible()
+  await expect(failed.locator('.app-result__title .app-result__glyph')).toBeVisible()
   await expect(failed.locator('.async-state__retry svg')).toBeVisible()
   await page.mouse.move(0, 0)
   const look = await failed.evaluate((el) => {
-    const glyph = el.querySelector('.async-state__glyph')!
+    const glyph = el.querySelector('.app-result__glyph')!
     const retry = el.querySelector('.async-state__retry')!
     const icon = retry.querySelector('svg')!
     const red = getComputedStyle(document.documentElement).getPropertyValue('--app-danger-fg').trim()
@@ -327,4 +327,22 @@ test('a list that failed to load says so in red, at its left, and offers Retry w
   expect(Math.abs(look.iconLeft - look.glyphLeft)).toBeLessThanOrEqual(1)
   expect(look.retryGround).toBe('rgba(0, 0, 0, 0)')
   await expect(failed.getByRole('button', { name: 'Retry' })).toBeVisible()
+
+  // A title that wraps (a narrow pane's, a phone's) keeps its glyph on its first line, at that line's middle.
+  const wrapped = await failed.evaluate((el) => {
+    ;(el as HTMLElement).style.width = '120px'
+    const words = el.querySelector('.app-result__title > span')!
+    const range = document.createRange()
+    range.selectNodeContents(words)
+    const lines = [...range.getClientRects()]
+    const glyph = el.querySelector('.app-result__glyph svg')!.getBoundingClientRect()
+    return {
+      lines: new Set(lines.map((r) => Math.round(r.top))).size,
+      firstTop: lines[0]!.top,
+      firstBottom: lines[0]!.bottom,
+      glyphMiddle: (glyph.top + glyph.bottom) / 2,
+    }
+  })
+  expect(wrapped.lines).toBeGreaterThan(1)
+  expect(Math.abs(wrapped.glyphMiddle - (wrapped.firstTop + wrapped.firstBottom) / 2)).toBeLessThanOrEqual(2)
 })

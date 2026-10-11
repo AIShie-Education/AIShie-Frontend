@@ -70,6 +70,16 @@ describe('Element Plus’s small round shapes, squared', () => {
   })
 })
 
+describe('a result (AppResult)', () => {
+  it('lies at the left of where it is, its title close under nothing, with no large icon over it', () => {
+    const result = rule('.el-result')
+    expect(result).toMatch(/--el-result-padding: var\(--app-space-xl\) 0;/)
+    expect(result).toMatch(/--el-result-title-margin-top: 0;/)
+    expect(result).toMatch(/align-items: flex-start;\s*text-align: start;/)
+    expect(rule('.el-result .el-result__icon')).toMatch(/display: none;/)
+  })
+})
+
 describe('a quotation in rendered Markdown (main.css, chat-prose.css)', () => {
   it('is set apart by a rule in a control’s edge, 3:1 or more, not the indigo’s faint line', () => {
     expect(ruleIn(sheets['./main.css']!, '.markdown-body blockquote')).toMatch(

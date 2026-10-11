@@ -35,6 +35,17 @@ describe('the element-look lint rule', () => {
     expect(await problems('<el-empty />', 'src/components/AsyncState.vue')).toHaveLength(1)
   })
 
+  it('refuses Element Plus’s result anywhere but AppResult, whatever its icon, and points to AppResult', async () => {
+    for (const result of [
+      '<el-result icon="warning" title="Not found" />',
+      '<el-result icon="error" :title="t(\'x\')"><template #extra><el-button>Retry</el-button></template></el-result>',
+      '<ElResult title="Done" />',
+    ])
+      expect(await problems(result), result).toEqual([expect.stringContaining('AppResult')])
+    expect(await problems('<el-result title="x" />', 'src/components/AsyncState.vue')).toHaveLength(1)
+    expect(await problems('<el-result :sub-title="subTitle"><template #title>x</template></el-result>', 'src/components/AppResult.vue')).toEqual([])
+  })
+
   it('refuses an explanation in an el-alert, of type info or none, and points to AppNote; lets a warning or an error be one', async () => {
     for (const alert of ['<el-alert type="info" title="x" />', '<el-alert title="x" :closable="false" show-icon />'])
       expect(await problems(alert)).toEqual([expect.stringContaining('AppNote')])

@@ -8,6 +8,7 @@ import { ApiError, type JoinPreview } from '@/api/http'
 import type { Me } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
+import AppResult from '@/components/AppResult.vue'
 import JoinView from './JoinView.vue'
 
 let preview: () => Promise<JoinPreview>
@@ -94,6 +95,9 @@ describe('the join page', () => {
     }
     const { w } = await mountJoin()
     expect(w.text()).toContain('This link isn’t valid')
+    // As every result says what went wrong: a glyph on its title's line, at the column's left.
+    expect(w.getComponent(AppResult).props('kind')).toBe('missing')
+    expect(w.find('.app-result__title .app-result__glyph').exists()).toBe(true)
     w.unmount()
   })
 

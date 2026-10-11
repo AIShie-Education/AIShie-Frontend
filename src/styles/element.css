@@ -790,6 +790,19 @@ html.dark .el-card {
 .el-popper.is-light > .el-popper__arrow::before {
   border-color: var(--app-control-border);
 }
+/* A result (AppResult: what went wrong where it fills a section, a page or the chat) lies at the left of where it
+   is, as the rest of its text does, with 24 px of room above and below, and without Element Plus's large icon on
+   a filled circle over a centred title: AppResult says what it is by a glyph on the title's line. */
+.el-result {
+  --el-result-padding: var(--app-space-xl) 0;
+  --el-result-title-margin-top: 0;
+  --el-result-extra-margin-top: var(--app-space-lg);
+  align-items: flex-start;
+  text-align: start;
+}
+.el-result .el-result__icon {
+  display: none;
+}
 .el-dropdown-menu,
 .el-select-dropdown__list {
   padding: 6px;

@@ -62,6 +62,7 @@ import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AiBadge from '@/components/AiBadge.vue'
+import AppResult from '@/components/AppResult.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -1047,17 +1048,18 @@ const closedLine = computed(() => {
       </template>
       <template v-else-if="respondent">
         <div v-if="openProposed" class="chat-pane__intro">
-          <el-result
-            icon="info"
+          <AppResult
+            kind="waiting"
+            class="chat-pane__proposed"
             :title="t('chat.proposed.title')"
             :sub-title="t('chat.proposed.body', { name: respondent.display_name })"
           >
             <template #extra>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-                <el-button>{{ t('chat.myActions') }}</el-button>
+                <el-button class="chat-pane__my-actions">{{ t('chat.myActions') }}</el-button>
               </router-link>
             </template>
-          </el-result>
+          </AppResult>
         </div>
         <div v-else class="chat-pane__intro chat-pane__start">
           <p class="chat-pane__start-title">{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
@@ -1323,6 +1325,15 @@ const closedLine = computed(() => {
 }
 .chat-pane__intro p {
   margin: 0 0 8px;
+}
+/* A conversation waiting for approval: the intro's own room is the result's, and My actions, a text button that
+   starts its line, takes back its room at its left, so that its words start under the title's glyph. */
+.el-result.chat-pane__proposed {
+  padding: 0;
+}
+.el-button.chat-pane__my-actions {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
 }
 /* A new conversation, at the pane's left as the page's text is: who it is with, then a few ways to begin, which
    fill the box, as rows of words between rules. */
