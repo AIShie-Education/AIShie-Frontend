@@ -590,7 +590,8 @@ defineExpose({ focus: () => input.value?.focus() })
   border-radius: 2px;
   background: currentColor;
 }
-/* The commands, or the course's assignments and materials, over the box: a list framed as a menu is, casting no
+/* The commands, or the course's assignments and materials, over the box: a list framed as a menu is, in a
+   control's edge (its ground is the pane's ivory, so the line alone would not tell it from the page), casting no
    shadow. */
 .chat-suggest {
   position: absolute;
@@ -601,7 +602,7 @@ defineExpose({ focus: () => input.value?.focus() })
   max-height: 264px;
   overflow-y: auto;
   padding: 4px;
-  border: var(--app-rule);
+  border: 1px solid var(--app-control-border);
   border-radius: var(--app-radius);
   background: var(--app-overlay);
 }

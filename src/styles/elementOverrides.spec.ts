@@ -3,7 +3,14 @@
 import { describe, expect, it } from 'vitest'
 
 const sheets = import.meta.glob<string>(
-  ['./element.css', './overlays.css', './main.css', './chat-prose.css', '../components/sidebar/AccountMenu.vue'],
+  [
+    './element.css',
+    './overlays.css',
+    './main.css',
+    './chat-prose.css',
+    '../components/sidebar/AccountMenu.vue',
+    '../components/chat/ChatComposer.vue',
+  ],
   {
     query: '?raw',
     import: 'default',
@@ -13,6 +20,7 @@ const sheets = import.meta.glob<string>(
 const elementCss = sheets['./element.css']!
 const overlaysCss = sheets['./overlays.css']!
 const accountMenu = sheets['../components/sidebar/AccountMenu.vue']!
+const chatComposer = sheets['../components/chat/ChatComposer.vue']!
 
 /** The declarations of every rule with this selector, as written at the start of a line. */
 function ruleIn(css: string, selector: string) {
@@ -61,6 +69,12 @@ describe('what floats over the page', () => {
     const menu = accountMenu.replace(/^[\s\S]*<style scoped>/, '')
     expect(ruleIn(menu, '.account-menu')).toMatch(/border: 1px solid var\(--app-control-border\);/)
     expect(ruleIn(menu, '.account-menu__sub')).toMatch(/border: 1px solid var\(--app-control-border\);/)
+  })
+
+  it('is framed so as the chat’s list of commands and references over its box, not in the rule', () => {
+    const suggest = ruleIn(chatComposer.replace(/^[\s\S]*<style scoped>/, ''), '.chat-suggest')
+    expect(suggest).toMatch(/border: 1px solid var\(--app-control-border\);/)
+    expect(suggest).not.toMatch(/var\(--app-rule\)/)
   })
 })
 
