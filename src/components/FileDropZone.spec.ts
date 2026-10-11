@@ -309,4 +309,13 @@ describe('FileDropZone', () => {
     await button.trigger('click')
     expect(click).toHaveBeenCalled()
   })
+
+  it('is the indigo’s words on a phone where it is compact, never an outlined button', async () => {
+    phone = true
+    const w = await zone({ compact: true })
+    const button = w.find('.file-drop__big')
+    expect(button.classes()).toContain('is-text')
+    expect(button.classes()).toContain('el-button--primary')
+    expect(button.classes()).not.toContain('is-plain')
+  })
 })

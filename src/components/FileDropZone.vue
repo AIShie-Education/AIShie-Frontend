@@ -322,7 +322,7 @@ defineExpose({ addFiles, choose, focus })
         ref="phoneButton"
         type="primary"
         :size="compact ? 'default' : 'large'"
-        :plain="compact"
+        :text="compact"
         class="file-drop__big"
         :disabled="disabled"
         @click="choose"
