@@ -488,9 +488,12 @@ defineExpose({ focus: () => input.value?.focus() })
   background: transparent;
   line-height: var(--app-lh-ui);
 }
+/* The box shows the focus (above), not the field inside it: neither the
+   field's edge nor the outline a focused field takes (styles/element.css). */
 .chat-composer__input :deep(.el-textarea__inner:focus),
 .chat-composer__input :deep(.el-textarea__inner:hover) {
   box-shadow: none;
+  outline: none;
 }
 .chat-composer__bar {
   display: flex;
