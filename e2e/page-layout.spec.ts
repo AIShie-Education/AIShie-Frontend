@@ -6,6 +6,7 @@ import {
   chatWindow,
   coursePath,
   demo,
+  minimizeChat,
   openChat,
   photograph,
   registerPerson,
@@ -18,17 +19,21 @@ import {
 import { startStandInIdp } from './stand-in-idp'
 
 // A page's two columns follow the page's own width, not the window's: the
-// side bar open on the left takes 260 px from it, and the chat, a window
-// floating over the page, takes nothing. Each page stacks its columns where
-// its main one would be left less than about 420 px, and keeps them side by
-// side where there is room, 32 px apart; each column is a stack of sections,
-// each under a rule, none drawn as a card (no ground, no frame, no corners),
-// as tall as what it holds. Opening, resizing or moving the chat's window changes nothing of
-// the page under it. What a page lays out in its template (a table or a card
-// per row, which columns a table shows, el-descriptions' columns) follows its
-// own width, or its card's, as its columns do; so do a course's tabs.
+// side bar open on the left takes 260 px from it, and the chat, docked at the
+// right edge while it is open, takes its own width (400 px until its edge is
+// dragged). Each page stacks its columns where its main one would be left less
+// than about 420 px, and keeps them side by side where there is room, 32 px
+// apart; each column is a stack of sections, each under a rule, none drawn as
+// a card (no ground, no frame, no corners), as tall as what it holds. Opening
+// or resizing the chat's pane lays the page out again by its own width, as the
+// side bar does. What a page lays out in its template (a table or a card per
+// row, which columns a table shows, el-descriptions' columns) follows its own
+// width, or its card's, as its columns do; so do a course's tabs.
 
-/** The side bar open on a view (or collapsed), and the chat's window open (unless not asked for), in a window this size. */
+/**
+ * The side bar open on a view (or collapsed), in a window this size; the chat's pane docked beside the page where
+ * asked for (`chat: true`), and closed otherwise, so that the page's width is the window's less the side bar alone.
+ */
 async function layout(
   page: Page,
   width: number,
@@ -43,9 +48,12 @@ async function layout(
     if (await shown.count()) await shown.click()
     await expect(page.locator('#side-bar')).toHaveCount(0)
   }
-  if (opts.chat === false) return
+  if (!opts.chat) {
+    if (await chatWindow(page).isVisible()) await minimizeChat(page)
+    return
+  }
   const panel = await openChat(page)
-  await expect(panel).toHaveClass(/is-window/)
+  await expect(panel).toHaveClass(/is-docked/)
 }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
@@ -85,7 +93,7 @@ async function box(l: Locator) {
   return b!
 }
 
-/** How wide the page is: its width is the window's, less the activity bar and the side bar, whatever the chat does. */
+/** How wide the page is: the window's, less the activity bar, the side bar and the chat's pane where they are open. */
 async function pageWidth(page: Page) {
   return Math.round((await box(page.locator('.app-main'))).width)
 }
@@ -127,8 +135,8 @@ async function stacked(main: Locator, side: Locator) {
   return Math.abs(m.x - s.x) < 2 || s.y >= m.y + m.height - 1 || m.y >= s.y + s.height - 1
 }
 
-test.describe('pages beside the side bar, under the chat’s window', () => {
-  test('the course overview takes its width from the window and the side bar alone, the chat over it, and a dialog over both', async ({
+test.describe('pages beside the side bar and the chat’s pane', () => {
+  test('the course overview takes its width from the window, the side bar and the chat beside it, and a dialog lies over all three', async ({
     page,
   }) => {
     const d = demo()
@@ -137,30 +145,27 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     await expect(page.locator('.overview .about')).toBeVisible()
     await page.setViewportSize({ width: 1280, height: 800 })
     await showSideView(page, 'Courses')
-    // 1280 px, less the activity bar and the side bar: the chat opens over it and takes nothing from it.
-    const closed = await pageWidth(page)
-    expect(closed).toBe(1280 - 48 - 260)
-    await layout(page, 1280, 800, { side: true })
-    expect(await pageWidth(page)).toBe(closed)
-    await page.mouse.move(0, 400)
-    await photograph(page, 'layout-overview-1280')
-
     const main = page.locator('.overview__main')
     const side = page.locator('.overview__side')
-    // About 920 px of page: two columns, the main one readable.
+    // 1280 px, less the activity bar and the side bar: about 920 px of page, two columns, the main one readable.
+    await layout(page, 1280, 800, { side: true })
+    expect(await pageWidth(page)).toBe(1280 - 48 - 260)
     expect(await stacked(main, side)).toBe(false)
     expect((await box(main)).width).toBeGreaterThanOrEqual(420)
-    expect((await box(page.locator('.overview .about'))).width).toBeGreaterThanOrEqual(380)
-    // Nothing scrolls sideways.
-    const scroll = await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    )
-    expect(scroll).toBeLessThanOrEqual(0)
 
-    // A dialog opened from the page (from the keyboard: the chat's window may lie over the button) covers the whole
-    // window, above the header and the chat's window.
-    await page.locator('.overview .about').getByRole('button', { name: 'Edit' }).focus()
-    await page.keyboard.press('Enter')
+    // The chat docked beside it takes its 400 px: the page lays itself out for what is left, one column, the card
+    // as readable.
+    await layout(page, 1280, 800, { side: true, chat: true })
+    expect(await pageWidth(page)).toBe(1280 - 48 - 260 - 400)
+    expect(await stacked(main, side)).toBe(true)
+    expect((await box(page.locator('.overview .about'))).width).toBeGreaterThanOrEqual(380)
+    await page.mouse.move(0, 400)
+    await photograph(page, 'layout-overview-1280')
+    // Nothing scrolls sideways.
+    expect(await noSideways(page)).toBe(true)
+
+    // A dialog opened from the page covers the whole window, above the header and the chat's pane.
+    await page.locator('.overview .about').getByRole('button', { name: 'Edit' }).click()
     const dialog = page.locator('.el-dialog:visible')
     await expect(dialog).toBeVisible()
     const at = await box(dialog)
@@ -182,19 +187,20 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     )
     expect(cover.onTop, 'the dialog’s dimmed layer is above the header').toBe(true)
     expect(cover.rect).toEqual([0, 0, 1280, 800])
-    expect(cover.chatCovered, 'the dialog’s dimmed layer is above the chat’s window').toBe(true)
+    expect(cover.chatCovered, 'the dialog’s dimmed layer is above the chat’s pane').toBe(true)
     await page.keyboard.press('Escape')
     await expect(dialog).toBeHidden()
     await expect(chatWindow(page)).toBeVisible()
 
-    // Less room, 1100 px with the side bar: one column, the card as readable.
+    // Less room, 1100 px with the side bar: one column, with or without the chat.
     await layout(page, 1100, 800, { side: true })
     expect(await pageWidth(page)).toBe(1100 - 48 - 260)
     expect(await stacked(main, side)).toBe(true)
     expect((await box(page.locator('.overview .about'))).width).toBeGreaterThanOrEqual(380)
 
-    // With more room, the two columns side by side, the main one as wide as ever.
-    await layout(page, 1920, 1080, { side: true })
+    // With more room, the two columns side by side beside the chat, the main one as wide as ever.
+    await layout(page, 1920, 1080, { side: true, chat: true })
+    expect(await pageWidth(page)).toBe(1920 - 48 - 260 - 400)
     expect(await stacked(main, side)).toBe(false)
     expect((await box(main)).width).toBeGreaterThanOrEqual(420)
     await photograph(page, 'layout-overview-1920')
@@ -294,7 +300,7 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     expect(await sectionsNotRuled(page.locator('.overview'))).toEqual([])
   })
 
-  test('the overview keeps its width and its columns as the chat’s window is resized and moved over it', async ({
+  test('the overview lays itself out again by its own width as the chat’s pane beside it is resized', async ({
     page,
   }) => {
     const d = demo()
@@ -303,37 +309,39 @@ test.describe('pages beside the side bar, under the chat’s window', () => {
     await expect(page.locator('.overview .about')).toBeVisible()
     const main = page.locator('.overview__main')
     const side = page.locator('.overview__side')
-    await layout(page, 1280, 800, { side: true })
-    const width = await pageWidth(page)
+    // The side bar collapsed and the chat docked: 1232 px for the page and the pane, 832 of them the page's.
+    await layout(page, 1280, 800, { side: false, chat: true })
     const panel = chatWindow(page)
-    const edge = panel.getByRole('separator', { name: 'Width of the chat window' })
+    const edge = panel.getByRole('separator', { name: 'Width of the chat' })
     await expect(edge).toHaveAttribute('aria-valuenow', '400')
+    expect(await pageWidth(page)).toBe(1280 - 48 - 400)
 
-    // Wider by 300 px, dragged by its left edge: over more of the page, which is as it was.
+    // Narrowed to the narrowest by its left edge: the page wider by as much, its two columns side by side.
     const at = await box(edge)
-    await page.mouse.move(at.x + at.width / 2, at.y + 100)
+    await page.mouse.move(at.x + at.width / 2, at.y + 200)
     await page.mouse.down()
-    await page.mouse.move(at.x + at.width / 2 - 300, at.y + 100, { steps: 10 })
+    await page.mouse.move(at.x + at.width / 2 + 300, at.y + 200, { steps: 10 })
     await page.mouse.up()
-    await expect(edge).toHaveAttribute('aria-valuenow', '700')
-    expect(await pageWidth(page)).toBe(width)
+    await expect(edge).toHaveAttribute('aria-valuenow', '320')
+    expect(await pageWidth(page)).toBe(1280 - 48 - 320)
     expect(await stacked(main, side)).toBe(false)
     await page.mouse.move(0, 400)
-    await photograph(page, 'resize-overview-700')
+    await photograph(page, 'resize-overview-320')
 
-    // Moved by its title bar to the left: the page, again, as it was, and still to use beside it.
-    const title = await box(panel.locator('.chat-panel__titlebar .chat-panel__title'))
-    await page.mouse.move(title.x + 40, title.y + title.height / 2)
+    // Widened by 300 px: the page narrower by as much, and its columns stacked, as at that width without it.
+    const again = await box(edge)
+    await page.mouse.move(again.x + again.width / 2, again.y + 200)
     await page.mouse.down()
-    await page.mouse.move(title.x - 160, title.y + title.height / 2, { steps: 10 })
+    await page.mouse.move(again.x + again.width / 2 - 300, again.y + 200, { steps: 10 })
     await page.mouse.up()
-    expect(await pageWidth(page)).toBe(width)
-    expect(await stacked(main, side)).toBe(false)
-    const moved = await box(panel)
-    expect(Math.round(1280 - moved.x - moved.width)).toBe(216)
-    // Back in its corner, 400 px wide, with a double click on its title bar.
-    await panel.locator('.chat-panel__titlebar .chat-panel__title').dblclick()
+    await expect(edge).toHaveAttribute('aria-valuenow', '620')
+    expect(await pageWidth(page)).toBe(1280 - 48 - 620)
+    expect(await stacked(main, side)).toBe(true)
+    expect(await noSideways(page)).toBe(true)
+    // Back to 400 px with a double click on its edge.
+    await edge.dblclick()
     await expect(edge).toHaveAttribute('aria-valuenow', '400')
+    expect(await pageWidth(page)).toBe(1280 - 48 - 400)
   })
 })
 
@@ -370,7 +378,7 @@ function noResizeObserverLoops() {
   return { excuse: (path: string) => void excused.push(path) }
 }
 
-test.describe('an administrator’s pages beside the side bar, under the chat’s window', () => {
+test.describe('an administrator’s pages beside the side bar', () => {
   noResizeObserverLoops()
 
   test('a department administrator’s pages and a course’s tabs are laid out for the page’s width, not the window’s', async ({
@@ -557,7 +565,7 @@ async function headingWidth(table: Locator, name: string) {
   return Math.round((await box(table.locator('thead th').filter({ hasText: name }).first())).width)
 }
 
-test.describe('a course’s tables beside the side bar, under the chat’s window', () => {
+test.describe('a course’s tables beside the side bar', () => {
   noResizeObserverLoops()
 
   test('a course’s members, a member’s page and My actions are laid out for the page’s width, not the window’s', async ({

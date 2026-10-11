@@ -5,9 +5,14 @@
 // whether it can be asked now (a dot before its name, AskableDot), whose it
 // is and what it is to the caller (two chips at most: docs/CONVENTIONS.md,
 // "Tags"; how it runs is its owner's concern, said on its own page), and how
-// its answers arrive when that is not at once. An agent with MCP access,
+// its answers arrive when that is not at once. Whose it is and what it is
+// are said only where the rows differ in them: where every agent listed is
+// the caller's own, or every one the course's, no row says so; and that the
+// course's agents answer others too is said once over the list where two or
+// more are listed, not under each. An agent with MCP access,
 // or one the runtime does not run just now, is not listed: Core leaves it
 // out, and its owner's page for it says why.
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
@@ -32,6 +37,18 @@ const offline = (r: Respondent) => {
   return a === 'never' || a === 'offline'
 }
 
+// A chip whose value is the same on every row is not shown (two rows or more: one row's says what it is).
+/** Whose an agent is, as its badge says it: the caller's own, a person's, or nobody's. */
+const whoseOf = (r: Respondent) => (r.is_my_delegate ? 'mine' : (r.owner_name ?? ''))
+const differ = (of: (r: Respondent) => string) => {
+  const items = list.items.value
+  return items.length < 2 || new Set(items.map(of)).size > 1
+}
+const showWhose = computed(() => differ(whoseOf))
+const showPurpose = computed(() => differ(agentPurpose))
+/** Two or more of the course's agents listed: that they answer others too is said once, over the list. */
+const sharedOnce = computed(() => list.items.value.filter((r) => agentPurpose(r) === 'course').length > 1)
+
 function refresh() {
   return list.refresh()
 }
@@ -46,6 +63,7 @@ defineExpose({ refresh })
     :empty-text="t('chat.respondents.empty')"
     @retry="list.reload()"
   >
+    <p v-if="sharedOnce" class="resp-shared">{{ t('chat.respondents.sharedHintAll') }}</p>
     <ul class="resp-list">
       <li v-for="r in list.items.value" :key="r.member_id">
         <!--
@@ -55,7 +73,9 @@ defineExpose({ refresh })
         <button
           type="button"
           class="resp-row"
-          :aria-describedby="`resp-${r.member_id}-ask resp-${r.member_id}-whose`"
+          :aria-describedby="
+            showWhose ? `resp-${r.member_id}-ask resp-${r.member_id}-whose` : `resp-${r.member_id}-ask`
+          "
           @click="emit('pick', r)"
         >
           <AgentAvatar :name="r.display_name" class="resp-row__avatar" />
@@ -65,18 +85,21 @@ defineExpose({ refresh })
               <!-- The "AI" stays with the name's last word when the line wraps. -->
               <AgentName :name="r.display_name" class="resp-row__name" />
               <AgentBadge
+                v-if="showWhose"
                 :kind="r.kind"
                 :owner-name="r.owner_name"
                 :mine="r.is_my_delegate"
                 no-ai
                 :hint-id="`resp-${r.member_id}-whose`"
               />
-              <StatusTag vocab="seatPurpose" :value="agentPurpose(r)" />
+              <StatusTag v-if="showPurpose" vocab="seatPurpose" :value="agentPurpose(r)" />
             </span>
             <span v-if="r.answer_level !== 'autonomous'" class="resp-row__line resp-row__facts">
               <StatusTag vocab="answerLevel" :value="r.answer_level" />
             </span>
-            <span v-if="agentPurpose(r) === 'course'" class="resp-row__note">{{ t('chat.respondents.sharedHint') }}</span>
+            <span v-if="!sharedOnce && agentPurpose(r) === 'course'" class="resp-row__note">{{
+              t('chat.respondents.sharedHint')
+            }}</span>
             <span v-if="offline(r)" class="resp-row__warn">
               {{ t('chat.respondents.offlineHint') }}
             </span>
@@ -89,41 +112,47 @@ defineExpose({ refresh })
 </template>
 
 <style scoped>
+/* What is true of the course's agents listed, said once over them, in the second ink. */
+.resp-shared {
+  margin: 0 0 8px;
+  max-width: var(--app-measure);
+  font-size: var(--app-text-sm);
+  line-height: var(--app-lh-text);
+  color: var(--app-ink-2);
+}
+/* The agents to ask: rows between rules, hovered in a tint, each ending in its ›. */
 .resp-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  border-bottom: var(--app-rule);
+}
+.resp-list > li {
+  border-top: var(--app-rule);
 }
 .resp-row {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-bg-color);
+  padding: 10px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.resp-row:hover,
+.resp-row:hover {
+  background: var(--el-fill-color-light);
+}
 .resp-row:focus-visible {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-color-primary-light-9);
+  outline-offset: -2px;
 }
 .resp-row__avatar {
   align-self: flex-start;
   margin-top: 1px;
-}
-/* The light's ring follows the row's ground as it is hovered. */
-.resp-row:hover .resp-row__avatar,
-.resp-row:focus-visible .resp-row__avatar {
-  --agent-avatar-ring: var(--el-color-primary-light-9);
 }
 .resp-row__main {
   display: flex;

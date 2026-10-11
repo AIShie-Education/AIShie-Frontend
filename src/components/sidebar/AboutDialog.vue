@@ -104,7 +104,7 @@ watch(open, async (v) => {
   justify-content: space-between;
   gap: 16px;
   padding-top: 6px;
-  border-top: 1px solid var(--app-line);
+  border-top: var(--app-rule);
 }
 .about__versions dt {
   color: var(--app-ink-3);

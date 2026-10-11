@@ -10,11 +10,10 @@ export default {
     newTip: '開始新對話',
     history: '過往對話',
     close: '關閉對話面板',
-    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
-    minimize: '最小化對話視窗',
-    // Its left edge and its top, which resize it.
-    width: '對話視窗寬度',
-    height: '對話視窗高度',
+    // The pane's head row: minimized, it opens again on what it showed; closed, on a new conversation.
+    minimize: '最小化對話',
+    // Its left edge, which resizes it.
+    width: '對話寬度',
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',
@@ -46,6 +45,7 @@ export default {
     empty: '這裡暫時沒有可以回答你問題的代理。',
     offlineHint: '這個代理目前似乎沒有在運行，回覆可能需要一段時間。',
     sharedHint: '它也會回答其他成員，會記住每個人寫給它的內容，並可能轉述給他們。',
+    sharedHintAll: '課程代理也會回答其他成員，會記住每個人寫給它們的內容，並可能轉述給他們。',
   },
   between: '{opener} → {respondent}',
   messagesLabel: '訊息',

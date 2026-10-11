@@ -747,7 +747,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   flex-wrap: wrap;
   gap: 4px 12px;
   padding: 4px 12px;
-  border-bottom: 1px solid var(--app-line);
+  border-bottom: var(--app-rule);
   background: var(--el-bg-color);
   font-size: var(--app-text-sm);
   /* Nothing to scroll here, and two fingers zoom the pages (onTouchMove, on all of the view), not the screen. */
@@ -769,7 +769,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   min-width: 2.5em;
   padding: 2px 6px;
   border: 1px solid var(--el-border-color);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: var(--el-bg-color);
   color: var(--app-ink);
   font: inherit;
@@ -796,7 +796,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   min-width: 4.2em;
   padding: 2px 4px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: none;
   color: var(--app-ink-2);
   font: inherit;
@@ -841,9 +841,8 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   position: relative;
   margin: 0 auto 16px;
   background: #fff;
-  box-shadow:
-    0 1px 3px rgb(0 0 0 / 12%),
-    0 0 0 1px rgb(0 0 0 / 6%);
+  /* A page: a 1 px line round it, no shadow; an outline, which takes nothing from the size pdf.js draws to. */
+  outline: 1px solid var(--app-line);
   overflow: hidden;
 }
 .pdf-page:last-child {
@@ -942,10 +941,9 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   justify-content: center;
   gap: 0;
   padding: 4px;
-  border: 1px solid var(--app-line);
-  border-radius: 999px;
+  border: 1px solid var(--app-line-strong);
+  border-radius: var(--app-radius);
   background: var(--el-bg-color-overlay);
-  box-shadow: var(--el-box-shadow-light);
   font-size: var(--app-text-lg);
 }
 .pdf-view.is-compact .pdf-view__zoom {
@@ -960,7 +958,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   width: 40px;
   height: 40px;
   padding: 0;
-  border-radius: 999px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xl);
 }
 .pdf-view.is-compact .pdf-view__page-input {
@@ -988,7 +986,7 @@ defineExpose({ goTo, zoomIn, zoomOut, toFitWidth, current, pageCount, zoom })
   min-width: 40px;
   height: 40px;
   padding: 0 4px;
-  border-radius: 999px;
+  border-radius: var(--app-radius);
 }
 /* On a small phone, the count and the per cent a step smaller too: at the large step, a 320 px
    phone's bar had no room for "of 1,200" beside the page field, and fitBar left the count out. */

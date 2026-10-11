@@ -24,6 +24,7 @@ vi.mock('@/api/http', async (orig) => {
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { useChatStore } = await import('@/stores/chat')
+const { useSideBarStore } = await import('@/stores/sidebar')
 const { default: AppLayout } = await import('./AppLayout.vue')
 
 const View = { render: () => null }
@@ -42,10 +43,19 @@ function membership(courseId: string, ask: string) {
   } as never
 }
 
-/** Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's. */
-async function mountAs(ask: string, opts: { phone?: boolean; email?: string; role?: string } = {}) {
+/**
+ * Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's, or in a window
+ * of this width, as media queries of width see it.
+ */
+async function mountAs(ask: string, opts: { phone?: boolean; width?: number; email?: string; role?: string } = {}) {
+  const fits = (query: string) => {
+    if (opts.width === undefined) return !!opts.phone && query.includes('max-width')
+    const min = /min-width:\s*(\d+)px/.exec(query)
+    const max = /max-width:\s*(\d+)px/.exec(query)
+    return (!!min || !!max) && (!min || opts.width >= Number(min[1])) && (!max || opts.width <= Number(max[1]))
+  }
   window.matchMedia = ((query: string) => ({
-    matches: !!opts.phone && query.includes('max-width'),
+    matches: fits(query),
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -114,25 +124,40 @@ describe('the frame', () => {
     const { w } = await mountAs('autonomous')
     expect(w.find('.app-rail').exists()).toBe(false)
     expect(w.find('[role="toolbar"][aria-label="Side panels"]').exists()).toBe(false)
-    // The page alone in its row; under the header, nothing but it: no button floats over it on a desktop.
+    // The page alone in its row; under the header, nothing but it: no button floats over it.
     expect(w.get('.app-body').element.children).toHaveLength(1)
     expect([...w.get('.app-main-wrap').element.children].map((el) => el.classList[0])).toEqual([
       'el-header',
       'app-body',
     ])
     expect(w.find('.app-chat-fab').exists()).toBe(false)
+    // The page column is the shell's last: nothing beside it while the chat is closed.
+    expect(w.get('.app-shell').element.lastElementChild).toBe(w.get('.app-main-wrap').element)
     // The activity bar has only its views: the chat is not one of them.
     expect(w.get('.activity-bar').find('[aria-controls="chat-panel"]').exists()).toBe(false)
+  })
+
+  it('says a newer build in a strip of the page column, under the header, never over the page', async () => {
+    const { w } = await mountAs('autonomous')
+    const notice = w.findComponent({ name: 'NewVersionNotice' })
+    expect(notice.exists()).toBe(true)
+    const wrap = w.get('.app-main-wrap').element
+    expect(notice.element.parentNode).toBe(wrap)
+    // After the header, before the page.
+    const nodes = [...wrap.childNodes]
+    expect(nodes.indexOf(notice.element as ChildNode)).toBeGreaterThan(nodes.indexOf(w.get('.app-header').element))
+    expect(nodes.indexOf(notice.element as ChildNode)).toBeLessThan(nodes.indexOf(w.get('.app-body').element))
   })
 })
 
 describe('the chat’s button', () => {
-  it('is at the header’s right end, and opens the chat in a window over the page, and minimizes it again', async () => {
+  it('is at the header’s right end, and opens the chat docked beside the page column, and minimizes it again', async () => {
     const { w, chat } = await mountAs('autonomous')
     const button = w.get('.app-header .app-header__chat #chat-panel-toggle')
     expect(button.element.tagName).toBe('BUTTON')
     expect(button.attributes('aria-label')).toBe('Chat with agents')
-    expect(button.attributes('aria-haspopup')).toBe('dialog')
+    // It shows a region of the page, not a dialog.
+    expect(button.attributes('aria-haspopup')).toBeUndefined()
     expect(button.attributes('aria-expanded')).toBe('false')
     expect(button.attributes('aria-controls')).toBe('chat-panel')
     expect(button.attributes('aria-keyshortcuts')).toBe('Control+J Meta+J')
@@ -144,12 +169,13 @@ describe('the chat’s button', () => {
     await flushPromises()
     expect(chat.open).toBe(true)
     const panel = w.get('#chat-panel')
-    expect(panel.classes()).toContain('is-window')
-    expect(panel.attributes('aria-modal')).toBe('false')
+    expect(panel.classes()).toContain('is-docked')
+    expect(panel.attributes('role')).toBe('complementary')
     expect(panel.element.contains(document.activeElement)).toBe(true)
     // It stays, saying the chat is open.
     expect(w.get('#chat-panel-toggle').attributes('aria-expanded')).toBe('true')
-    // Over the page, not in its row: the page is as it was.
+    // Beside the page column, at the shell's right end: not over the page, nor in the page's own row.
+    expect(w.get('.app-main-wrap').element.nextElementSibling).toBe(panel.element)
     expect(w.get('.app-body').element.children).toHaveLength(1)
 
     await w.get('.chat-panel__minimize').trigger('click')
@@ -165,6 +191,41 @@ describe('the chat’s button', () => {
     await flushPromises()
     expect(chat.open).toBe(false)
     expect(w.find('#chat-panel').exists()).toBe(false)
+  })
+
+  it('has the side bar give way to the chat in a window too narrow for both beside the page, and back', async () => {
+    // 1000 px: the activity bar, the side bar, the narrowest pane and 420 px of page would need 1048.
+    const { w, chat } = await mountAs('autonomous', { width: 1000 })
+    expect(w.find('#side-bar').exists()).toBe(true)
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.get('#chat-panel').classes()).toContain('is-docked')
+    expect(w.find('#side-bar').exists()).toBe(false)
+    // Its view's button says it is not shown, and the side bar is still open, as this browser keeps it.
+    expect(w.get('#side-view-courses').attributes('aria-expanded')).toBe('false')
+    expect(useSideBarStore().open).toBe(true)
+    // Minimized: back beside the page.
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(true)
+    // Open again, and then its view's button: the side bar, and the chat minimized in its turn.
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(false)
+    await w.get('#side-view-courses').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(true)
+    expect(w.get('#side-view-courses').attributes('aria-expanded')).toBe('true')
+    expect(chat.open).toBe(false)
+    expect(w.find('#chat-panel').exists()).toBe(false)
+  })
+
+  it('leaves the side bar beside the chat where the window has room for both', async () => {
+    const { w } = await mountAs('autonomous', { width: 1048 })
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.get('#chat-panel').classes()).toContain('is-docked')
+    expect(w.find('#side-bar').exists()).toBe(true)
   })
 
   it('says its shortcut in its tooltip, and leaves Enter and Space to the button, which the tooltip would otherwise take', async () => {
@@ -204,7 +265,7 @@ describe('the chat’s button', () => {
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
   })
 
-  it('takes no room from the page, which nothing floats over', async () => {
+  it('keeps no room below the page for a button floating over it: there is none', async () => {
     const { w } = await mountAs('autonomous')
     expect(w.get('.app-main').classes()).not.toContain('has-chat-fab')
   })
@@ -258,66 +319,44 @@ describe('on a phone', () => {
     expect(menu.attributes('aria-expanded')).toBe('false')
   })
 
-  it('has a floating button instead, with no tooltip, which opens the sheet and is gone while it is open', async () => {
+  it('has the chat’s button at the header’s right end too, in its one row, with no tooltip, opening the sheet over it', async () => {
     const { w, chat } = await mountAs('autonomous', { phone: true })
     expect(w.find('.app-rail').exists()).toBe(false)
-    expect(w.get('.app-header').find('[aria-controls="chat-panel"]').exists()).toBe(false)
-    const fab = w.get('.app-chat-fab #chat-panel-toggle')
-    expect(fab.attributes('aria-label')).toBe('Chat with agents')
-    expect(fab.attributes('aria-haspopup')).toBe('dialog')
+    expect(w.find('.app-chat-fab').exists()).toBe(false)
+    const button = w.get('.app-header .app-header__chat #chat-panel-toggle')
+    expect(button.attributes('aria-label')).toBe('Chat with agents')
+    expect(button.attributes('aria-haspopup')).toBe('dialog')
+    // The header's last, as the menu's button is its first.
+    expect(w.get('.app-header').element.lastElementChild?.contains(button.element)).toBe(true)
     const tip = w.findAllComponents({ name: 'ElTooltip' }).find((c) => /^Chat with agents/.test(c.props('content')))
-    expect(tip).toBeUndefined()
-    // The page leaves room below its last item for it.
-    expect(w.get('.app-main').classes()).toContain('has-chat-fab')
+    expect(tip?.props('disabled')).toBe(true)
+    // Nothing floats over the page, which keeps no room for it.
+    expect(w.get('.app-main').classes()).not.toContain('has-chat-fab')
 
-    await fab.trigger('click')
+    await button.trigger('click')
     await flushPromises()
     expect(chat.open).toBe(true)
     expect(w.get('#chat-panel').classes()).toContain('is-sheet')
-    expect(w.find('.app-chat-fab').exists()).toBe(false)
+    expect(w.get('#chat-panel-toggle').attributes('aria-expanded')).toBe('true')
 
     await w.get('.chat-panel__close').trigger('click')
     await flushPromises()
     expect(w.find('#chat-panel').exists()).toBe(false)
-    expect(document.activeElement).toBe(w.get('.app-chat-fab #chat-panel-toggle').element)
+    expect(document.activeElement).toBe(w.get('.app-header #chat-panel-toggle').element)
   })
 
-  it('tucks the floating button away while the page is scrolled down, and brings it back as it is scrolled up', async () => {
-    const frames = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
-      cb(0)
-      return 0
-    })
-    const { w } = await mountAs('autonomous', { phone: true })
-    const scrollTo = async (y: number) => {
-      Object.defineProperty(window, 'scrollY', { value: y, configurable: true })
-      window.dispatchEvent(new Event('scroll'))
-      await flushPromises()
-    }
-    await scrollTo(400)
-    expect(w.get('.app-chat-fab').classes()).toContain('is-tucked')
-    await scrollTo(360)
-    expect(w.get('.app-chat-fab').classes()).not.toContain('is-tucked')
-    await scrollTo(800)
-    expect(w.get('.app-chat-fab').classes()).toContain('is-tucked')
-    // Reached from the keyboard, it comes back.
-    await w.get('#chat-panel-toggle').trigger('focus')
-    expect(w.get('.app-chat-fab').classes()).not.toContain('is-tucked')
-    await scrollTo(0)
-    frames.mockRestore()
-  })
-
-  it('counts the answers not read yet on the floating button', async () => {
+  it('counts the answers not read yet on the header’s button', async () => {
     unread = 1
     const { w } = await mountAs('autonomous', { phone: true })
     await flushPromises()
-    expect(w.get('.app-chat-fab .el-badge__content').text()).toBe('1')
+    expect(w.get('.app-header__chat .el-badge__content').text()).toBe('1')
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
   })
 
-  it('offers no floating button, nor room for one, where the caller may ask in no course', async () => {
+  it('offers no chat’s button where the caller may ask in no course', async () => {
     const { w } = await mountAs('denied', { phone: true })
-    expect(w.find('.app-chat-fab').exists()).toBe(false)
-    expect(w.get('.app-main').classes()).not.toContain('has-chat-fab')
+    expect(w.find('.app-chat-entry').exists()).toBe(false)
+    expect(w.find('#chat-panel-toggle').exists()).toBe(false)
   })
 })
 

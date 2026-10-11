@@ -49,6 +49,12 @@ provide(COURSE_PAGE, {
 
 const ready = computed(() => course.courseId === props.courseId && !!course.course)
 
+// The line of context says what departs from the usual alone: a course's
+// state only where it is not active (a draft, archived), and the reader's
+// role only where their roles differ among their courses (a teacher in one,
+// a student in another), as the side bar's rows do.
+const rolesDiffer = computed(() => new Set(session.liveMemberships.map((m) => m.role)).size > 1)
+
 // An administrator refused a course they have no seat in has not done anything
 // wrong: neither a platform role nor a department's appointment opens a
 // course, a seat does. Say so, and where the seat is given, rather than only
@@ -206,8 +212,8 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
           >
           <span class="course-head__title" :title="course.course.title">{{ course.course.title }}</span>
           <span class="course-head__tags">
-            <StatusTag vocab="courseStatus" :value="course.course.status" />
-            <StatusTag v-if="course.role" vocab="role" :value="course.role" />
+            <StatusTag v-if="course.course.status !== 'active'" vocab="courseStatus" :value="course.course.status" />
+            <StatusTag v-if="course.role && rolesDiffer" vocab="role" :value="course.role" />
             <StatusTag
               v-if="course.membership && course.membership.status !== 'active'"
               vocab="memberStatus"
@@ -328,9 +334,9 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
     margin-top: -12px;
   }
 }
-/* Which course: its code, its name in the sans, and its status, on one line. A long name gives way, cut
-   short with an ellipsis (the top bar, its title and the side bar say it in full); the code and the status
-   never do. Only where the page is a phone's do they wrap, the name then on two lines at most. */
+/* Which course: its code, its name in the sans, and its status where it is not active, on one line. A long name
+   gives way, cut short with an ellipsis (the top bar, its title and the side bar say it in full); the code and the
+   status never do. Only where the page is a phone's do they wrap, the name then on two lines at most. */
 .course-head {
   display: flex;
   align-items: center;
@@ -386,7 +392,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 .course-head__admin {
   display: inline-flex;
   padding: 4px;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   color: var(--el-text-color-secondary);
 }
 .course-head__admin:hover {
@@ -396,17 +402,19 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 .course-banner {
   margin: 8px 0;
 }
-/* The tabs: one row, ruled under, never wrapped. */
+/* The tabs: one row, never wrapped, over a rule (the strip's own border); the tab shown's 2 px underline lies on
+   it, the strip reaching a pixel into the rule. */
 .course-nav {
   position: relative;
   margin-bottom: 12px;
+  border-bottom: var(--app-rule);
 }
 .course-tabs {
   display: flex;
   flex-wrap: nowrap;
   gap: 2px;
+  margin-bottom: -1px;
   overflow: hidden;
-  box-shadow: inset 0 -1px 0 var(--app-line);
   --fade: 16px;
 }
 /* A phone: every tab in the strip, which scrolls sideways (by touch: no bar). */
@@ -467,7 +475,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 .course-tabs__item:focus-visible {
   outline: 2px solid var(--app-focus);
   outline-offset: -2px;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
 }
 .course-tabs__more-wrap {
   flex: 0 0 auto;
@@ -499,7 +507,8 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 </style>
 
 <style>
-/* More's menu: each item a link filling it; the tab chosen, if it is one of them, marked as the strip marks it. */
+/* More's menu: each item a link filling it; the tab chosen, if it is one of them, marked as the side bar marks
+   the page shown, a 2 px navy rule at its left and its words in the navy. */
 .course-tabs__menu .el-dropdown-menu__item {
   padding: 0;
 }
@@ -522,7 +531,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
 }
 .course-tabs__menu .el-dropdown-menu__item.is-active {
   color: var(--app-indigo);
-  background: var(--app-indigo-tint);
+  box-shadow: inset 2px 0 0 var(--app-indigo);
   font-weight: 500;
 }
 </style>

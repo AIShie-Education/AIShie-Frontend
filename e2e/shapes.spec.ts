@@ -85,7 +85,10 @@ for (const theme of ['light', 'dark'] as const) {
       const cs = getComputedStyle(el)
       return { radius: cs.borderTopLeftRadius, shadow: cs.boxShadow }
     })
-    expect(shell).toEqual({ radius: '2px', shadow: 'none' })
+    // Framed in the line by a ring of 1 px (styles/overlays.css), a stroke that takes no width from what it holds,
+    // and nothing cast.
+    expect(shell.radius).toBe('2px')
+    expect(shell.shadow).toMatch(/^rgb\([^)]+\) 0px 0px 0px 1px$/)
     expect(await offencesIn(page, '.el-dialog')).toEqual([])
     expect((await soloPrimary(page)).overlays).toEqual([['Create']])
 

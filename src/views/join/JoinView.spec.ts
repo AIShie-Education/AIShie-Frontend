@@ -97,6 +97,21 @@ describe('the join page', () => {
     w.unmount()
   })
 
+  it('starts its column with the course’s title, its h1, and its code under it: no line over the title', async () => {
+    for (const p of [open, { ...open, joinable: false, reason: 'expired' as const, registration: false }]) {
+      preview = async () => p
+      const { w } = await mountJoin()
+      const column = w.get('main.app-auth-page__card').element
+      const first = column.firstElementChild!
+      expect(first.matches('section.join__course')).toBe(true)
+      expect([...first.children].map((el) => el.tagName)).toEqual(['H1', 'P'])
+      expect(first.children[0]!.textContent).toBe('Programming')
+      expect(first.children[1]!.textContent).toBe('CS101 · A')
+      expect(w.text()).not.toContain('You have been invited to join')
+      w.unmount()
+    }
+  })
+
   it('says why a link cannot be joined through, and offers nothing to join', async () => {
     preview = async () => ({ ...open, joinable: false, reason: 'revoked', registration: false })
     const { w } = await mountJoin()

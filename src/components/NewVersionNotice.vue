@@ -1,8 +1,11 @@
 <script setup lang="ts">
-// A small notice that a newer version of the app has been deployed since this
-// tab loaded it (useNewVersion), with a button that loads it, and Later,
-// which puts it away. It covers nothing that matters and takes no focus:
-// the page is never reloaded without the person's say.
+// A strip at the top of the page column, under the header, that says a
+// newer version of the app has been deployed since this tab loaded it
+// (useNewVersion), with Reload, which loads it, and Later, which puts it
+// away: words, the first in the indigo, neither of them solid, for the page
+// under it may have its own one primary button. It lies in the page's flow,
+// ruled below, and floats over nothing; it takes no focus: the page is never
+// reloaded without the person's say.
 import { useI18n } from 'vue-i18n'
 import { useNewVersion, type NewVersionOptions } from '@/composables/useNewVersion'
 
@@ -12,74 +15,47 @@ const { available, dismiss, reload } = useNewVersion(props.options)
 </script>
 
 <template>
-  <Transition name="new-version">
-    <div v-if="available" class="new-version" role="status">
-      <el-icon class="new-version__icon" aria-hidden="true"><Refresh /></el-icon>
-      <span class="new-version__text">{{ t('layout.newVersion.available') }}</span>
-      <el-button type="primary" size="small" class="new-version__reload" @click="reload">
-        {{ t('layout.newVersion.reload') }}
-      </el-button>
-      <el-button text size="small" class="new-version__later" @click="dismiss">
-        {{ t('layout.newVersion.later') }}
-      </el-button>
-    </div>
-  </Transition>
+  <div v-if="available" class="new-version" role="status">
+    <el-icon class="new-version__icon" aria-hidden="true"><Refresh /></el-icon>
+    <span class="new-version__text">{{ t('layout.newVersion.available') }}</span>
+    <el-button text type="primary" size="small" class="new-version__reload" @click="reload">
+      {{ t('layout.newVersion.reload') }}
+    </el-button>
+    <el-button text size="small" class="new-version__later" @click="dismiss">
+      {{ t('layout.newVersion.later') }}
+    </el-button>
+  </div>
 </template>
 
 <style scoped>
-/* At the bottom left, beside the activity bar, over the page and under everything Element Plus lays over it. */
+/* The page column's width, under the header: the ground's second shade, ruled below, its words at the page's
+   left gutter. */
 .new-version {
-  position: fixed;
-  left: 60px;
-  bottom: 16px;
-  z-index: calc(var(--app-z-sheet) + 1);
   display: flex;
   align-items: center;
-  gap: 8px;
-  max-width: calc(100vw - 32px);
-  padding: 8px 8px 8px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item);
-  background: var(--app-overlay);
-  box-shadow: var(--app-shadow-pop);
+  flex-wrap: wrap;
+  gap: var(--app-space-xs) var(--app-space-sm);
+  min-height: 44px;
+  padding: var(--app-space-xs) var(--app-space-xl);
+  border-bottom: var(--app-rule);
+  background: var(--app-ground-2);
   color: var(--app-ink);
   font-size: var(--app-text-md);
+}
+@media (max-width: 600px) {
+  .new-version {
+    padding: var(--app-space-xs) var(--app-space-lg);
+  }
 }
 .new-version__icon {
   color: var(--app-indigo);
 }
 .new-version__text {
+  margin-right: var(--app-space-xs);
   font-weight: var(--app-weight-strong);
-  white-space: nowrap;
 }
 .new-version .el-button + .el-button {
   margin-left: 0;
-}
-/* On a phone, at the top, clear of the chat's button and its sheet's box. */
-@media (max-width: 899px) {
-  .new-version {
-    left: 50%;
-    bottom: auto;
-    top: calc(8px + env(safe-area-inset-top, 0px));
-    transform: translateX(-50%);
-  }
-}
-.new-version-enter-active,
-.new-version-leave-active {
-  transition:
-    opacity 0.2s,
-    translate 0.2s;
-}
-.new-version-enter-from,
-.new-version-leave-to {
-  opacity: 0;
-  translate: 0 8px;
-}
-@media (prefers-reduced-motion: reduce) {
-  .new-version-enter-active,
-  .new-version-leave-active {
-    transition: none;
-  }
 }
 @media print {
   .new-version {

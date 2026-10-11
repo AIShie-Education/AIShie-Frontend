@@ -110,11 +110,11 @@ const ELEMENT_LOOK = {
 const BUTTON_LOOKS = ['plain', 'round', 'circle']
 /**
  * The files whose outlined or round buttons another part of design wave 3
- * takes away (the chat's, the chrome), refused here once they have:
- * src/lint/elementLook.spec.ts fails when one of them no longer writes the
- * look, so the list only shrinks.
+ * takes away, refused here once they have: src/lint/elementLook.spec.ts
+ * fails when one of them no longer writes the look, so the list only
+ * shrinks. Empty since the components and the chrome swept theirs.
  */
-export const LOOK_PENDING = ['src/components/chat/ChatPanel.vue']
+export const LOOK_PENDING = []
 /** Whether an element is given a look, written (`plain`) or bound to anything but false (`:plain="x"`). */
 function hasLook(node, name) {
   const a = attributeOf(node, name)

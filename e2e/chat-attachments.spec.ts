@@ -390,7 +390,7 @@ test.describe.serial('files in the chat', () => {
     await signIn(page, demo().actors.yuki)
     await page.goto(coursePath())
     await page
-      .locator('.app-chat-fab')
+      .locator('.app-header .app-chat-entry')
       .getByRole('button', { name: /^Chat with agents/ })
       .click()
     const panel = panelOf(page)

@@ -82,7 +82,7 @@ for (const theme of ['light', 'dark'] as const) {
     await look('a permission changed')
     await photograph(page, `contrast-perm-changed-${theme}`)
     await page.getByRole('button', { name: 'Cancel' }).click()
-    // The chat's window, over the overview.
+    // The chat's pane, beside the overview.
     await page.goto(coursePath())
     await openChat(page)
     await look('chat')

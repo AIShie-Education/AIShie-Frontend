@@ -1,130 +1,88 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  boxForKey,
-  clampBox,
-  defaultBox,
-  fitsIn,
+  clampWidth,
   isMac,
   isPanelShortcut,
-  largestBox,
   loadFrame,
-  moveBox,
-  resizeBox,
+  PAGE_MIN,
+  PANEL_DEFAULT,
+  PANEL_MAX,
+  PANEL_MIN,
+  panelMax,
   saveFrame,
   shortcutLabel,
-  WINDOW_HEIGHT,
-  WINDOW_INSET,
-  WINDOW_MIN_HEIGHT,
-  WINDOW_MIN_WIDTH,
-  WINDOW_WIDTH,
+  widthForKey,
 } from './panel'
 
 beforeEach(() => localStorage.clear())
 afterEach(() => vi.restoreAllMocks())
 
-const desk = { width: 1440, height: 900 }
-
-describe('the chat’s window', () => {
-  it('opens 400 × 600 px in the bottom right corner, 16 px from the edges, as the chat’s button is', () => {
-    expect([WINDOW_WIDTH, WINDOW_HEIGHT, WINDOW_INSET]).toEqual([400, 600, 16])
-    expect(defaultBox(desk)).toEqual({ width: 400, height: 600, right: 16, bottom: 16 })
+describe('the chat’s pane', () => {
+  it('opens 400 px wide, and may be made from 320 to 640 px', () => {
+    expect([PANEL_DEFAULT, PANEL_MIN, PANEL_MAX]).toEqual([400, 320, 640])
+    expect(clampWidth(400)).toBe(400)
+    expect(clampWidth(100)).toBe(320)
+    expect(clampWidth(5000)).toBe(640)
+    expect(clampWidth(450.6)).toBe(451)
+    expect(clampWidth(Number.NaN)).toBe(400)
   })
 
-  it('opens smaller where the viewport is: clear of the header, and never smaller than 320 × 360 while there is room', () => {
-    expect([WINDOW_MIN_WIDTH, WINDOW_MIN_HEIGHT]).toEqual([320, 360])
-    // 600 high less the 56 px header and 16 px above and below it.
-    expect(defaultBox({ width: 1000, height: 600 })).toEqual({ width: 400, height: 512, right: 16, bottom: 16 })
-    expect(defaultBox({ width: 1000, height: 420 })).toEqual({ width: 400, height: 360, right: 16, bottom: 16 })
-    // Smaller than the smallest window: the viewport's size.
-    expect(defaultBox({ width: 300, height: 300 })).toEqual({ width: 300, height: 300, right: 0, bottom: 0 })
+  it('leaves the page beside it 420 px where the window has room for both, and is never narrower than 320', () => {
+    expect(PAGE_MIN).toBe(420)
+    // 1280 px less the activity bar and the side bar: 972 px for the page and the pane.
+    expect(panelMax(1280 - 48 - 260)).toBe(552)
+    // The side bar collapsed: room for the widest.
+    expect(panelMax(1920 - 48)).toBe(640)
+    // Too little for both: the narrowest pane, the page what is left.
+    expect(panelMax(592)).toBe(320)
+    expect(panelMax(null)).toBe(640)
+    expect(clampWidth(600, panelMax(1280 - 48 - 260))).toBe(552)
   })
 
-  it('lies wholly within the viewport, in whole pixels', () => {
-    expect(clampBox({ width: 2000, height: 100, right: -40, bottom: 5000 }, desk)).toEqual({
-      width: 1440,
-      height: 360,
-      right: 0,
-      bottom: 540,
-    })
-    expect(clampBox({ width: 450.4, height: 500.6, right: 20.2, bottom: 30.7 }, desk)).toEqual({
-      width: 450,
-      height: 501,
-      right: 20,
-      bottom: 31,
-    })
-    expect(fitsIn({ width: 400, height: 600, right: 16, bottom: 16 }, desk)).toBe(true)
-    expect(fitsIn({ width: 400, height: 600, right: 16, bottom: 16 }, { width: 400, height: 900 })).toBe(false)
-    expect(fitsIn({ width: 400, height: 600, right: 16, bottom: 300 }, desk)).toBe(true)
-    expect(fitsIn({ width: 400, height: 600, right: 16, bottom: 301 }, desk)).toBe(false)
-    expect(fitsIn({ width: 400, height: 600, right: -1, bottom: 16 }, desk)).toBe(false)
-  })
-
-  it('moves by its title bar within the viewport, its size as it was', () => {
-    const at = { width: 400, height: 600, right: 16, bottom: 16 }
-    // The pointer 300 px to the left and 100 px up.
-    expect(moveBox(at, -300, -100, desk)).toEqual({ width: 400, height: 600, right: 316, bottom: 116 })
-    // Past the viewport's edges: against them.
-    expect(moveBox(at, -5000, -5000, desk)).toEqual({ width: 400, height: 600, right: 1040, bottom: 300 })
-    expect(moveBox(at, 500, 500, desk)).toEqual({ width: 400, height: 600, right: 0, bottom: 0 })
-  })
-
-  it('resizes from its top left, its right and bottom edges staying, from the smallest up to the viewport’s edges', () => {
-    const at = { width: 400, height: 600, right: 16, bottom: 16 }
-    expect(resizeBox(at, -100, 0, desk)).toEqual({ width: 500, height: 600, right: 16, bottom: 16 })
-    expect(resizeBox(at, 0, -150, desk)).toEqual({ width: 400, height: 750, right: 16, bottom: 16 })
-    expect(resizeBox(at, -100, -150, desk)).toEqual({ width: 500, height: 750, right: 16, bottom: 16 })
-    expect(resizeBox(at, 300, 400, desk)).toEqual({ width: 320, height: 360, right: 16, bottom: 16 })
-    expect(resizeBox(at, -5000, -5000, desk)).toEqual({ width: 1424, height: 884, right: 16, bottom: 16 })
-    expect(largestBox(at, desk)).toEqual({ width: 1424, height: 884 })
-  })
-
-  it('resizes with the arrow keys on its edges, and goes to the smallest and the largest with Home and End', () => {
-    const at = { width: 400, height: 600, right: 16, bottom: 16 }
-    expect(boxForKey('left', 'ArrowLeft', at, desk)?.width).toBe(416)
-    expect(boxForKey('left', 'ArrowRight', at, desk)?.width).toBe(384)
-    expect(boxForKey('left', 'ArrowLeft', at, desk, { shift: true })?.width).toBe(464)
-    expect(boxForKey('left', 'Home', at, desk)?.width).toBe(320)
-    expect(boxForKey('left', 'End', at, desk)?.width).toBe(1424)
-    expect(boxForKey('left', 'ArrowUp', at, desk)).toBeNull()
-    expect(boxForKey('top', 'ArrowUp', at, desk)).toEqual({ ...at, height: 616 })
-    expect(boxForKey('top', 'ArrowDown', at, desk, { shift: true })).toEqual({ ...at, height: 536 })
-    expect(boxForKey('top', 'Home', at, desk)?.height).toBe(360)
-    expect(boxForKey('top', 'End', at, desk)?.height).toBe(884)
-    expect(boxForKey('top', 'ArrowLeft', at, desk)).toBeNull()
-    expect(boxForKey('top', 'Enter', at, desk)).toBeNull()
+  it('is resized with the arrow keys on its left edge, and goes to the narrowest and the widest with Home and End', () => {
+    const max = panelMax(1280 - 48)
+    expect(widthForKey('ArrowLeft', 400, max)).toBe(416)
+    expect(widthForKey('ArrowRight', 400, max)).toBe(384)
+    expect(widthForKey('ArrowLeft', 400, max, { shift: true })).toBe(464)
+    expect(widthForKey('ArrowLeft', 636, max)).toBe(640)
+    expect(widthForKey('ArrowRight', 330, max)).toBe(320)
+    expect(widthForKey('Home', 400, max)).toBe(320)
+    expect(widthForKey('End', 400, max)).toBe(640)
+    expect(widthForKey('End', 400, panelMax(800))).toBe(380)
+    expect(widthForKey('ArrowUp', 400, max)).toBeNull()
+    expect(widthForKey('Enter', 400, max)).toBeNull()
   })
 })
 
 describe('what this browser remembers of it', () => {
-  it('keeps whether it is open, and where it was left and how big', () => {
-    expect(loadFrame()).toEqual({ open: false, box: null })
-    saveFrame({ open: true, box: { width: 512.4, height: 480, right: 40, bottom: 20.6 } })
-    expect(JSON.parse(localStorage.getItem('aishie.chatPanel')!)).toEqual({
-      open: true,
-      box: { width: 512, height: 480, right: 40, bottom: 21 },
-    })
-    expect(loadFrame()).toEqual({ open: true, box: { width: 512, height: 480, right: 40, bottom: 21 } })
-    saveFrame({ open: false, box: null })
-    expect(loadFrame()).toEqual({ open: false, box: null })
+  it('keeps whether it is open, and how wide', () => {
+    expect(loadFrame()).toEqual({ open: false, width: null })
+    saveFrame({ open: true, width: 512.4 })
+    expect(JSON.parse(localStorage.getItem('aishie.chatPanel')!)).toEqual({ open: true, width: 512 })
+    expect(loadFrame()).toEqual({ open: true, width: 512 })
+    saveFrame({ open: false, width: null })
+    expect(loadFrame()).toEqual({ open: false, width: null })
   })
 
-  it('opens in its corner where a version that docked it beside the page kept its width', () => {
-    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, width: 480 }))
-    expect(loadFrame()).toEqual({ open: true, box: null })
+  it('takes the width alone of the window an earlier version floated over the page', () => {
+    localStorage.setItem(
+      'aishie.chatPanel',
+      JSON.stringify({ open: true, box: { width: 480, height: 600, right: 16, bottom: 16 } }),
+    )
+    expect(loadFrame()).toEqual({ open: true, width: 480 })
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: false, box: { width: 1200, height: 600 } }))
+    expect(loadFrame()).toEqual({ open: false, width: 640 })
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, box: null }))
+    expect(loadFrame()).toEqual({ open: true, width: null })
   })
 
   it('starts as new from anything it cannot read', () => {
     localStorage.setItem('aishie.chatPanel', '{not json')
-    expect(loadFrame()).toEqual({ open: false, box: null })
+    expect(loadFrame()).toEqual({ open: false, width: null })
     localStorage.setItem('aishie.chatPanel', 'null')
-    expect(loadFrame()).toEqual({ open: false, box: null })
-    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: 'yes', box: { width: 'wide' } }))
-    expect(loadFrame()).toEqual({ open: false, box: null })
-    localStorage.setItem(
-      'aishie.chatPanel',
-      JSON.stringify({ open: true, box: { width: 400, height: 600, right: 16 } }),
-    )
-    expect(loadFrame()).toEqual({ open: true, box: null })
+    expect(loadFrame()).toEqual({ open: false, width: null })
+    localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: 'yes', width: 'wide', box: { width: 'wide' } }))
+    expect(loadFrame()).toEqual({ open: false, width: null })
   })
 
   it('does without storage where the browser refuses it', () => {
@@ -134,8 +92,8 @@ describe('what this browser remembers of it', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('denied')
     })
-    expect(() => saveFrame({ open: true, box: null })).not.toThrow()
-    expect(loadFrame()).toEqual({ open: false, box: null })
+    expect(() => saveFrame({ open: true, width: null })).not.toThrow()
+    expect(loadFrame()).toEqual({ open: false, width: null })
   })
 })
 

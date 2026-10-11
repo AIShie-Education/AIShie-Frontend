@@ -124,15 +124,19 @@ async function signOut() {
 
 <template>
   <div class="app-auth-page change-pw">
-    <div class="app-auth-page__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
-      </el-select>
-    </div>
+    <header class="app-auth-page__head">
+      <div class="app-auth-page__bar">
+        <AppWordmark class="app-auth-page__wordmark change-pw__wordmark" decorative />
+        <div class="app-auth-page__lang">
+          <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+          </el-select>
+        </div>
+      </div>
+    </header>
     <main class="app-auth-page__card" :aria-busy="leaving">
       <div class="change-pw__brand">
-        <AppWordmark class="app-auth-page__wordmark change-pw__wordmark" decorative />
-        <h1 class="change-pw__title">{{ t('auth.change.title') }}</h1>
+        <h1 class="app-auth-page__title change-pw__title">{{ t('auth.change.title') }}</h1>
         <p class="change-pw__lead">{{ t('auth.change.lead') }}</p>
       </div>
       <el-alert
@@ -204,34 +208,20 @@ async function signOut() {
 
 <style scoped>
 .change-pw__brand {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
   margin-bottom: 20px;
 }
-.change-pw__wordmark {
-  align-self: flex-start;
-}
-.change-pw__title {
-  margin: 0;
-  font-size: var(--app-text-2xl);
-  line-height: 1.3;
-}
 .change-pw__lead {
-  margin: 0;
+  margin: var(--app-space-sm) 0 0;
+  max-width: var(--app-measure);
   font-size: var(--app-text-md);
   line-height: var(--app-lh-text);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
 }
 .change-pw__alert {
   margin-bottom: 16px;
 }
-.change-pw__submit {
-  width: 100%;
-}
 .change-pw__out {
   margin: 16px 0 0;
-  text-align: center;
   font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }

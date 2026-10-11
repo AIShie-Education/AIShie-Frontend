@@ -4,6 +4,7 @@ import {
   coursePath,
   courseTab,
   demo,
+  expectCourseAgentRow,
   hostOnRuntime,
   inTraditionalChinese,
   openChat,
@@ -386,9 +387,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await page.goto(coursePath())
     const panel = await openChat(page)
     const row = panel.locator('.resp-row').filter({ hasText: BOT })
-    await expect(row).toContainText('Course agent')
-    await expect(row).not.toContainText('Personal agent')
-    await expect(row).toContainText('It answers other members too')
+    await expectCourseAgentRow(panel, row)
     // And so its draft says, once chosen.
     await row.click()
     await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')

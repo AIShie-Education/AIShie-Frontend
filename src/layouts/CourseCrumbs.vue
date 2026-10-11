@@ -81,6 +81,13 @@ const sub = computed(() =>
   align-items: baseline;
   min-width: 0;
 }
+/* One row in every language, the course's title cut short with an ellipsis where the row is too narrow (beside
+   the docked chat, say): main.css lets a Chinese list item wrap (text-wrap: pretty sets text-wrap-mode back to
+   wrap), and the title wrapped out of the header's 56 px instead. Named with the list, to outweigh that rule
+   wherever each is loaded. */
+.course-crumbs ol > li {
+  white-space: nowrap;
+}
 /* The separator is drawn, not read: the list says where each step is. */
 .course-crumbs li + li::before {
   content: '›';
@@ -95,7 +102,7 @@ const sub = computed(() =>
   min-width: 0;
   color: var(--el-text-color-regular);
   text-decoration: none;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 .course-crumbs a:hover {
   color: var(--app-indigo);
@@ -129,9 +136,13 @@ const sub = computed(() =>
   font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
-/* On a phone: the course's code alone, then the tab. Where they do not all fit (a long code, a narrow phone),
-   the code gives way, cut short with an ellipsis, rather than run under the tab. */
+/* On a phone: the course's code alone, then the tab, the separators closer, in a row it shares with the menu's and
+   the chat's buttons. Where they do not all fit (a long code, a narrow phone), the code gives way, cut short with
+   an ellipsis, rather than run under the tab. */
 @media (max-width: 640px) {
+  .course-crumbs li + li::before {
+    margin: 0 5px;
+  }
   .course-crumbs__title {
     display: none;
   }

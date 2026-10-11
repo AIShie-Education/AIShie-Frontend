@@ -1,28 +1,29 @@
 <script setup lang="ts">
-// The chat, a window floating over every signed-in page, as a chat on a web
-// page is: it neither docks nor takes its width from the page, which stays
-// as it is, and usable, behind it. It opens from the chat's button at the
-// header's right end (AppLayout), in the bottom right corner, 400 × 600 px until
-// it is moved by its title bar or resized from its top edge, its left edge
-// or its top left corner (the edges also with the arrow keys, as
-// separators), always within the viewport; a double click on its title bar
-// puts it back. This browser remembers whether it was open, and where and how
-// big it was left, unless it no longer fits the viewport, when it goes back
-// to its corner. It lies over the page and under whatever Element Plus lays
-// over the page (a dialog, a list, a message), with a shadow. Its title bar
-// minimizes it (as Escape does from within it, and Ctrl/⌘+J, which opens it
-// too), and it opens again on what it showed; or closes it, and it opens
+// The chat, a pane docked at the window's right edge beside every
+// signed-in page, as an editor's side panel is: the page column narrows by
+// its width while it is open and lays itself out by its own width, as it
+// does beside the side bar on the left, and nothing floats over the page. It
+// opens from the chat's button at the header's right end (AppLayout), full
+// height, its head row as high as the header and ruled with it, on the
+// page's own ground with a rule at its left. It is 400 px wide until its left
+// edge is dragged (or moved with the arrow keys, as a separator), from 320 up
+// to 640 px and never so wide that the page beside it is left less than
+// 420 px; in a window without room for the side bar too, the side bar gives
+// way while the pane is open (stores/sidebar.ts). A double click on the edge
+// puts it back. This browser remembers whether it was open, and how wide. Its head
+// row minimizes it (as Escape does from within it, and Ctrl/⌘+J, which opens
+// it too), and it opens again on what it showed; or closes it, and it opens
 // again on a new conversation. Either way focus goes back to the button. It
-// is a dialog, not a modal one: the page is still there to use.
+// is a region of the page (complementary), not a dialog: the page beside it
+// is there to use.
 //
 // On a phone (up to 899 px wide) it is a sheet over the whole screen, a modal
 // dialog, with no edge to drag, closed with its button, Escape or back, which
-// keeps what it showed, as minimizing the window does; following a link in
-// it closes it too. The window on a wider screen is not closed by back: it
-// is no modal one, and stays open from page to page, which back moves
-// between.
+// keeps what it showed, as minimizing the pane does; following a link in it
+// closes it too. The pane on a wider screen is not closed by back: it is no
+// modal one, and stays open from page to page, which back moves between.
 //
-// Under its title bar (on a phone, on top), the course asked in (one of the
+// Under its head row (on a phone, on top), the course asked in (one of the
 // caller's courses where they may ask: the page's own on a course page, else
 // the last one used), a new conversation, and the history. A new conversation starts with one of that
 // course's agents; the history lists the caller's conversations with agents
@@ -31,10 +32,9 @@
 //
 // Files dropped on the panel go to the conversation it shows, attached to
 // what the caller is writing (ChatPane takes those dropped on it, and those
-// dropped on the window's title bar or the panel's bar come to it too),
-// wherever the window has been moved; where it shows none to write
-// in, the panel takes them and does nothing with them, rather than the page
-// under it (materials, say) taking them.
+// dropped on the pane's head row or the panel's bar come to it too); where
+// it shows none to write in, the panel takes them and does nothing with
+// them, rather than the page beside it (materials, say) taking them.
 //
 // Mounted once, open or not: it reads the newest of the caller's
 // conversations again every UNREAD_POLL_MS while the page is shown, so that an
@@ -50,25 +50,20 @@ import { useBackCloses } from '@/composables/useBackCloses'
 import { useMediaQuery } from '@/composables/useMediaQuery'
 import { usePolling } from '@/composables/usePolling'
 import { useChatStore } from '@/stores/chat'
+import { useSideBarStore } from '@/stores/sidebar'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AgentPicker from './AgentPicker.vue'
 import ChatHistory from './ChatHistory.vue'
 import ChatPane from './ChatPane.vue'
 import {
-  boxForKey,
-  clampBox,
-  defaultBox,
-  fitsIn,
+  clampWidth,
   isPanelShortcut,
-  largestBox,
-  moveBox,
+  PANEL_DEFAULT,
+  PANEL_MIN,
   PANEL_SHEET_MAX_WIDTH,
-  resizeBox,
+  panelMax,
   UNREAD_POLL_MS,
-  WINDOW_MIN_HEIGHT,
-  WINDOW_MIN_WIDTH,
-  type Viewport,
-  type WindowBox,
+  widthForKey,
 } from './panel'
 import { courseLabel } from './seat'
 import { joinParts } from '@/utils/parts'
@@ -79,75 +74,68 @@ const route = useRoute()
 const sheet = useMediaQuery(`(max-width: ${PANEL_SHEET_MAX_WIDTH}px)`)
 const panel = ref<HTMLElement | null>(null)
 
-// --- Where the window is, and how big ------------------------------------------
-/** The viewport, less any scroll bar (jsdom has no layout: the window's size there). */
-function measureViewport(): Viewport {
-  const el = typeof document === 'undefined' ? null : document.documentElement
-  return {
-    width: el?.clientWidth || (typeof window === 'undefined' ? 1280 : window.innerWidth),
-    height: el?.clientHeight || (typeof window === 'undefined' ? 800 : window.innerHeight),
-  }
+// --- How wide the pane is ------------------------------------------------------
+/**
+ * The width the page and the pane share: the window's, less what is at its
+ * left (the activity bar and the side bar), where the page column starts.
+ * jsdom has no layout: the window's width there.
+ */
+function measureRoom(): number {
+  const vw = typeof document === 'undefined' ? 0 : document.documentElement.clientWidth
+  const width = vw || (typeof window === 'undefined' ? 1280 : window.innerWidth)
+  const column = typeof document === 'undefined' ? null : document.querySelector('.app-main-wrap')
+  return width - Math.max(0, column?.getBoundingClientRect().left ?? 0)
 }
-const viewport = ref<Viewport>(measureViewport())
-/** Where it was left, back in its corner once it no longer fits the viewport (never on a phone, where it is a sheet). */
-function keepOnScreen() {
-  if (!sheet.value && chat.box && !fitsIn(chat.box, viewport.value)) chat.box = null
-}
+const room = ref<number>(measureRoom())
 function onResize() {
-  viewport.value = measureViewport()
-  keepOnScreen()
+  room.value = measureRoom()
 }
-/** While it is moved or resized, where it is: kept once let go. */
-const dragBox = ref<WindowBox | null>(null)
-const shownBox = computed(() => dragBox.value ?? clampBox(chat.box ?? defaultBox(viewport.value), viewport.value))
-const largest = computed(() => largestBox(shownBox.value, viewport.value))
-const boxStyle = computed(() => {
-  const b = shownBox.value
-  return { width: `${b.width}px`, height: `${b.height}px`, right: `${b.right}px`, bottom: `${b.bottom}px` }
-})
+// The side bar opened, collapsed or giving way to the pane (stores/sidebar.ts) leaves the page and the pane more
+// room, or less.
+const side = useSideBarStore()
+watch(
+  () => side.visible,
+  () => void nextTick(onResize),
+)
+/** The widest the pane may be now. */
+const maxWidth = computed(() => panelMax(room.value))
+/** While its edge is dragged, how wide it is: kept once let go. */
+const dragWidth = ref<number | null>(null)
+const shownWidth = computed(() => dragWidth.value ?? clampWidth(chat.width ?? PANEL_DEFAULT, maxWidth.value))
+const paneStyle = computed(() => ({ width: `${shownWidth.value}px` }))
 
 // A drag reads nothing of the layout as it goes: where it started and the
-// viewport are taken once, and the window is set once a frame.
+// widest are taken once, and the width is set once a frame.
 const nextFrame: (cb: () => void) => number =
   typeof requestAnimationFrame === 'function' ? requestAnimationFrame : (cb) => window.setTimeout(cb, 16)
 const cancelFrame: (id: number) => void =
   typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : (id) => window.clearTimeout(id)
-/** What a drag does: moves the window by its title bar, or resizes it from its left edge, its top or its corner. */
-type Grip = 'move' | 'left' | 'top' | 'corner'
-let drag: { grip: Grip; x: number; y: number; from: WindowBox; vp: Viewport; at: { x: number; y: number } } | null =
-  null
+let drag: { x: number; from: number; max: number; at: number } | null = null
 let frame = 0
-function dragTo(at: { x: number; y: number }) {
+function dragTo(x: number) {
   if (!drag) return
-  const dx = at.x - drag.x
-  const dy = at.y - drag.y
-  const { grip, from, vp } = drag
-  dragBox.value =
-    grip === 'move' ? moveBox(from, dx, dy, vp) : resizeBox(from, grip === 'top' ? 0 : dx, grip === 'left' ? 0 : dy, vp)
+  // The edge dragged to the left, towards the page, widens it.
+  dragWidth.value = clampWidth(drag.from - (x - drag.x), drag.max)
 }
-function onPointerDown(grip: Grip, e: PointerEvent) {
+function onPointerDown(e: PointerEvent) {
   if (e.button !== 0) return
-  // The title bar's own buttons are pressed, not dragged.
-  if (grip === 'move' && (e.target as Element | null)?.closest?.('button')) return
   e.preventDefault()
-  const at = { x: e.clientX, y: e.clientY }
-  drag = { grip, x: at.x, y: at.y, from: shownBox.value, vp: viewport.value, at }
-  dragBox.value = shownBox.value
+  drag = { x: e.clientX, from: shownWidth.value, max: maxWidth.value, at: e.clientX }
+  dragWidth.value = shownWidth.value
   ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
-  document.body.classList.add('is-dragging-chat', `is-dragging-chat-${grip}`)
+  document.body.classList.add('is-dragging-chat')
 }
 function onPointerMove(e: PointerEvent) {
   if (!drag) return
-  drag.at = { x: e.clientX, y: e.clientY }
+  drag.at = e.clientX
   if (frame) return
   frame = nextFrame(() => {
     frame = 0
     if (drag) dragTo(drag.at)
   })
 }
-const GRIPS: Grip[] = ['move', 'left', 'top', 'corner']
 function endDrag() {
-  document.body.classList.remove('is-dragging-chat', ...GRIPS.map((g) => `is-dragging-chat-${g}`))
+  document.body.classList.remove('is-dragging-chat')
 }
 function onPointerUp(e: PointerEvent) {
   if (!drag) return
@@ -158,31 +146,31 @@ function onPointerUp(e: PointerEvent) {
   ;(e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId)
   endDrag()
   // Kept once let go, not while it moves.
-  if (dragBox.value) chat.box = dragBox.value
-  dragBox.value = null
+  if (dragWidth.value !== null) chat.width = dragWidth.value
+  dragWidth.value = null
 }
-// Closed (or turned into the sheet) while it is dragged: the drag is let go, and nothing of it kept.
+// Closed (or turned into the sheet) while its edge is dragged: the drag is let go, and nothing of it kept.
 watch(
   () => chat.open && !sheet.value,
   (shown) => {
-    if (shown || !drag) return
+    if (shown) return void nextTick(onResize)
+    if (!drag) return
     if (frame) cancelFrame(frame)
     frame = 0
     drag = null
-    dragBox.value = null
+    dragWidth.value = null
     endDrag()
   },
 )
-function onEdgeKey(edge: 'left' | 'top', e: KeyboardEvent) {
-  const box = boxForKey(edge, e.key, shownBox.value, viewport.value, { shift: e.shiftKey })
-  if (!box) return
+function onEdgeKey(e: KeyboardEvent) {
+  const w = widthForKey(e.key, shownWidth.value, maxWidth.value, { shift: e.shiftKey })
+  if (w === null) return
   e.preventDefault()
-  chat.box = box
+  chat.width = w
 }
-/** Back in its corner, at its size until resized. */
-function resetBox(e?: MouseEvent) {
-  if ((e?.target as Element | null)?.closest?.('button')) return
-  chat.box = null
+/** Back to its width until resized. */
+function resetWidth() {
+  chat.width = null
 }
 
 // --- Opening and closing ---------------------------------------------------
@@ -200,7 +188,7 @@ async function focusPanel() {
     el.querySelector<HTMLElement>('.chat-panel__bar button')
   ;(first ?? el).focus()
 }
-/** Back to the button that opens it: the header's, or on a phone the round one, shown again once the sheet is closed. */
+/** Back to the button that opens it, at the header's right end. */
 function focusToggle() {
   document.getElementById('chat-panel-toggle')?.focus()
 }
@@ -232,7 +220,7 @@ function onKeydown(e: KeyboardEvent) {
     return
   }
   if (e.key !== 'Escape' || !chat.open || e.defaultPrevented) return
-  // The sheet, which covers the page, or the window from within it.
+  // The sheet, which covers the page, or the pane from within it.
   if (!sheet.value && !panel.value?.contains(document.activeElement)) return
   // Not while a box of its own (a confirmation, a list) is open over it: that closes first.
   const over = [...document.querySelectorAll<HTMLElement>('.el-overlay, .el-popper')].some(
@@ -320,10 +308,10 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
     id="chat-panel"
     ref="panel"
     class="chat-panel"
-    :class="sheet ? 'is-sheet' : 'is-window'"
-    :style="sheet ? undefined : boxStyle"
-    role="dialog"
-    :aria-modal="sheet ? 'true' : 'false'"
+    :class="sheet ? 'is-sheet' : 'is-docked'"
+    :style="sheet ? undefined : paneStyle"
+    :role="sheet ? 'dialog' : 'complementary'"
+    :aria-modal="sheet ? 'true' : undefined"
     aria-labelledby="chat-panel-title"
     tabindex="-1"
     @dragenter="onDragOver"
@@ -331,58 +319,28 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
     @drop="onDrop"
   >
     <template v-if="!sheet">
-      <!-- Its left edge and its top, each a separator that resizes it (with the arrow keys too), and its top left corner. -->
+      <!-- Its left edge, a separator that resizes it (with the arrow keys too); a double click puts it back. -->
       <div
-        class="chat-panel__edge is-left"
+        class="chat-panel__edge"
         role="separator"
         aria-orientation="vertical"
-        :aria-valuenow="shownBox.width"
-        :aria-valuemin="Math.min(WINDOW_MIN_WIDTH, largest.width)"
-        :aria-valuemax="largest.width"
+        :aria-valuenow="shownWidth"
+        :aria-valuemin="PANEL_MIN"
+        :aria-valuemax="maxWidth"
         :aria-label="t('chat.panel.width')"
         tabindex="0"
-        @pointerdown="onPointerDown('left', $event)"
+        @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
-        @keydown="onEdgeKey('left', $event)"
+        @keydown="onEdgeKey"
+        @dblclick="resetWidth"
       />
-      <div
-        class="chat-panel__edge is-top"
-        role="separator"
-        aria-orientation="horizontal"
-        :aria-valuenow="shownBox.height"
-        :aria-valuemin="Math.min(WINDOW_MIN_HEIGHT, largest.height)"
-        :aria-valuemax="largest.height"
-        :aria-label="t('chat.panel.height')"
-        tabindex="0"
-        @pointerdown="onPointerDown('top', $event)"
-        @pointermove="onPointerMove"
-        @pointerup="onPointerUp"
-        @pointercancel="onPointerUp"
-        @keydown="onEdgeKey('top', $event)"
-      />
-      <div
-        class="chat-panel__corner"
-        aria-hidden="true"
-        @pointerdown="onPointerDown('corner', $event)"
-        @pointermove="onPointerMove"
-        @pointerup="onPointerUp"
-        @pointercancel="onPointerUp"
-      />
-      <!-- The title bar: it moves the window, and a double click on it puts the window back in its corner. -->
-      <div
-        class="chat-panel__titlebar"
-        @pointerdown="onPointerDown('move', $event)"
-        @pointermove="onPointerMove"
-        @pointerup="onPointerUp"
-        @pointercancel="onPointerUp"
-        @dblclick="resetBox"
-      >
+      <!-- Its head row, as high as the header beside it and ruled with it: its name, minimize and close. -->
+      <div class="chat-panel__head">
         <h2 id="chat-panel-title" class="chat-panel__title">{{ t('chat.panel.title') }}</h2>
         <el-button
           text
-          size="small"
           class="chat-panel__icon chat-panel__minimize"
           :aria-label="t('chat.panel.minimize')"
           :title="t('chat.panel.minimize')"
@@ -392,7 +350,6 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         </el-button>
         <el-button
           text
-          size="small"
           class="chat-panel__icon chat-panel__close"
           :aria-label="t('chat.panel.close')"
           :title="t('chat.panel.close')"
@@ -437,11 +394,11 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
       </el-tooltip>
       <el-tooltip :content="t('chat.panel.history')" placement="bottom" :show-after="400" :trigger-keys="[]">
         <el-button
+          text
           size="small"
           class="chat-panel__icon"
           :class="{ 'is-on': inHistory }"
           :type="inHistory ? 'primary' : undefined"
-          :plain="inHistory"
           :aria-pressed="inHistory ? 'true' : 'false'"
           :aria-label="t('chat.panel.history')"
           @click="chat.toggleHistory()"
@@ -450,7 +407,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           <span v-if="chat.unreadCount && !inHistory" class="chat-panel__dot" aria-hidden="true" />
         </el-button>
       </el-tooltip>
-      <!-- On a phone, the sheet's one way out, which keeps what it showed, as minimizing the window does. -->
+      <!-- On a phone, the sheet's one way out, which keeps what it showed, as minimizing the pane does. -->
       <el-button
         v-if="sheet"
         text
@@ -535,19 +492,23 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   display: flex;
   flex-direction: column;
   min-width: 0;
-  background: var(--el-bg-color);
+  background: var(--app-page);
   outline: none;
 }
-/* Over the page, placed from the viewport's bottom right corner (its place and size are set on it), with a
-   shadow, and under whatever Element Plus lays over the page: see the layers in styles/tokens.css. */
-.chat-panel.is-window {
-  position: fixed;
+/* Docked at the window's right edge, beside the page column, as tall as the window and staying as the page
+   scrolls, as the side bar does on the left: on the page's ground, with a rule between them. Its width is set on
+   it; the page takes the rest. */
+.chat-panel.is-docked {
+  position: sticky;
+  top: 0;
   z-index: var(--app-z-panel);
-  border: 1px solid var(--app-line-strong);
-  border-radius: var(--app-radius-item);
-  box-shadow: var(--app-shadow-window);
-  overflow: hidden;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  height: 100vh;
+  height: 100dvh;
+  border-left: var(--app-rule);
 }
+/* On a phone, a sheet over the whole screen: square, its edges the screen's. */
 .chat-panel.is-sheet {
   position: fixed;
   inset: 0;
@@ -556,91 +517,74 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   height: 100vh;
   height: 100dvh;
 }
-/* Its left edge and its top, a few pixels inside it, and its top left corner, which resize it. */
-.chat-panel__edge,
-.chat-panel__corner {
+/* Its left edge, a few pixels either side of its rule, which resizes it: the rule turns navy while it is
+   hovered, focused or dragged. */
+.chat-panel__edge {
   position: absolute;
   top: 0;
-  left: 0;
-  z-index: 3;
-  touch-action: none;
-}
-.chat-panel__edge.is-left {
   bottom: 0;
-  width: 6px;
+  left: -4px;
+  z-index: 3;
+  width: 8px;
   cursor: ew-resize;
-}
-.chat-panel__edge.is-top {
-  right: 0;
-  height: 6px;
-  cursor: ns-resize;
-}
-.chat-panel__corner {
-  z-index: 4;
-  width: 14px;
-  height: 14px;
-  cursor: nwse-resize;
+  touch-action: none;
 }
 .chat-panel__edge::after {
   content: '';
   position: absolute;
   top: 0;
-  left: 0;
+  bottom: 0;
+  left: 3px;
+  width: 2px;
   background: transparent;
   transition: background-color 0.15s;
 }
-.chat-panel__edge.is-left::after {
-  bottom: 0;
-  width: 2px;
-}
-.chat-panel__edge.is-top::after {
-  right: 0;
-  height: 2px;
-}
 .chat-panel__edge:hover::after,
 .chat-panel__edge:focus-visible::after,
-:global(body.is-dragging-chat-left) .chat-panel__edge.is-left::after,
-:global(body.is-dragging-chat-top) .chat-panel__edge.is-top::after,
-:global(body.is-dragging-chat-corner) .chat-panel__edge::after {
-  background: var(--el-color-primary);
+:global(body.is-dragging-chat) .chat-panel__edge::after {
+  background: var(--app-indigo);
 }
 .chat-panel__edge:focus-visible {
   outline: none;
 }
-/* The title bar, which the window is moved by: its name, and minimize and close. */
-.chat-panel__titlebar {
+/* Its head row, as high as the page's header and ruled with it: its name, then minimize and close. */
+.chat-panel__head {
   display: flex;
   align-items: center;
   gap: 2px;
   flex-shrink: 0;
-  height: 40px;
-  padding: 0 6px 0 14px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  background: var(--app-ground);
-  cursor: move;
-  user-select: none;
-  touch-action: none;
+  height: 56px;
+  padding: 0 var(--app-space-sm) 0 var(--app-space-lg);
+  border-bottom: var(--app-rule);
 }
-.chat-panel__titlebar .chat-panel__title {
+.chat-panel__head .chat-panel__title {
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--app-font-sans);
   font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
+  letter-spacing: normal;
+  line-height: var(--app-lh-heading);
   color: var(--app-ink);
 }
-.chat-panel__titlebar .el-button + .el-button {
+.chat-panel__head .el-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+.chat-panel__head .el-button + .el-button {
   margin-left: 0;
 }
 .chat-panel__bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 10px 10px 10px 14px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  padding: 10px 10px 10px 16px;
+  border-bottom: var(--app-rule);
   flex-shrink: 0;
 }
 /* On a phone, the sheet's name is for screen readers: its bar has no room for it. */
@@ -671,10 +615,18 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   margin-left: 0;
   padding: 5px 7px;
 }
-/* On a touch screen, square: as wide as a small control is tall (40 px). */
+/* The history shown: its button pressed, in the indigo on its tint. */
+.chat-panel__icon.is-on {
+  background: var(--app-indigo-tint);
+}
+/* On a touch screen, square: as wide as a small control is tall (40 px), and the head row's 44 px. */
 @media (pointer: coarse) {
   .chat-panel__icon {
     min-width: var(--el-component-size-small);
+  }
+  .chat-panel__head .el-button {
+    width: 44px;
+    height: 44px;
   }
 }
 .chat-panel__bar .el-button + .el-button {
@@ -710,6 +662,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   margin: 0 0 4px;
   font-size: var(--app-text-md);
   font-weight: var(--app-heading-weight);
+  line-height: var(--app-lh-heading);
 }
 .chat-panel__hint {
   margin: 0 0 10px;
@@ -718,8 +671,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   color: var(--el-text-color-secondary);
 }
 .chat-panel__none {
-  margin: auto;
-  padding: 24px;
+  padding: var(--app-space-xl) var(--app-space-lg);
 }
 @media print {
   .chat-panel {
@@ -732,21 +684,10 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
 html.chat-sheet-open {
   overflow: hidden;
 }
-/* While the window is moved or resized, the page selects no text, and the cursor stays the grip's. */
+/* While its edge is dragged, the page selects no text, and the cursor stays the edge's. */
 body.is-dragging-chat {
   user-select: none;
-}
-body.is-dragging-chat-move {
-  cursor: move;
-}
-body.is-dragging-chat-left {
   cursor: ew-resize;
-}
-body.is-dragging-chat-top {
-  cursor: ns-resize;
-}
-body.is-dragging-chat-corner {
-  cursor: nwse-resize;
 }
 /* The courses' names are longer than the list is wide. */
 .chat-panel__course-popper {

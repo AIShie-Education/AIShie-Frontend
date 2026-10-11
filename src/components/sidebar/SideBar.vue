@@ -93,7 +93,7 @@ function onTabKey(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-/* Beside the activity bar, as tall as the window, on the ground, with a hairline between it and the page. */
+/* Beside the activity bar, as tall as the window, on the paper, ruled off from the page. */
 .side-bar {
   position: sticky;
   top: 0;
@@ -104,7 +104,7 @@ function onTabKey(e: KeyboardEvent) {
   height: 100vh;
   height: 100dvh;
   min-width: 0;
-  border-right: 1px solid var(--app-line);
+  border-right: var(--app-rule);
   background: var(--app-ground);
 }
 .side-bar.is-drawer {
@@ -120,19 +120,20 @@ function onTabKey(e: KeyboardEvent) {
   flex-shrink: 0;
   height: 56px;
   padding: 0 16px;
-  border-bottom: 1px solid var(--app-line);
+  border-bottom: var(--app-rule);
 }
+/* Its title, the view's name as the activity bar says it ("Courses"), in the ink: no capitals, no tracking. */
 .side-bar__title {
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--app-font-sans);
-  font-size: var(--app-text-xs);
+  font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--app-ink-3);
+  letter-spacing: normal;
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink);
 }
 .side-bar__body {
   flex: 1;
@@ -141,14 +142,13 @@ function onTabKey(e: KeyboardEvent) {
   overscroll-behavior: contain;
   padding: 12px 8px 24px;
 }
-/* On a phone, the views are tabs along the menu's top, each its icon over its name. */
+/* On a phone, the views are tabs along the menu's top, each its icon over its name, the one chosen underlined in
+   the navy as a course's tabs are, over the menu's rule. */
 .side-bar__tabs {
   display: flex;
   flex-shrink: 0;
-  gap: 4px;
-  padding: 8px;
-  border-bottom: 1px solid var(--app-line);
-  background: var(--app-ground-2);
+  padding: 0 8px;
+  border-bottom: var(--app-rule);
 }
 .side-bar__tab {
   flex: 1 1 0;
@@ -157,14 +157,22 @@ function onTabKey(e: KeyboardEvent) {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 6px 4px;
+  margin-bottom: -1px;
+  padding: 8px 4px 6px;
   border: none;
-  border-radius: var(--app-radius-control);
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   background: transparent;
-  color: var(--app-ink-3);
+  color: var(--app-ink-2);
   font: inherit;
   font-size: var(--app-text-xs);
   cursor: pointer;
+}
+.side-bar__tab:hover {
+  color: var(--app-indigo);
+}
+.side-bar__tab:focus-visible {
+  outline-offset: -2px;
 }
 .side-bar__tab span {
   max-width: 100%;
@@ -173,7 +181,7 @@ function onTabKey(e: KeyboardEvent) {
   white-space: nowrap;
 }
 .side-bar__tab.is-active {
-  background: var(--app-indigo-tint);
+  border-bottom-color: var(--app-indigo);
   color: var(--app-indigo);
   font-weight: var(--app-weight-strong);
 }
@@ -185,7 +193,8 @@ function onTabKey(e: KeyboardEvent) {
 </style>
 
 <style>
-/* What every view lists: links, one to a line or more, the one open tinted. */
+/* What every view lists: links, one to a line or more, square; the one open marked as the site's contents mark
+   the page shown, a 2 px navy rule at its left and its words in the navy, on no tint. */
 .side-bar .side-list {
   display: flex;
   flex-direction: column;
@@ -196,8 +205,8 @@ function onTabKey(e: KeyboardEvent) {
   align-items: center;
   gap: 10px;
   padding: 7px 10px;
-  border-radius: var(--app-radius-control);
-  color: var(--el-text-color-regular);
+  border-radius: 0;
+  color: var(--app-ink-2);
   text-decoration: none;
   font-size: var(--app-text-md);
   line-height: 1.4;
@@ -207,7 +216,7 @@ function onTabKey(e: KeyboardEvent) {
   color: var(--app-ink);
 }
 .side-bar .side-item.is-active {
-  background: var(--app-indigo-tint);
+  box-shadow: inset 2px 0 0 var(--app-indigo);
   color: var(--app-indigo);
 }
 .side-bar .side-item:focus-visible {
@@ -229,20 +238,15 @@ function onTabKey(e: KeyboardEvent) {
 .side-bar .side-group {
   margin-top: 18px;
 }
+/* A group's heading (courses without a seat): a plain sub-heading in the second ink, in the case it is written. */
 .side-bar .side-heading {
   margin: 0;
   padding: 0 10px 6px;
   font-family: var(--app-font-sans);
-  font-size: var(--app-text-xs);
+  font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--app-ink-3);
-}
-/* Chinese has no capitals, and its characters are not spaced out. */
-html:lang(zh) .side-bar__title,
-html:lang(zh) .side-bar .side-heading {
-  letter-spacing: 0;
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink-2);
 }
 .side-bar .side-note {
   margin: 4px 10px;

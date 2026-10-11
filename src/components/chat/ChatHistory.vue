@@ -3,9 +3,10 @@
 // course the panel asks in, or in every course they are seated in
 // (me.conversations, with course_id for one course), a page at a time. Each
 // says where and with whom (course code · agent), its title, where it
-// stands, and whether the agent has written since the caller last read it
-// (unread, which Core keeps). A conversation from before, with a person, is
-// closed and not listed. Kept fresh while it is shown.
+// stands where that is not the usual (answered: nothing is said), and whether
+// the agent has written since the caller last read it (unread, which Core
+// keeps). A conversation from before, with a person, is closed and not
+// listed. Kept fresh while it is shown.
 //
 // Grouped by when each last moved: today, yesterday, this week, earlier; and
 // searched by title and agent, among those read so far (more pages are read
@@ -133,7 +134,8 @@ function more() {
                 <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__unread">{{
                   t('chat.history.unread')
                 }}</span>
-                <StatusTag vocab="conversationState" :value="stateOf(c)" />
+                <!-- The usual state, answered, is no tag in a list: only what departs from it is said. -->
+                <StatusTag v-if="stateOf(c) !== 'answered'" vocab="conversationState" :value="stateOf(c)" />
               </span>
             </button>
           </li>
@@ -161,18 +163,19 @@ function more() {
 .chat-history__group + .chat-history__group {
   margin-top: 10px;
 }
+/* When each moved (today, yesterday…): a plain sub-heading in the second ink, staying while its rows scroll. */
 .chat-history__heading {
   position: sticky;
   top: -12px;
   z-index: 1;
   margin: 0;
-  padding: 8px 12px 4px;
-  background: var(--el-bg-color);
+  padding: 8px 8px 6px;
+  background: var(--app-page);
   font-family: var(--app-font-sans);
-  font-size: var(--app-text-xs);
+  font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
-  color: var(--el-text-color-secondary);
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink-2);
 }
 .chat-history__none {
   margin: 16px 0;
@@ -187,35 +190,39 @@ function more() {
   line-height: var(--app-lh-ui);
   color: var(--el-text-color-secondary);
 }
+/* The conversations: rows between rules, hovered in a tint; the one shown marked at its left in the navy, as
+   the side bar marks the page shown. */
 .chat-history__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+  border-bottom: var(--app-rule);
+}
+.chat-history__list > li {
+  border-top: var(--app-rule);
 }
 .hist-row {
   display: flex;
   flex-direction: column;
   gap: 4px;
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid transparent;
-  border-radius: var(--app-radius-item);
+  padding: 9px 8px;
+  border: none;
+  border-radius: 0;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.hist-row:hover,
-.hist-row:focus-visible {
+.hist-row:hover {
   background: var(--el-fill-color-light);
 }
+.hist-row:focus-visible {
+  outline-offset: -2px;
+}
 .hist-row.is-selected {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary-light-7);
+  box-shadow: inset 2px 0 0 var(--app-indigo);
 }
 .hist-row__line {
   display: flex;

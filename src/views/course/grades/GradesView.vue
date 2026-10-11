@@ -650,13 +650,6 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
 }
-/* On a phone, the chat's round button floats at the screen's bottom right,
-   where the toolbar's ⋯ would be under it when the page opens: the toolbar
-   keeps clear of that column (the button's size and its 16 px inset). Dead
-   once the chat's button is in the phone's header, and taken away then. */
-.has-chat-fab .grades-view__post {
-  padding-right: calc(var(--app-fab-size, 48px) + 16px);
-}
 .grades-view__post-hint {
   margin: 0;
   flex: 1 1 200px;
