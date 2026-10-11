@@ -1297,7 +1297,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     and never pushes the "AI" out of its row; a last word breaks no sooner than it would have. `<AgentName
     :name ellipsis />` cuts the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
     an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
-    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
+    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`. Whose it is
+    is said once: where a row names whom the agent acts for (the course's agents' "For Sato Hiroshi (you)"),
+    it has no `AgentBadge` beside its name.
     `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
     control (a row that is a button), `AgentBadge`, `AskableText` and `AskableDot` take `hint-id`: they take no focus,
     and what their tooltips say goes in hidden elements of those ids, for the control's
