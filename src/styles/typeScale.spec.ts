@@ -292,7 +292,11 @@ describe('the type scale', () => {
     expect([zh['--app-text-xs'], zh['--app-text-sm']]).toEqual(['13px', '14px'])
     expect(zh['--app-lh-ui']).toBe('1.6')
     // Running text and headings are set as in English: 1.7 and 1.25, the site's in every language.
-    expect([zh['--app-lh-text'], zh['--app-lh-prose'], zh['--app-lh-heading']]).toEqual([undefined, undefined, undefined])
+    expect([zh['--app-lh-text'], zh['--app-lh-prose'], zh['--app-lh-heading']]).toEqual([
+      undefined,
+      undefined,
+      undefined,
+    ])
     // Noto Sans is loaded in 400, 500 and 700 (styles/fonts-zh-*.ts): 600 would fall to 700.
     expect(zh['--app-weight-strong']).toBe('500')
     expect(zh['--app-heading-weight']).toBe('700')
