@@ -160,7 +160,10 @@ function onSeated(_memberId: string, actorId: string) {
           show-icon
           class="course-admin__alert"
         />
-        <AppNote v-else class="course-admin__alert">{{ t(`admin.course.statusHelp.${course.status}`) }}</AppNote>
+        <!-- A draft says what it waits for; an active course, the usual state, says nothing its facts do not. -->
+        <AppNote v-else-if="course.status === 'draft'" class="course-admin__alert">
+          {{ t('admin.course.statusHelp.draft') }}
+        </AppNote>
         <AppNote class="course-admin__alert">
           {{
             seat
