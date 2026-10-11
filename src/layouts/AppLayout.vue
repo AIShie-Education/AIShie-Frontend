@@ -7,7 +7,9 @@
 // column, its header (the page's title and, at its right end, the chat's
 // button) over the page, on the page's own ground; and, while the chat is
 // open, the chat docked at the window's right edge beside the page column,
-// which narrows by its width (ChatPanel). The chat's button says how many
+// which narrows by its width (ChatPanel); in a window too narrow for the
+// side bar beside them, the side bar gives way to the chat while it is open
+// (stores/sidebar.ts). The chat's button says how many
 // answers are not read. On a phone there is no activity bar: three lines at
 // the header's left open the views in a drawer, the wordmark at its top and
 // tabs under it, with the account at its bottom; the chat's button stays at
@@ -105,7 +107,7 @@ const crumbsCourse = computed(() => {
     <!-- On the left, as an editor's: the activity bar, and beside it the side bar with the view chosen. -->
     <template v-if="!narrow">
       <ActivityBar />
-      <SideBar v-if="side.open" />
+      <SideBar v-if="side.visible" />
     </template>
     <!-- On a phone, the views are the menu's, opened from the header; closed, it holds nothing that polls. -->
     <el-drawer

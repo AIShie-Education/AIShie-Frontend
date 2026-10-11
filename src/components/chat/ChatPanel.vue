@@ -8,8 +8,9 @@
 // page's own ground with a rule at its left. It is 400 px wide until its left
 // edge is dragged (or moved with the arrow keys, as a separator), from 320 up
 // to 640 px and never so wide that the page beside it is left less than
-// 420 px where the window has room for both; a double click on the edge puts
-// it back. This browser remembers whether it was open, and how wide. Its head
+// 420 px; in a window without room for the side bar too, the side bar gives
+// way while the pane is open (stores/sidebar.ts). A double click on the edge
+// puts it back. This browser remembers whether it was open, and how wide. Its head
 // row minimizes it (as Escape does from within it, and Ctrl/⌘+J, which opens
 // it too), and it opens again on what it showed; or closes it, and it opens
 // again on a new conversation. Either way focus goes back to the button. It
@@ -89,10 +90,11 @@ const room = ref<number>(measureRoom())
 function onResize() {
   room.value = measureRoom()
 }
-// The side bar opened or collapsed leaves the page and the pane more room, or less.
+// The side bar opened, collapsed or giving way to the pane (stores/sidebar.ts) leaves the page and the pane more
+// room, or less.
 const side = useSideBarStore()
 watch(
-  () => side.open,
+  () => side.visible,
   () => void nextTick(onResize),
 )
 /** The widest the pane may be now. */

@@ -3,7 +3,8 @@
 // mark on top, which leads home, and under it a button for each view the
 // caller is offered (their courses, their agents, administration). A button
 // shows its view in the side bar beside it (SideBar), or, pressed again while
-// its view is shown, collapses the side bar. It is a vertical toolbar: one
+// its view is shown, collapses the side bar; pressed while the side bar gives
+// way to the chat in a narrow window, shows it and minimizes the chat. It is a vertical toolbar: one
 // of its buttons is reached with Tab, and the arrow keys, Home and End move
 // between them. At its bottom, as an editor's Accounts, the caller's account
 // (AccountMenu): their language, the theme and signing out are there. A phone
@@ -19,7 +20,8 @@ import { VIEW_META, type SideView } from './frame'
 const { t } = useI18n()
 const side = useSideBarStore()
 
-const isOpen = (v: SideView) => side.open && side.shown === v
+/** Whether its view is beside the page: not while the side bar is collapsed or gives way to the chat. */
+const isOpen = (v: SideView) => side.visible && side.shown === v
 
 /** The button Tab reaches: the one focused last, else the view shown's. */
 const focused = ref<SideView | null>(null)

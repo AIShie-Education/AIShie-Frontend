@@ -1,6 +1,7 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
 import {
+  activityBar,
   call,
   chatBadge,
   chatButton,
@@ -14,6 +15,7 @@ import {
   minimizeChat,
   photograph,
   showSideView,
+  sideBar,
   signIn,
   signInAsRoot,
   type CoreReply,
@@ -25,8 +27,9 @@ import {
 // floating over the page), as tall as the window, on the page's ground with a
 // rule at its left and no shadow; the page column narrows by its width, 400 px
 // until its left edge is dragged (from 320 to 640 px, the page beside it kept
-// 420 px where the window has room), and this browser keeps how wide it was
-// made; minimized, it opens again on what it showed. On a phone it is a sheet
+// 420 px, the side bar giving way in a window without room for it too), and
+// this browser keeps how wide it was made; minimized, it opens again on what
+// it showed. On a phone it is a sheet
 // over the whole screen, opened from the same button at the header's right
 // end, in the header's one row. Told through a course agent made for this run,
 // hosted on AIshie (the test plays the runtime), and Yuki, a student, who asks
@@ -554,7 +557,7 @@ test.describe.serial('the chat panel', () => {
       .toBe(false)
   })
 
-  test('is resized only from 320 to 640 px, leaves the page beside it 420 px where there is room, and docks from 900 px wide', async ({
+  test('is resized only from 320 to 640 px, leaves the page beside it 420 px, the side bar giving way where there is no room for it too, and docks from 900 px wide', async ({
     page,
   }) => {
     const d = demo()
@@ -588,19 +591,39 @@ test.describe.serial('the chat panel', () => {
     await page.setViewportSize({ width: 1100, height: 800 })
     await expect.poll(() => expectDocked(page)).toBe(372)
     expect(await columnWidth(page)).toBe(420)
-    // 1000 px: too little for both; the narrowest pane, the page what is left.
+    // 1000 px: too little for the side bar, the narrowest pane and 420 px of page (1048). The side bar gives way
+    // while the chat is open, still open as this browser keeps it but its button not pressed; the pane is as wide
+    // as it was made, and the page what is left, 472.
     await page.setViewportSize({ width: 1000, height: 800 })
-    await expect.poll(() => expectDocked(page)).toBe(320)
-    // Wide again: as wide as it was made.
+    await expect(sideBar(page)).toHaveCount(0)
+    await expect.poll(() => expectDocked(page)).toBe(480)
+    expect(await columnWidth(page)).toBe(1000 - 48 - 480)
+    const courses = activityBar(page).getByRole('button', { name: 'Courses', exact: true })
+    await expect(courses).toHaveAttribute('aria-expanded', 'false')
+    await page.mouse.move(0, 400)
+    await photograph(page, 'chat-pane-1000')
+    // Its view's button: the side bar, and the chat minimized in its turn; opened again, on what it showed, the
+    // side bar gives way again.
+    await courses.click()
+    await expect(sideBar(page)).toBeVisible()
+    await expect(panelOf(page)).toHaveCount(0)
+    expect(await columnWidth(page)).toBe(1000 - 48 - 260)
+    await chatButton(page).click()
+    await expect(sideBar(page)).toHaveCount(0)
+    await expect.poll(() => expectDocked(page)).toBe(480)
+    // Wide again: the side bar back beside the page, and the pane as wide as it was made.
     await page.setViewportSize({ width: 1440, height: 900 })
+    await expect(sideBar(page)).toBeVisible()
     await expect.poll(() => expectDocked(page)).toBe(480)
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-pane-1440')
 
-    // Docked from 900 px wide; a sheet below.
+    // Docked from 900 px wide, the side bar giving way, the page left 420 px; a sheet below.
     await page.setViewportSize({ width: 900, height: 700 })
     await expect(panelOf(page)).toHaveClass(/is-docked/)
-    await expectDocked(page)
+    await expect(sideBar(page)).toHaveCount(0)
+    await expect.poll(() => expectDocked(page)).toBe(432)
+    expect(await columnWidth(page)).toBe(420)
     await page.setViewportSize({ width: 899, height: 700 })
     await expect(panelOf(page)).toHaveClass(/is-sheet/)
     await expect(panelOf(page)).toHaveAttribute('aria-modal', 'true')

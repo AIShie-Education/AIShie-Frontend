@@ -7,7 +7,10 @@
 // the page column narrows by the pane's width while it is open, and lays
 // itself out by its own width. It is resized from its left edge alone, from
 // PANEL_MIN up to PANEL_MAX, and never so wide that the page beside it is
-// left less than PAGE_MIN where the window has room for both.
+// left less than PAGE_MIN where the window has room for both. Where the side
+// bar would leave too little room for the narrowest pane and PAGE_MIN, it
+// gives way while the pane is open (SIDEBAR_GIVES_WAY_MAX_WIDTH,
+// stores/sidebar.ts), rather than leave the page a strip.
 
 /** Its width until someone drags its edge, in pixels, and what a double click on the edge goes back to. */
 export const PANEL_DEFAULT = 400

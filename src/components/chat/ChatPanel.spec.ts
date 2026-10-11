@@ -139,19 +139,32 @@ function membership(
   } as never
 }
 
-/** A window this wide (and high), as media queries of max-width see it: a phone's is a sheet. */
+/** The media queries asked so far, each with what listens to it, told as the window is resized. */
+const queries: { media: string; heard: Set<(e: { matches: boolean }) => void> }[] = []
+let screenWidth = 1440
+const fits = (query: string) => {
+  const min = /min-width:\s*(\d+)px/.exec(query)
+  const max = /max-width:\s*(\d+)px/.exec(query)
+  return (!!min || !!max) && (!min || screenWidth >= Number(min[1])) && (!max || screenWidth <= Number(max[1]))
+}
+/** A window this wide (and high), as media queries of width see it: a phone's is a sheet. */
 function screen(width: number, height = 900) {
+  screenWidth = width
   Object.defineProperty(window, 'innerWidth', { configurable: true, value: width })
   Object.defineProperty(window, 'innerHeight', { configurable: true, value: height })
-  window.matchMedia = ((query: string) => {
-    const max = /max-width:\s*(\d+)px/.exec(query)
+  window.matchMedia = ((media: string) => {
+    const query = { media, heard: new Set<(e: { matches: boolean }) => void>() }
+    queries.push(query)
     return {
-      matches: !!max && width <= Number(max[1]),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
+      media,
+      get matches() {
+        return fits(media)
+      },
+      addEventListener: (_: string, f: (e: { matches: boolean }) => void) => query.heard.add(f),
+      removeEventListener: (_: string, f: (e: { matches: boolean }) => void) => query.heard.delete(f),
     }
   }) as unknown as typeof window.matchMedia
+  for (const q of queries) for (const f of q.heard) f({ matches: fits(q.media) })
 }
 
 async function setup(opts: { at?: string; phone?: boolean; width?: number; height?: number } = {}) {
@@ -226,6 +239,7 @@ function myConversation(id: string, unread: boolean): MyConversation {
 }
 
 beforeEach(() => {
+  queries.length = 0
   localStorage.clear()
   setLocale('en')
   reads.length = 0
@@ -471,7 +485,7 @@ describe('ChatPanel', () => {
     localStorage.setItem('aishie.chatPanel', JSON.stringify({ open: true, width: 600 }))
     const { w, chat } = await setup({ width: 1440, height: 900 })
     expect(shownWidth(w)).toBe(600)
-    // 1000 px for the page and the pane: 580 for the pane, 420 for the page.
+    // 1000 px for the page and the pane (no side bar here): 580 for the pane, 420 for the page.
     screen(1000, 900)
     window.dispatchEvent(new Event('resize'))
     await flushPromises()
@@ -507,12 +521,30 @@ describe('ChatPanel', () => {
     await flushPromises()
     await flushPromises()
     expect(shownWidth(w)).toBe(640)
-    // In a window 1000 px wide with the side bar open, too little for both: the narrowest pane.
-    column.getBoundingClientRect = () => ({ left: 308 }) as DOMRect
+    // Open again, in a window 1000 px wide: no room for it, the narrowest pane and 420 px of page, so it gives way
+    // to the pane, open as it is (AppLayout leaves it out, and the column starts 48 px from the left): 952 px for
+    // the page and the pane, 532 for the pane, never the 320 that would have left the page 372.
+    side.open = true
+    await flushPromises()
+    column.getBoundingClientRect = () => ({ left: side.visible ? 308 : 48 }) as DOMRect
     screen(1000, 800)
     window.dispatchEvent(new Event('resize'))
     await flushPromises()
-    expect(shownWidth(w)).toBe(320)
+    await flushPromises()
+    expect([side.open, side.visible]).toEqual([true, false])
+    expect(shownWidth(w)).toBe(532)
+    // At 900 px, the narrowest window it docks in: 852 px, 432 for the pane.
+    screen(900, 800)
+    window.dispatchEvent(new Event('resize'))
+    await flushPromises()
+    expect(shownWidth(w)).toBe(432)
+    // Wide enough for all three again: the side bar is back, and the pane leaves the page 420 px of 1100 - 308.
+    screen(1100, 800)
+    window.dispatchEvent(new Event('resize'))
+    await flushPromises()
+    await flushPromises()
+    expect(side.visible).toBe(true)
+    expect(shownWidth(w)).toBe(372)
   })
 
   it('is docked from 900 px wide, and a sheet with no edge nor head row on a phone', async () => {

@@ -1223,7 +1223,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   「對話寬度」), from 320 to 640 px (`PANEL_MIN`, `PANEL_MAX`) and never so wide that the page
   beside it is left less than 420 px (`PAGE_MIN`) where the window has room for both
   (`panelMax`, in `components/chat/panel.ts`, of the width the page and the pane share: the
-  window's less what is at the page column's left); a double click on the edge puts it back. How
+  window's less what is at the page column's left); a double click on the edge puts it back. Where
+  the window has no room for the side bar too (the activity bar, the side bar, the narrowest pane
+  and 420 px of page: under 1048 px, `SIDEBAR_GIVES_WAY_MAX_WIDTH`), the one opened last stays: the
+  side bar gives way while the chat is open, still open as this browser keeps it but not shown nor
+  its view's button pressed, and is back as the chat is minimized or closed or the window widens;
+  a view's button pressed meanwhile shows it and minimizes the chat (`stores/sidebar.ts`, `visible`),
+  rather than leave the page a strip (272 px at 900 px, before). How
   wide it was made is kept (with whether it is open, in this browser, `aishie.chatPanel`) once a drag
   is let go; the box an earlier version kept for the window it floated in is read for its width
   alone. Minimized (its button, Escape from within it, or Ctrl/⌘+J), it opens again on what it

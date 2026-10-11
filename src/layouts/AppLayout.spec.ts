@@ -24,6 +24,7 @@ vi.mock('@/api/http', async (orig) => {
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { useChatStore } = await import('@/stores/chat')
+const { useSideBarStore } = await import('@/stores/sidebar')
 const { default: AppLayout } = await import('./AppLayout.vue')
 
 const View = { render: () => null }
@@ -42,10 +43,19 @@ function membership(courseId: string, ask: string) {
   } as never
 }
 
-/** Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's. */
-async function mountAs(ask: string, opts: { phone?: boolean; email?: string; role?: string } = {}) {
+/**
+ * Signed in as someone who may ask agents in one course (or not), on a wide screen or a phone's, or in a window
+ * of this width, as media queries of width see it.
+ */
+async function mountAs(ask: string, opts: { phone?: boolean; width?: number; email?: string; role?: string } = {}) {
+  const fits = (query: string) => {
+    if (opts.width === undefined) return !!opts.phone && query.includes('max-width')
+    const min = /min-width:\s*(\d+)px/.exec(query)
+    const max = /max-width:\s*(\d+)px/.exec(query)
+    return (!!min || !!max) && (!min || opts.width >= Number(min[1])) && (!max || opts.width <= Number(max[1]))
+  }
   window.matchMedia = ((query: string) => ({
-    matches: !!opts.phone && query.includes('max-width'),
+    matches: fits(query),
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -181,6 +191,41 @@ describe('the chat’s button', () => {
     await flushPromises()
     expect(chat.open).toBe(false)
     expect(w.find('#chat-panel').exists()).toBe(false)
+  })
+
+  it('has the side bar give way to the chat in a window too narrow for both beside the page, and back', async () => {
+    // 1000 px: the activity bar, the side bar, the narrowest pane and 420 px of page would need 1048.
+    const { w, chat } = await mountAs('autonomous', { width: 1000 })
+    expect(w.find('#side-bar').exists()).toBe(true)
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.get('#chat-panel').classes()).toContain('is-docked')
+    expect(w.find('#side-bar').exists()).toBe(false)
+    // Its view's button says it is not shown, and the side bar is still open, as this browser keeps it.
+    expect(w.get('#side-view-courses').attributes('aria-expanded')).toBe('false')
+    expect(useSideBarStore().open).toBe(true)
+    // Minimized: back beside the page.
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(true)
+    // Open again, and then its view's button: the side bar, and the chat minimized in its turn.
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(false)
+    await w.get('#side-view-courses').trigger('click')
+    await flushPromises()
+    expect(w.find('#side-bar').exists()).toBe(true)
+    expect(w.get('#side-view-courses').attributes('aria-expanded')).toBe('true')
+    expect(chat.open).toBe(false)
+    expect(w.find('#chat-panel').exists()).toBe(false)
+  })
+
+  it('leaves the side bar beside the chat where the window has room for both', async () => {
+    const { w } = await mountAs('autonomous', { width: 1048 })
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.get('#chat-panel').classes()).toContain('is-docked')
+    expect(w.find('#side-bar').exists()).toBe(true)
   })
 
   it('says its shortcut in its tooltip, and leaves Enter and Space to the button, which the tooltip would otherwise take', async () => {
