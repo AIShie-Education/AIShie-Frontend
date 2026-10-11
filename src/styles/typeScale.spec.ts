@@ -269,7 +269,13 @@ describe('the type scale', () => {
       '40px',
     ])
     expect([root['--app-text-prose'], root['--app-text-mark']]).toEqual(['15px', '11px'])
-    expect([root['--app-lh-ui'], root['--app-lh-text'], root['--app-lh-prose']]).toEqual(['1.5', '1.6', '1.7'])
+    // Running text and headings take the site's leading (aishie.app's --lh-body and --lh-heading).
+    expect([root['--app-lh-ui'], root['--app-lh-text'], root['--app-lh-prose'], root['--app-lh-heading']]).toEqual([
+      '1.5',
+      '1.7',
+      '1.7',
+      '1.25',
+    ])
     expect([root['--app-weight-strong'], root['--app-heading-weight']]).toEqual(['600', '600'])
     expect(['xs', 'sm', 'md', 'lg', 'xl', '2xl'].map((s) => root[`--app-space-${s}`])).toEqual([
       '4px',
@@ -281,10 +287,12 @@ describe('the type scale', () => {
     ])
   })
 
-  it('sets Chinese no smaller than 13 px, with lines further apart and strong text in 500', () => {
+  it('sets Chinese no smaller than 13 px, with the interface’s lines further apart and strong text in 500', () => {
     const zh = block('html:lang(zh)')
     expect([zh['--app-text-xs'], zh['--app-text-sm']]).toEqual(['13px', '14px'])
-    expect([zh['--app-lh-ui'], zh['--app-lh-text'], zh['--app-lh-prose']]).toEqual(['1.6', '1.75', '1.85'])
+    expect(zh['--app-lh-ui']).toBe('1.6')
+    // Running text and headings are set as in English: 1.7 and 1.25, the site's in every language.
+    expect([zh['--app-lh-text'], zh['--app-lh-prose'], zh['--app-lh-heading']]).toEqual([undefined, undefined, undefined])
     // Noto Sans is loaded in 400, 500 and 700 (styles/fonts-zh-*.ts): 600 would fall to 700.
     expect(zh['--app-weight-strong']).toBe('500')
     expect(zh['--app-heading-weight']).toBe('700')

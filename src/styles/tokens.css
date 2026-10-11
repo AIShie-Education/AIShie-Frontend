@@ -5,7 +5,15 @@
    indigo that reads on them, and the same warm light. Each pairing of text
    and ground below meets WCAG AA (4.5:1 for text, 3:1 for a control's edge
    and the focus ring), in both themes; styles/contrast.spec.ts measures
-   them. */
+   them.
+
+   What the app shares with aishie.app (the brand's navy and amber, the
+   paper, the line, the three inks and the edge of a field in the light
+   theme; the corner, the rule, the leading and the measure) has the site's
+   values, so that the app looks like the pages that show it: an academic
+   publication's, straight corners and thin rules rather than rounded cards
+   on shadows. contrast.spec.ts writes them out beside the site's names, and
+   fails when one side changes alone. */
 :root {
   /* Grounds and surfaces */
   --app-ground: #f6f3ec;
@@ -15,21 +23,32 @@
   --app-card: #fbf8f2;
   --app-overlay: #fbf8f2;
   --app-field: #ffffff;
-  --app-line: #e2ddd1;
+  /* The page's own surface, where its header and its sections are read: the
+     ivory, not the paper. With its sections ruled rather than boxed, the
+     page would otherwise lie wholly on the warm paper, and warm paper, a
+     serif and an amber dot are the look the app is not to add to; the paper
+     stays the side bar's and the activity bar's. */
+  --app-page: var(--app-card);
+  /* The site's line (--line), between sections and rows. */
+  --app-line: #d9d4c8;
   --app-line-soft: #ece8de;
   --app-line-strong: #cfc8b8;
-  /* The edge of a field, a checkbox or a radio: 3:1 on a card and on the ground. */
-  --app-control-border: #8f887a;
+  /* The edge of a field, a checkbox or a radio: 3:1 on a card and on the
+     ground; the site's --field-line. */
+  --app-control-border: #8c8472;
   --app-control-border-hover: #6c665b;
 
-  /* Ink, in three steps a reader tells apart: the text, what is secondary
-     to it, and the meta beside it (a time, a heading over a column, a hint),
-     each 1.5:1 or more from the next. The third reads at 4.5:1 on every
+  /* Ink, in three steps a reader tells apart, the site's three: the ink
+     (--ink) of headings, names and the interface's words; the second
+     (--ink-body) of running text, a note's, rendered Markdown's, an answer's
+     and a description's; and the third (--ink-3) of the meta beside them (a
+     time, a heading over a column, a hint). The first two are 1.4:1 or more
+     apart, the second and third 1.5:1. The third reads at 4.5:1 on every
      ground it is drawn on, the second shade and a hovered row's included.
      The placeholder's is a step quieter, AA on a field, a card and the page. */
-  --app-ink: #1b1d24;
-  --app-ink-2: #4a4d58;
-  --app-ink-3: #656872;
+  --app-ink: #1c1c1c;
+  --app-ink-2: #3a3a3a;
+  --app-ink-3: #5a5d68;
   --app-ink-placeholder: #6b6e78;
   --app-ink-disabled: #a9a8a3;
 
@@ -41,13 +60,16 @@
   --app-on-indigo: #ffffff;
   --app-focus: #22407a;
 
-  /* The light: the warm dot on the i, and what teaching passes on */
+  /* The light: the warm dot on the i of the wordmark and the mark. The
+     brand is the navy, and the amber its accent alone, never a second
+     identity: an agent's avatar, an empty place and the chat do not take it.
+     The wait colour, below, is a state's, not the light's. */
   --app-light: #e0934f;
   --app-light-halo: #f0d8c0;
   --app-wordmark: #22407a;
 
-  /* Pills: waiting, done, refused, each a hue of its own, and neutral, a
-     category's, whose text is a step darker than the third ink, to read on
+  /* A state's colours: waiting, done, refused, each a hue of its own, and
+     neutral, a category's, whose text is the third ink's colour, to read on
      its ground. */
   --app-wait-bg: #fbf0d9;
   --app-wait-fg: #8a5a00;
@@ -58,15 +80,25 @@
   --app-neutral-bg: #ede7da;
   --app-neutral-fg: #5a5d68;
 
-  /* Shapes */
-  --app-radius-control: 8px;
-  --app-radius-item: 12px;
-  --app-radius-card: 16px;
-  --app-radius-pill: 999px;
-  --app-shadow-raised: 0 24px 48px -24px rgb(27 29 36 / 18%);
-  --app-shadow-pop: 0 12px 32px -8px rgb(27 29 36 / 16%), 0 2px 6px rgb(27 29 36 / 6%);
-  /* Cast all round, by a window floating over the page (the chat's). */
-  --app-shadow-window: 0 24px 56px -12px rgb(27 29 36 / 26%), 0 4px 12px rgb(27 29 36 / 8%);
+  /* Shapes, the site's (docs/CONVENTIONS.md, "Shapes"). Every box has 2 px
+     corners: a control, a field, a tag, a chip, a dialog, a menu, a tooltip,
+     a box around one thing the reader operates. What is a section of a page,
+     a drawer, a phone's sheet, has none. Nothing is rounder than 4 px but a
+     mark as wide as it is tall: a person's avatar, a dot, a radio's circle.
+     Sections are parted by a rule (--app-rule) and room, not a card. Nothing
+     casts a shadow: what floated on one is docked, or has an edge.
+     styles/shapes.spec.ts refuses anything else. */
+  --app-radius: 2px;
+  --app-radius-card: 0;
+  --app-rule: 1px solid var(--app-line);
+  /* The names of waves 1 and 2, each now the one corner, until every rule
+     that reads them reads --app-radius instead; then they go. */
+  --app-radius-control: var(--app-radius);
+  --app-radius-item: var(--app-radius);
+  --app-radius-pill: var(--app-radius);
+  --app-shadow-raised: none;
+  --app-shadow-pop: none;
+  --app-shadow-window: none;
 
   /* Layers, lowest first. Element Plus lays its overlays over the page from
      2000 up, one above another as each opens: a drawer (the phone's side
@@ -125,10 +157,18 @@
      a file, an id, a key, a file's size): never Chinese, and the same in
      every language. */
   --app-text-mark: 11px;
-  /* Leading: the interface's lines, a paragraph's, and rendered Markdown's. */
+  /* Leading: the interface's lines (a label, a cell, a button); a
+     paragraph's and rendered Markdown's, which are the site's running text,
+     1.7 in every language (the site's spec found Chinese at about 1.9 too
+     loose); and a heading's, 1.25, the site's too. */
   --app-lh-ui: 1.5;
-  --app-lh-text: 1.6;
+  --app-lh-text: 1.7;
   --app-lh-prose: 1.7;
+  --app-lh-heading: 1.25;
+  /* The measure: running text (a paragraph of rendered Markdown, a note, a
+     page's subtitle) stops at 34 em of its own size, 34 Han characters, as
+     the site's every paragraph does; a line of 70 is hard to read. */
+  --app-measure: 34em;
   /* What stands out in the interface's text: a name, a label, a table's
      heading, a figure. A heading takes --app-heading-weight, as does a
      figure that stands for a card. */
@@ -144,8 +184,9 @@
   --app-space-2xl: 32px;
 }
 
-/* In Chinese, either script, headings bold and untracked, lines further
-   apart; <html lang> is set with the language (zh-Hans or zh-Hant). The two
+/* In Chinese, either script, headings bold and untracked, the interface's
+   lines further apart; <html lang> is set with the language (zh-Hans or
+   zh-Hant). Running text keeps 1.7, as in English. The two
    smallest sizes are a step larger, and strong text is 500: Noto Sans,
    loaded in 400, 500 and 700, has no 600, which falls to 700 and makes every
    label and table heading bold. A heading stays 700. */
@@ -155,8 +196,6 @@ html:lang(zh) {
   --app-text-xs: 13px;
   --app-text-sm: 14px;
   --app-lh-ui: 1.6;
-  --app-lh-text: 1.75;
-  --app-lh-prose: 1.85;
   --app-weight-strong: 500;
 }
 
@@ -215,8 +254,4 @@ html.dark {
   --app-danger-fg: #f2a195;
   --app-neutral-bg: #242938;
   --app-neutral-fg: #a9a7a0;
-
-  --app-shadow-raised: 0 24px 48px -24px rgb(0 0 0 / 60%);
-  --app-shadow-pop: 0 12px 32px -8px rgb(0 0 0 / 55%), 0 2px 6px rgb(0 0 0 / 30%);
-  --app-shadow-window: 0 24px 56px -12px rgb(0 0 0 / 70%), 0 4px 12px rgb(0 0 0 / 40%);
 }

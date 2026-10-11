@@ -202,7 +202,8 @@ async function expectWindow(page: Page, pageWidth?: number) {
     }
   })
   expect(look).toMatchObject({ position: 'fixed', role: 'dialog', modal: 'false' })
-  expect(look.shadow).not.toBe('none')
+  // Nothing casts a shadow (docs/CONVENTIONS.md, "Shapes"): its edge parts it from the page.
+  expect(look.shadow).toBe('none')
   if (pageWidth !== undefined) {
     expect(Math.round((await box_(page.locator('.app-main'))).width)).toBe(Math.round(pageWidth))
   }
