@@ -707,30 +707,43 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   nothing there, is their agents' proposals.
 - Wrap anything loaded in `<AsyncState :loading :error :empty @retry="reload">`.
 - **Empty places** say so with `<AppEmpty :text>` (AsyncState's `empty-text` is one), never Element
-  Plus's grey box: inside a card, one line in the second ink, with what to do about it in its slot (an
-  action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), the
-  brand's line icon (an open book with the light over it, 48 px, stroke 1.75) over the words and a
-  title where it has one. A state that is not a fault (no agent service beside the server, an
-  administrator with no seat in a course) is one too; an `el-result` is left for what went wrong.
+  Plus's grey box: inside a section, one line in the second ink, with what to do about it in its slot
+  (an action, a hint); where nothing fills the page or the chat (`page`, AsyncState's `empty-page`), its
+  title, where it has one, in the ink over its words, at the page's left as the rest of its text is,
+  24 px of room above and below, the words at the measure, and no picture: an illustration over an
+  empty place is a template's, and the amber light is the wordmark's alone (design wave 3; it was an
+  open book with the light over it, centred). A state that is not a fault (no agent service beside the
+  server, an administrator with no seat in a course) is one too; an `el-result` is left for what went
+  wrong, and AsyncState draws its own at the section's left too, with no icon on a filled circle over
+  it and Retry as a text button.
   So is a text with nothing written in it: `<MarkdownView :source :empty>` says its `empty` as an
   `AppEmpty`, never in a paragraph of its own.
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
   for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
-  drawn by what they say and never by an effect chosen on the page:
-  - a **state** is a pill (`variant="pill"`, the default), tinted in its tone's pill colours: `done`,
-    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
+  drawn by what they say and never by an effect chosen on the page. Every one is a rectangle with the
+  app's 2 px corners, never a pill (design wave 3: the pill was the commonest mark of a generated app,
+  336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
+  the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
+  - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below).
+    `pill`, its name before wave 3, draws the same until the wave's cleanup takes it out;
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
-    a line and no ground, square-cornered as `AgentBadge`'s owner is, with its icon (`:icon`) unless
-    its row shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose
-    rows start with a person's icon or an agent's avatar); it has no tone;
-  - only a **count** is solid (`variant="count"`);
+    a 1 px line and no ground, as `AgentBadge`'s owner is, with its icon (`:icon`) unless its row
+    shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose rows
+    start with a person's icon or an agent's avatar); it has no tone;
+  - only a **count** is solid (`variant="count"`), and always in the indigo, its figures in what is
+    written on it; a count on a tab or a button (`el-badge`) is a rectangle too, and only a badge
+    that is a dot alone is round;
   - the **usual state** of a row (an active seat, course or actor, work submitted, a grade posted, a
     material published, a conversation open or answered) is quiet (`variant="quiet"`, as StatusTag
-    draws those values): words in the third ink, no pill, or nothing where the row says it otherwise,
-    so that only what departs from it is coloured. A row that is not published (a material, an
-    assignment) also has the 3 px amber line at its left (`.app-row-unpublished`; on a table, its
-    `row-class-name`).
+    draws those values): words in the third ink, no tag, or nothing where the row says it otherwise,
+    so that only what departs from it is coloured. A column or a tag whose value is the same on every
+    row is not shown at all (a list of active seats has no Status column; a list of published
+    materials, no "Published"): the usual state is words only among a page's own facts, and a list
+    shows a state only where its rows differ, by a `v-if` of the screen's own. A row that is not
+    published (a material, an assignment) also has the 3 px amber line at its left
+    (`.app-row-unpublished`; on a table, its `row-class-name`).
 
   A row holds two chips at most. Whether an agent can be asked is a dot before its name
   (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
@@ -738,9 +751,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
   (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
 - **Notes and alerts.** What explains (what a page does, what will happen, that a change waits for
-  approval, a proposal just made) is `<AppNote>`: no icon, a 3 px indigo line at its left, the
-  indigo's tint at half strength under it (`plain`: none), its words in the second ink under a title
-  in the ink where it has one, `closable` where it says what was just done. An `el-alert` is a
+  approval, a proposal just made) is `<AppNote>`, as aishie.app's notes are: no icon, no ground and
+  no corners, a 2 px rule in the indigo's line at its left and 16 px of room after it, its words in the
+  second ink at a paragraph's leading, stopping at the measure, under a title in the ink where it has
+  one; `closable` where it says what was just done, its close button a square of 28 px (44 on a touch
+  screen). `plain` was a note without the tint it had until design wave 3; every note is one now, and
+  `plain` is kept for the places that ask for it. An `el-alert` is a
   warning or an error, or an outcome reported in green, and says which in its template, where lint
   reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
   'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
@@ -748,24 +764,29 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   proposal taken back: `OutcomeAlert`) and what a version's readers read are notes. It has Element Plus's small icon on its title's line, never the large one
   beside a title and a description (`styles/element.css`). Where data leaves the site (to a model's
   provider, under the school's key or an owner's own; into files someone downloads) is said by
-  `<DataFlowNotice>`, a shield on an outline in the indigo's line, the same to administrators,
-  owners and those who ask: in the chat, the first time's points, "Where it goes to be answered" in
-  the whole notice, and, `compact`, the one line under the composer, the shield before it and no
-  outline (`DataFlowNotice.spec.ts` checks each place that says so).
+  `<DataFlowNotice>`, a shield before its words and the note's rule at its left, with no box around
+  it (an outline in the indigo's line until design wave 3), its words at the measure, the same to
+  administrators, owners and those who ask: in the chat, the first time's points, "Where it goes to
+  be answered" in the whole notice, and, `compact`, the one line under the composer, the shield
+  before it and no rule (`DataFlowNotice.spec.ts` checks each place that says so).
 - **Refresh** is `<RefreshButton :loading @click>`, at the right end of the toolbar of the card that
-  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has
-  none): a secondary button with "Refresh", on a phone's screen (600 px or narrower) a round icon
-  button with its words in its tooltip. A page's header holds what creates or goes elsewhere, never
-  Refresh.
+  holds what it reads again (`.app-toolbar`; the card's title row, or the tabs' row, where it has none):
+  a text button with "Refresh", on a phone's screen (600 px or narrower) a square of its icon alone, as
+  tall and as wide as a button is high, with its words in its tooltip and its name. A page's header holds
+  what creates or goes elsewhere, never Refresh.
 - **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
-  tags, "All N" first, then each choice with its count (a lower bound, "12+", while there is more to
-  load), one at a time, radios to the keyboard and a screen reader; counts a list shows by state are
-  these chips too, never a row of tags that cannot be pressed. A chip counts the rows it filters, no
-  others: where a select has already narrowed the list to one (a student on the submissions page),
-  there is nothing left to filter and there are no chips. A count is in the chip's own ink, set apart
-  by its weight, never faded below the contrast text keeps. A choice of many (an assignment, a
-  student, a type) stays a select. A segmented control (`el-radio-group` of buttons) is for a view's
-  mode, newest or oldest first, by owner or by model, never a filter.
+  tags, drawn as rectangles with the app's corners (`styles/element.css`): on no ground, the ink's words
+  inside a 1 px line, the chosen one in the indigo's words on its tint inside the indigo's line, one with
+  nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
+  count (a lower bound, "12+", while there is more to load), one at a time, radios to the keyboard and a
+  screen reader; counts a list shows by state are these chips too, never a row of tags that cannot be
+  pressed. A chip counts the rows it filters, no others: where a select has already narrowed the list to
+  one (a student on the submissions page), there is nothing left to filter and there are no chips. A
+  count is in the chip's own ink, set apart by its weight, never faded below the contrast text keeps. A
+  choice of many (an assignment, a student, a type) stays a select. A segmented control (`el-radio-group`
+  of buttons) is for a view's mode, newest or oldest first, by owner or by model, never a filter: one
+  frame in a control's edge, 2 px at its ends, a rule between its parts and no ground, the chosen part
+  the indigo's words on its tint inside an indigo line, never a second solid button on the screen.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
@@ -842,16 +863,28 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
   irreversible actions with `ElMessageBox.confirm`.
-- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else: `type="primary"`
-  (solid indigo) for the one main action of a view or a dialog, approving and publishing among them;
-  no type (outlined, the ink's text) for everything beside it, rejecting, requesting changes and
-  cancelling among them, rejecting being the safe choice, not a destructive one; `type="danger" plain` (a red outline) for a
-  destructive action on a page (archive, remove, revoke), which asks first; and solid red alone for
-  the last step of that confirmation (`confirmButtonClass: 'el-button--danger'`, or a dialog's
-  button that does it at once). `success`, `warning` and `info` are outcomes' colours, for tags,
-  never a button's. A disabled button has no hue, whatever its rank. What cannot be taken back is
-  not put beside what is done every day: it goes in the toolbar's ⋯ menu (`MoreFilled`), at its far
-  end, as undoing final grades is beside posting them.
+- **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else, with the app's
+  2 px corners and no outline on any (design wave 3: a solid button beside an outlined one is the
+  template's pair, and the site has none). `type="primary"` (solid indigo) for the one main action of
+  a view or a dialog, approving and publishing among them: never two of them on one screen. No type
+  is a **text button**, the ink's words on no ground and no edge, its icon a step quieter, the
+  indigo's words on its tint on hover, as tall as any other button (36 px, 44 on a touch screen), for
+  everything beside it, rejecting, requesting changes and cancelling among them, rejecting being the
+  safe choice, not a destructive one. `type="primary" text` (or `link`) is the indigo's words, for a
+  list item's own main action (open, approve in a queue whose first proposal holds the one solid
+  Approve, the queue being oldest first) or an action that reads as a link. `type="danger" text` (or
+  `link`) is the danger's words and icon, no outline, its tint on hover, for a destructive action on
+  a page (archive, remove, revoke), never beside the primary (at the toolbar's far end, or in ⋯), which
+  asks first; and solid red alone for the last step of that confirmation (`confirmButtonClass:
+  'el-button--danger'`, or a dialog's button that does it at once). `plain` draws as `text` until the
+  screens are swept of it (the ghost, an indigo or red outline, is gone), and an icon alone is a square
+  of its height, even one asked for as `circle`. `success`, `warning` and `info` are outcomes'
+  colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
+  a solid one keeps the ground's second shade under its words, so that the main action's place still
+  reads. What cannot be taken back is not put beside what is done every day: it goes in the toolbar's
+  ⋯ menu (`MoreFilled`), at its far end, as undoing final grades is beside posting them.
+  `e2e/components-style.spec.ts` reads every button, tag, chip, badge, avatar, note and empty place on
+  the pages that hold most of them, at a laptop's size and a phone's, in both themes.
 - Tables: `el-table` with `:data`, `row-key`, `@row-click` to navigate where rows are things; keep a
   mobile width in mind (`min-width` on columns, not fixed widths everywhere). A table has no ground of its own:
   it lies on its card (`styles/element.css`), white being a field's alone, and a column of figures is
@@ -1078,20 +1111,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
 - **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
   hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
-  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a rounded square
-    (radius 8 at 28 px; a person is always a circle) on `--app-indigo-tint`, its initials in
-    `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or Korean
-    character), with the brand's light at its top right corner. 28 px (`default`) where it heads a row
-    of a list of agents (the chat's list to ask, the course's agents), 20 px (`small`) inline in a line of
-    text (the chat's header and author line, a proposal's proposer or target, a name in a table, the
-    feed's who line, a draft's drafter), 36 px (`large`) heading an entry of a list of agents with their
-    details (My agents, the administration's card). It is decorative (`aria-hidden`); its initials are
-    drawn by CSS.
+  - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a square with the
+    app's 2 px corners at every size (a person is always a circle) on `--app-indigo-tint`, its initials
+    in `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or
+    Korean character), and nothing else: the brand's light, which sat at its top right corner until
+    design wave 3, is the wordmark's alone, the navy being the identity and the amber its accent. 28 px
+    (`default`) where it heads a row of a list of agents (the chat's list to ask, the course's agents),
+    20 px (`small`) inline in a line of text (the chat's header and author line, a proposal's proposer or
+    target, a name in a table, the feed's who line, a draft's drafter), 36 px (`large`) heading an entry
+    of a list of agents with their details (My agents, the administration's card). It is decorative
+    (`aria-hidden`); its initials are drawn by CSS.
   - Agents as a kind (a view of the activity bar, a course's tab, a kind to choose, a note about
     agents) take `<AgentSeatIcon />`, the person-beside-a-seat line icon of aishie.app (stroke 1.8,
     round caps; in an `<el-icon>`, or by component where icons are listed). Never the chip (`Cpu`).
   - After an agent's name, wherever the name is shown, `<AiBadge />`: "AI" in every language
-    (`common.agent.ai`), 11 px, on the indigo tint, radius 4, its words on hover; it takes no focus.
+    (`common.agent.ai`), 11 px, on the indigo tint, a rectangle with the app's 2 px corners, its words
+    on hover; it takes no focus.
     It never parts from the name: `<AgentName :name />` keeps the name's last character (with any
     punctuation after it) on the line of the "AI" when the name wraps, and nothing more, so a name with
     no spaces (`cs101-introduction-to-programming-weekly-revision-tutor`) still breaks wherever it must
