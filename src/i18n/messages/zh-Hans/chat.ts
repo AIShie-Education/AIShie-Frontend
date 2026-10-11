@@ -45,6 +45,7 @@ export default {
     empty: '这里暂时没有可以回答你问题的智能体。',
     offlineHint: '这个智能体目前似乎没有在运行，回复可能需要一段时间。',
     sharedHint: '它也会回答其他成员，会记住每个人写给它的内容，并可能转述给他们。',
+    sharedHintAll: '课程智能体也会回答其他成员，会记住每个人写给它们的内容，并可能转述给他们。',
   },
   between: '{opener} → {respondent}',
   messagesLabel: '消息',

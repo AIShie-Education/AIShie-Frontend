@@ -45,6 +45,7 @@ export default {
     empty: 'No agent here answers your questions yet.',
     offlineHint: 'Nothing seems to be running this agent now: an answer may take a while.',
     sharedHint: 'It answers other members too, holds what each one writes, and may repeat it to them.',
+    sharedHintAll: 'Course agents answer other members too, hold what each one writes, and may repeat it to them.',
   },
   between: '{opener} → {respondent}',
   messagesLabel: 'Messages',

@@ -3,9 +3,10 @@
 // course the panel asks in, or in every course they are seated in
 // (me.conversations, with course_id for one course), a page at a time. Each
 // says where and with whom (course code · agent), its title, where it
-// stands, and whether the agent has written since the caller last read it
-// (unread, which Core keeps). A conversation from before, with a person, is
-// closed and not listed. Kept fresh while it is shown.
+// stands where that is not the usual (answered: nothing is said), and whether
+// the agent has written since the caller last read it (unread, which Core
+// keeps). A conversation from before, with a person, is closed and not
+// listed. Kept fresh while it is shown.
 //
 // Grouped by when each last moved: today, yesterday, this week, earlier; and
 // searched by title and agent, among those read so far (more pages are read
@@ -133,7 +134,8 @@ function more() {
                 <span v-if="chat.unreadIds.has(c.conversation_id)" class="hist-row__unread">{{
                   t('chat.history.unread')
                 }}</span>
-                <StatusTag vocab="conversationState" :value="stateOf(c)" />
+                <!-- The usual state, answered, is no tag in a list: only what departs from it is said. -->
+                <StatusTag v-if="stateOf(c) !== 'answered'" vocab="conversationState" :value="stateOf(c)" />
               </span>
             </button>
           </li>

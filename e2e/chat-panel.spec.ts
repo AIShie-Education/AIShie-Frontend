@@ -9,6 +9,7 @@ import {
   coursePath,
   demo,
   dropFiles,
+  expectCourseAgentRow,
   expectNothingAtRightEdge,
   hostOnRuntime,
   inTraditionalChinese,
@@ -383,7 +384,7 @@ test.describe.serial('the chat panel', () => {
     // On a course page it asks in that course, and offers its agents.
     await expect(panel.locator('.chat-panel__course')).toContainText('CS101')
     const row = panel.locator('button.resp-row').filter({ hasText: TUTOR })
-    await expect(row).toContainText('Course agent')
+    await expectCourseAgentRow(panel, row)
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-panel-agents')
     await row.click()
@@ -416,12 +417,13 @@ test.describe.serial('the chat panel', () => {
     await expect(panel).toBeVisible()
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
 
-    // Its history: the conversation, named by course and agent, with its title and where it stands.
+    // Its history: the conversation, named by course and agent, with its title; answered, the usual, is not said.
     await showHistory(page)
     const item = panel.locator('.hist-row').filter({ hasText: TITLE })
     await expect(item).toContainText(`CS101 · ${TUTOR}`)
     await expect(item.locator('.hist-row__title')).toHaveText(TITLE)
-    await expect(item).toContainText('Answered')
+    await expect(item).not.toContainText('Answered')
+    await expect(item.locator('.app-tag')).toHaveCount(0)
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-panel-history')
     await item.click()

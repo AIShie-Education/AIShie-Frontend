@@ -160,6 +160,73 @@ describe('AgentPicker', () => {
     expect(rows[1]!.text()).toContain('Personal agent')
   })
 
+  it('says nothing that every row would say: a student’s course agents, an instructor’s own agents', async () => {
+    // A student offered two of the course's agents, both seated by its instructor: no row says "Course agent" nor
+    // whose it is, and that they answer others too is said once, over the list.
+    respondents = [
+      { ...tutor, owner_name: 'Ms Chan' },
+      { ...tutor, member_id: 'lab', display_name: 'Lab helper', owner_name: 'Ms Chan' },
+    ]
+    const student = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global, attachTo: document.body })
+    await flushPromises()
+    const rows = student.findAll('button.resp-row')
+    expect(rows).toHaveLength(2)
+    for (const row of rows) {
+      expect(row.text()).not.toContain('Course agent')
+      expect(row.text()).not.toContain('Ms Chan')
+      expect(row.text()).not.toContain('It answers other members too')
+      expect(row.findAll('.resp-row__line .el-tag, .agent-badge__owner')).toHaveLength(0)
+      // Nor does a screen reader hear whose it is: what its dot says alone.
+      expect(row.attributes('aria-describedby')).toBe(`resp-${row.text().includes('Lab') ? 'lab' : 'tutor'}-ask`)
+    }
+    expect(student.get('.resp-shared').text()).toBe(
+      'Course agents answer other members too, hold what each one writes, and may repeat it to them.',
+    )
+    student.unmount()
+
+    // An instructor's own course agents and their personal agent: all theirs, so none says "Your agent"; what
+    // each is differs, and is said; that the course's answer others too, once over the list.
+    respondents = [
+      { ...tutor, member_id: 'own-tutor', display_name: 'CS101 tutor', is_my_delegate: true },
+      { ...tutor, member_id: 'own-lab', display_name: 'CS101 lab helper', is_my_delegate: true },
+      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+    ]
+    const instructor = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const [course, lab, personal] = instructor.findAll('button.resp-row')
+    expect(instructor.get('.resp-shared').text()).toMatch(/^Course agents answer other members too/)
+    for (const row of [course!, lab!, personal!]) {
+      expect(row.text()).not.toContain('Your agent')
+      expect(row.text()).not.toContain('It answers other members too')
+    }
+    expect(course!.text()).toContain('Course agent')
+    expect(lab!.text()).toContain('Course agent')
+    expect(personal!.text()).toContain('Personal agent')
+    instructor.unmount()
+
+    // One course agent beside the caller's own: the note under it, there being no other to say it of.
+    respondents = [
+      { ...tutor, member_id: 'own-tutor', display_name: 'CS101 tutor', is_my_delegate: true },
+      { ...tutor, member_id: 'mine', display_name: 'My helper', is_my_delegate: true, answers_course: false },
+    ]
+    const mixed = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const [tutorRow, mineRow] = mixed.findAll('button.resp-row')
+    expect(mixed.find('.resp-shared').exists()).toBe(false)
+    expect(tutorRow!.text()).toContain('It answers other members too')
+    expect(mineRow!.text()).not.toContain('It answers other members too')
+    mixed.unmount()
+
+    // One agent alone: what it is is said, there being nothing to tell it from.
+    respondents = [{ ...tutor, owner_name: 'Ms Chan' }]
+    setLocale('zh-Hant')
+    const one = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    expect(one.get('button.resp-row').text()).toContain('課程代理')
+    expect(one.get('button.resp-row').text()).toContain('它也會回答其他成員')
+    expect(one.find('.resp-shared').exists()).toBe(false)
+  })
+
   it('makes each row one control: nothing in it takes focus, and what the tooltips say describes it', async () => {
     respondents = [
       { ...tutor, last_seen_at: null },

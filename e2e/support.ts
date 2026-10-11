@@ -163,6 +163,30 @@ export async function openChat(page: Page) {
   return panel
 }
 
+/**
+ * An agent the course seated, as the chat's list of agents to ask shows it (in English), however many other tests
+ * of the run have seated: called a course agent where the rows differ in what they are (where every one is the
+ * course's, no row says so), never a personal agent; and that it answers others too said under it where it is the
+ * one course agent listed, or else once over the list.
+ */
+export async function expectCourseAgentRow(panel: Locator, row: Locator) {
+  await expect(row).toBeVisible()
+  await expect(row).not.toContainText('Personal agent')
+  if (!(await row.textContent())!.includes('Course agent')) {
+    await expect(panel.locator('.resp-row').filter({ hasText: 'Personal agent' })).toHaveCount(0)
+  }
+  const once = panel.locator('.resp-shared')
+  if (await once.count()) {
+    await expect(once).toHaveText(
+      'Course agents answer other members too, hold what each one writes, and may repeat it to them.',
+    )
+    expect(await panel.locator('.resp-row').count()).toBeGreaterThan(1)
+    await expect(row).not.toContainText('It answers other members too')
+  } else {
+    await expect(row).toContainText('It answers other members too')
+  }
+}
+
 /** Minimizes the chat from its head row: it opens again on what it showed. */
 export async function minimizeChat(page: Page) {
   await chatWindow(page).locator('.chat-panel__minimize').click()

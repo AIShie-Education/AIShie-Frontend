@@ -1357,7 +1357,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the ways to begin as rows of words between rules. Its history and the agents to ask are rows
   between rules too, hovered in a tint, the conversation shown marked at its left in the navy as the
   side bar marks the page shown, and the history's groups (today, yesterday…) plain sub-headings in
-  the second ink, not tracked.
+  the second ink, not tracked. A row says only what departs from the usual or tells it from the
+  others: a conversation answered, the usual, has no state on its row (one awaiting an answer, or
+  closed, says so); the agents to ask say whose each is and what it is (課程代理, 個人代理) only where
+  the rows differ in it, so that a student's course agents say neither and an instructor's own
+  agents not 「你的代理」; and where two or more of the course's agents are listed, that they answer
+  others too is said once over the list (`chat.respondents.sharedHintAll`), not under each
+  (`AgentPicker`; one agent alone says what it is).
   An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
   working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps

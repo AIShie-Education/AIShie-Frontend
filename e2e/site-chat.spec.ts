@@ -4,6 +4,7 @@ import {
   chatButton,
   coursePath,
   demo,
+  expectCourseAgentRow,
   hostOnRuntime,
   photograph,
   signIn,
@@ -211,7 +212,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await signIn(page, d.actors.ken)
     const panel = await openChat(page)
     const row = panel.locator('button.resp-row').filter({ hasText: TUTOR })
-    await expect(row).toContainText('Course agent')
+    await expectCourseAgentRow(panel, row)
     // Whether it can be asked, by a dot before its name; how it runs is its owner's concern.
     await expect(row.locator('.askable-dot')).toHaveAttribute('aria-label', 'Can be asked')
     await expect(row.locator('.hosting-tag')).toHaveCount(0)
