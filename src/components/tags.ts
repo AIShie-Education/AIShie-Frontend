@@ -3,12 +3,8 @@
 
 /** A state's colour: done green, danger red, wait amber, neutral, or indigo for what is new or the reader's to decide. */
 export type TagTone = 'neutral' | 'done' | 'wait' | 'danger' | 'indigo'
-/**
- * A state (state), an identity or an attribute (outline), a count (count), or the usual state of a row
- * (quiet). `pill` is a state's name from before design wave 3, when a state was drawn as a pill, and
- * draws one as `state` does, until the wave's cleanup takes it out.
- */
-export type TagVariant = 'state' | 'pill' | 'outline' | 'count' | 'quiet'
+/** A state (state), an identity or an attribute (outline), a count (count), or the usual state of a row (quiet). */
+export type TagVariant = 'state' | 'outline' | 'count' | 'quiet'
 
 /** Element Plus's names for the same colours, which older maps of states still use. */
 export type ElementTagType = 'success' | 'warning' | 'danger' | 'info' | 'primary'

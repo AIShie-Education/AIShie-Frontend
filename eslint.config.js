@@ -82,7 +82,6 @@ const ELEMENT_LOOK = {
   // A button is solid (the view's one primary) or words; nothing is outlined, a pill or a disc.
   'el-button': {
     allowedIn: [],
-    pending: () => LOOK_PENDING,
     when: (node) => BUTTON_LOOKS.some((look) => hasLook(node, look)),
     message:
       'A button is solid (the one primary of a view or a dialog) or words: a text button (text, or link inline) with type="primary" for an item’s own action or type="danger" for a destructive one; never outlined (plain), a pill (round) or a disc (circle): an icon alone is a square text button (docs/CONVENTIONS.md, "Buttons").',
@@ -108,13 +107,6 @@ const ELEMENT_LOOK = {
 }
 /** The looks a button may not be given. */
 const BUTTON_LOOKS = ['plain', 'round', 'circle']
-/**
- * The files whose outlined or round buttons another part of design wave 3
- * takes away, refused here once they have: src/lint/elementLook.spec.ts
- * fails when one of them no longer writes the look, so the list only
- * shrinks. Empty since the components and the chrome swept theirs.
- */
-export const LOOK_PENDING = []
 /** Whether an element is given a look, written (`plain`) or bound to anything but false (`:plain="x"`). */
 function hasLook(node, name) {
   const a = attributeOf(node, name)
@@ -179,7 +171,6 @@ const elementLook = {
         for (const name of drawnAs(node)) {
           const rule = ELEMENT_LOOK[name]
           if (!rule || rule.allowedIn.some((f) => file.endsWith(f))) continue
-          if (rule.pending?.().some((f) => file.endsWith(f))) continue
           if (rule.when && !rule.when(node)) continue
           context.report({ node: node.startTag, message: rule.message })
         }

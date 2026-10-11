@@ -257,7 +257,7 @@ defineExpose({ reload: () => list.reload() })
             <div class="creds__main">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
-                <AppTag :variant="state === 'active' ? 'quiet' : 'pill'" :tone="toneOf(STATE_TAG[state])">
+                <AppTag :variant="state === 'active' ? 'quiet' : 'state'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
                 </AppTag>
               </div>
@@ -316,7 +316,7 @@ defineExpose({ reload: () => list.reload() })
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
                 <AppTag
-                  :variant="row.state === 'active' ? 'quiet' : 'pill'"
+                  :variant="row.state === 'active' ? 'quiet' : 'state'"
                   :tone="toneOf(STATE_TAG[row.state as CredentialState])"
                 >
                   {{ t(`admin.credentials.state.${row.state}`) }}

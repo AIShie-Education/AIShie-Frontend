@@ -793,8 +793,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
   the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
   - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
-    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below).
-    `pill`, its name before wave 3, draws the same until the wave's cleanup takes it out;
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
     a faint 1 px line (`--app-line-strong`) and no ground, as `AgentBadge`'s owner is, never in a
