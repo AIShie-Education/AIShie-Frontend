@@ -1,6 +1,8 @@
 <script setup lang="ts">
-// A page's header: its title, the page's one h1, a line under it, and its
-// primary actions. Inside a course, a title that only names the tab chosen
+// A page's header: its title, the page's one h1, at a heading's leading, a
+// line under it in the third ink that stops at the measure, and its primary
+// actions. The way back, on a page under another, is a square with the app's
+// 2 px corners. Inside a course, a title that only names the tab chosen
 // (Materials, under the Materials tab) is not shown again: the h1 is kept
 // for screen readers, and the subtitle and the actions alone show. On the
 // grades' pages, the grades' own tabs take the title's place.
@@ -81,8 +83,8 @@ function filled(nodes: VNode[] | undefined): boolean {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: var(--app-radius-control);
-  color: var(--el-text-color-regular);
+  border-radius: var(--app-radius);
+  color: var(--app-ink-2);
   flex-shrink: 0;
 }
 .page-header__back:hover {
@@ -100,7 +102,7 @@ function filled(nodes: VNode[] | undefined): boolean {
 .page-header__title {
   margin: 0;
   font-size: var(--app-text-2xl);
-  line-height: 32px;
+  line-height: var(--app-lh-heading);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -149,8 +151,9 @@ function filled(nodes: VNode[] | undefined): boolean {
   margin-top: 0;
 }
 .page-header__subtitle {
+  max-width: var(--app-measure);
   margin: 4px 0 0;
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   font-size: var(--app-text-sm);
 }
 .page-header__actions {

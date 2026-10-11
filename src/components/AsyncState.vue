@@ -1,8 +1,11 @@
 <script setup lang="ts">
 // Loading, error and empty states around content that comes from Core. A
-// refusal (403) is shown as a lack of permission, not as a failure. Nothing
-// to show is an AppEmpty: one line inside the card it is in, or, given
-// `empty-page`, the line icon over the words where it fills the page.
+// refusal (403) is shown as a lack of permission, not as a failure; either
+// is said in words at the section's left, as its other text is, with no icon
+// on a filled circle over them, and a failure offers to try again as a text
+// button, never a second solid one beside the page's own. Nothing to show is an AppEmpty: one line inside the
+// section it is in, or, given `empty-page`, its words at the page's left
+// where it fills the page.
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
@@ -31,14 +34,24 @@ const notFound = computed(() => !!props.error && props.error.isNotFound)
     <div v-if="loading && !overlay" class="async-state__loading" v-loading="true" />
     <el-result
       v-else-if="error && forbidden"
-      icon="warning"
+      class="async-state__result"
       :title="t('common.errors.forbidden')"
       :sub-title="error.message"
     />
-    <el-result v-else-if="error && notFound" icon="info" :title="t('common.errors.notFound')" :sub-title="error.message" />
-    <el-result v-else-if="error" icon="error" :title="t('common.errors.title')" :sub-title="errorMessage(error)">
+    <el-result
+      v-else-if="error && notFound"
+      class="async-state__result"
+      :title="t('common.errors.notFound')"
+      :sub-title="error.message"
+    />
+    <el-result
+      v-else-if="error"
+      class="async-state__result"
+      :title="t('common.errors.title')"
+      :sub-title="errorMessage(error)"
+    >
       <template #extra>
-        <el-button type="primary" @click="emit('retry')">{{ t('common.actions.retry') }}</el-button>
+        <el-button class="async-state__retry" @click="emit('retry')">{{ t('common.actions.retry') }}</el-button>
       </template>
     </el-result>
     <AppEmpty v-else-if="empty && !loading" :text="emptyText ?? t('common.labels.empty')" :page="emptyPage">
@@ -53,5 +66,21 @@ const notFound = computed(() => !!props.error && props.error.isNotFound)
 <style scoped>
 .async-state__loading {
   min-height: 160px;
+}
+/* What went wrong: its title and its words at the left, 24 px of room above and below, and none of Element
+   Plus's icon, a glyph on a filled circle (the words say which it is). */
+.el-result.async-state__result {
+  align-items: flex-start;
+  padding: var(--app-space-xl) 0;
+  text-align: start;
+}
+.async-state__result :deep(.el-result__icon) {
+  display: none;
+}
+.async-state__result :deep(.el-result__title) {
+  margin-top: 0;
+}
+.async-state__result :deep(.el-result__extra) {
+  margin-top: var(--app-space-lg);
 }
 </style>
