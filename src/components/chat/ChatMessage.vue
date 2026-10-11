@@ -212,17 +212,14 @@ async function copy() {
 .chat-msg.is-agent .chat-msg__body {
   padding: 0 2px;
 }
-/* The person's: a quiet bubble, as wide as its words, up to most of the width. */
+/* The person's: a quiet block on the ground's second shade, square-cornered, as wide as its words, up to most
+   of the width. */
 .chat-msg.is-person .chat-msg__body {
   max-width: min(88%, 620px);
-  padding: 8px 13px;
-  border-radius: 14px;
-  border-bottom-right-radius: 5px;
+  padding: 8px 12px;
+  border-radius: var(--app-radius);
   background: var(--app-ground-2);
   border: 1px solid var(--app-line-soft);
-}
-.chat-msg.is-person.is-grouped .chat-msg__body {
-  border-top-right-radius: 5px;
 }
 /* Its files: over the person's bubble, on the right; under the agent's words. */
 .chat-msg__files.is-before {
@@ -236,7 +233,7 @@ async function copy() {
 }
 .chat-msg.is-retracted .chat-msg__body {
   padding: 8px 12px;
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   background: transparent;
   border: 1px dashed var(--el-border-color);
   color: var(--el-text-color-secondary);
@@ -286,7 +283,7 @@ async function copy() {
   height: 24px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   cursor: pointer;

@@ -89,41 +89,39 @@ defineExpose({ refresh })
 </template>
 
 <style scoped>
+/* The agents to ask: rows between rules, hovered in a tint, each ending in its ›. */
 .resp-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  border-bottom: var(--app-rule);
+}
+.resp-list > li {
+  border-top: var(--app-rule);
 }
 .resp-row {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-bg-color);
+  padding: 10px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
-.resp-row:hover,
+.resp-row:hover {
+  background: var(--el-fill-color-light);
+}
 .resp-row:focus-visible {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-color-primary-light-9);
+  outline-offset: -2px;
 }
 .resp-row__avatar {
   align-self: flex-start;
   margin-top: 1px;
-}
-/* The light's ring follows the row's ground as it is hovered. */
-.resp-row:hover .resp-row__avatar,
-.resp-row:focus-visible .resp-row__avatar {
-  --agent-avatar-ring: var(--el-color-primary-light-9);
 }
 .resp-row__main {
   display: flex;

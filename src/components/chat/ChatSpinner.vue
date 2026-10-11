@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // The small glyph that turns while an agent works, as an agent chat's
-// spinner: out through a few stars and back. Still where motion is reduced.
+// spinner: out through a few stars and back, in the third ink (the amber is
+// the brand's dot alone). Still where motion is reduced.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 /** The glyph's turns, out and back. */
@@ -29,6 +30,6 @@ const glyph = computed(() => FRAMES[frame.value])
   text-align: center;
   font-size: var(--app-text-lg);
   line-height: 1;
-  color: var(--app-light);
+  color: var(--app-ink-3);
 }
 </style>

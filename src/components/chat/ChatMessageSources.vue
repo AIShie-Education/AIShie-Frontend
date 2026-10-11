@@ -109,7 +109,7 @@ const summary = computed(() => {
   max-width: 100%;
   padding: 2px 6px 2px 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: inherit;
   font: inherit;

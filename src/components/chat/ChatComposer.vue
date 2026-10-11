@@ -456,21 +456,22 @@ defineExpose({ focus: () => input.value?.focus() })
 </template>
 
 <style scoped>
-/* One box, as an editor's agent chat has it: the text, then a row along its bottom with the send button. */
+/* One box, as an editor's agent chat has it, framed as a field is (2 px corners, the control's edge): the text,
+   then a row along its bottom with the send button. Focused, as a field is: a navy edge and a navy line round it,
+   no halo. */
 .chat-composer {
   position: relative;
   display: flex;
   flex-direction: column;
   border: 1px solid var(--el-border-color);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   background: var(--el-fill-color-blank);
-  transition:
-    border-color 0.15s,
-    box-shadow 0.15s;
+  transition: border-color 0.15s;
 }
 .chat-composer:focus-within {
-  border-color: var(--el-color-primary);
-  box-shadow: 0 0 0 1px var(--el-color-primary);
+  border-color: var(--app-focus);
+  outline: 1px solid var(--app-focus);
+  outline-offset: 0;
 }
 .chat-composer.is-disabled {
   background: var(--el-disabled-bg-color);
@@ -488,9 +489,11 @@ defineExpose({ focus: () => input.value?.focus() })
   background: transparent;
   line-height: var(--app-lh-ui);
 }
+/* The box shows focus, not the field inside it. */
 .chat-composer__input :deep(.el-textarea__inner:focus),
 .chat-composer__input :deep(.el-textarea__inner:hover) {
   box-shadow: none;
+  outline: none;
 }
 .chat-composer__bar {
   display: flex;
@@ -513,7 +516,7 @@ defineExpose({ focus: () => input.value?.focus() })
   height: 28px;
   margin-left: -6px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius);
   color: var(--app-ink-3);
   font-size: var(--app-text-lg);
 }
@@ -559,7 +562,7 @@ defineExpose({ focus: () => input.value?.focus() })
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius);
 }
 /* On a touch screen the paperclip and the send button are 40 px, apart enough not to be pressed for each other. */
 @media (pointer: coarse) {
@@ -586,7 +589,8 @@ defineExpose({ focus: () => input.value?.focus() })
   border-radius: 2px;
   background: currentColor;
 }
-/* The commands, or the course's assignments and materials, over the box. */
+/* The commands, or the course's assignments and materials, over the box: a list framed as a menu is, casting no
+   shadow. */
 .chat-suggest {
   position: absolute;
   left: 0;
@@ -596,10 +600,9 @@ defineExpose({ focus: () => input.value?.focus() })
   max-height: 264px;
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid var(--app-line);
-  border-radius: 10px;
+  border: var(--app-rule);
+  border-radius: var(--app-radius);
   background: var(--app-overlay);
-  box-shadow: var(--app-shadow-pop);
 }
 .chat-suggest__item {
   display: flex;
@@ -607,7 +610,7 @@ defineExpose({ focus: () => input.value?.focus() })
   gap: 10px;
   min-height: 32px;
   padding: 5px 10px;
-  border-radius: 7px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-md);
   cursor: pointer;
 }

@@ -67,8 +67,8 @@
 }
 .markdown-body.chat-prose :not(pre) > code {
   padding: 0.12em 0.36em;
-  border: 1px solid var(--app-line-soft);
-  border-radius: 5px;
+  border: none;
+  border-radius: var(--app-radius);
   background: var(--app-ground-2);
   font-size: 0.86em;
 }
@@ -81,7 +81,8 @@
   color: var(--app-indigo);
   text-underline-offset: 2px;
 }
-/* A table scrolls sideways within the message, ruled lightly, its head a step off the ground. */
+/* A table scrolls sideways within the message, ruled between its rows as the site's tables are: no frame
+   round it, no grid of cells, its head over a stronger rule. */
 .markdown-body.chat-prose table {
   display: block;
   max-width: 100%;
@@ -92,18 +93,43 @@
 }
 .markdown-body.chat-prose th,
 .markdown-body.chat-prose td {
-  padding: 6px 12px;
-  border: 1px solid var(--app-line);
+  padding: 6px 12px 6px 0;
+  border: none;
+  border-bottom: var(--app-rule);
+  background: none;
   text-align: left;
   vertical-align: top;
 }
 .markdown-body.chat-prose th {
-  background: var(--app-ground-2);
+  border-bottom-color: var(--app-line-strong);
   font-weight: var(--app-weight-strong);
   white-space: nowrap;
 }
-.markdown-body.chat-prose tbody tr:nth-child(even) td {
-  background: color-mix(in srgb, var(--app-ground-2) 45%, transparent);
+
+/* Code in an answer: a listing as the site sets one, ruled above and below with no box nor ground, its language
+   and its copy button on a line under the top rule. */
+.markdown-body.chat-prose .md-code {
+  border: none;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
+  border-radius: 0;
+  background: transparent;
+}
+.markdown-body.chat-prose .md-code__bar {
+  min-height: 28px;
+  padding: 0;
+  border-bottom: none;
+  background: transparent;
+}
+.markdown-body.chat-prose .md-code__copy {
+  border-radius: var(--app-radius);
+}
+.markdown-body.chat-prose .md-code__copy:hover {
+  background: var(--app-ground-2);
+}
+.markdown-body.chat-prose .md-code pre {
+  padding: 2px 0 10px;
+  border: none;
 }
 
 /* An answer being written (ChatDraft): a caret at the end of the text so far,
