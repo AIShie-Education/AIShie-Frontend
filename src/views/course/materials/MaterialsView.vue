@@ -227,12 +227,12 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
     display: none;
   }
 }
-/* Rows between rules, not boxes. */
+/* Rows between rules, not boxes: the section's own rule is above the first,
+   which has no second one of its own. */
 .material-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  border-top: var(--app-rule);
 }
 .material-list li {
   border-bottom: var(--app-rule);
