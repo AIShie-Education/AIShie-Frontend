@@ -232,6 +232,13 @@ describe('the join page', () => {
     await flushPromises()
     expect(w.text()).toContain('An account with this email already exists')
     expect(w.findAll('a').some((a) => a.text().includes('Sign in instead'))).toBe(true)
+    // The indigo's words, never a second solid button over the form's Create account and join.
+    const instead = w.get('.join__instead')
+    expect(instead.classes()).toEqual(expect.arrayContaining(['el-button--primary', 'is-link']))
+    const solids = w
+      .findAll('button.el-button--primary')
+      .filter((b) => !['is-text', 'is-link'].some((c) => b.classes().includes(c)))
+    expect(solids.map((b) => b.text())).toEqual(['Create account and join'])
     w.unmount()
   })
 

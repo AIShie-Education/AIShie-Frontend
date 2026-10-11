@@ -384,7 +384,7 @@ function goToCourse(courseId: string) {
                 class="join__alert"
               >
                 <router-link v-if="emailTaken" :to="signInRoute">
-                  <el-button type="primary" size="small" class="join__instead">{{ t('join.page.signInInstead') }}</el-button>
+                  <el-button type="primary" link class="join__instead">{{ t('join.page.signInInstead') }}</el-button>
                 </router-link>
               </el-alert>
               <JoinRegisterForm
