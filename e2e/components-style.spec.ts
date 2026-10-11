@@ -11,6 +11,8 @@ import { coursePath, demo, signIn, signInAsRoot } from './support'
 // avatar carries no light of the brand's; a note and where data goes have no ground and no box, a rule at
 // their left; an empty place draws no picture (an action in its slot keeps its icon). Element Plus's own
 // round marks (a radio, a dot) are not these components, and are left to the audit of every element.
+// A filter's chip has a control's edge, never a tag's outline; and what is chosen, a chip or a segmented
+// control's part, has a bar at its foot, which says so without its hue.
 
 /** What breaks the look, by element; an empty list where nothing does. */
 function offences(page: Page): Promise<string[]> {
@@ -169,3 +171,112 @@ test('a page with nothing to show says so at its left, with no picture', async (
   expect(title!.x).toBe(box!.x)
   expect(await empty.evaluate((el) => getComputedStyle(el).textAlign)).toMatch(/^(start|left)$/)
 })
+
+/**
+ * How what can be chosen is drawn, as the browser draws it: on Members, a filter's chip that is not chosen
+ * (its edge against its ground, and whether a tag's outline is drawn in the same colour), and the bar at the
+ * foot of each chip (its contrast on the chip's ground; 0 for none); elsewhere, each part of a segmented control.
+ */
+function chosenLooks(what: 'chips' | 'segments') {
+  const lum = (c: string) => {
+    const [r = 0, g = 0, b = 0] = (c.match(/[\d.]+/g) ?? [])
+      .slice(0, 3)
+      .map(Number)
+      .map((v) => v / 255)
+      .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+  }
+  const contrast = (a: string, b: string) => {
+    const [x = 0, y = 0] = [lum(a), lum(b)].sort((p, q) => q - p)
+    return +((x + 0.05) / (y + 0.05)).toFixed(2)
+  }
+  const clear = (c: string) => c === 'transparent' || /rgba\(.*,\s*0\)$/.test(c)
+  /** Its own ground, or the nearest one under it. */
+  const ground = (el: Element) => {
+    for (let e: Element | null = el; e; e = e.parentElement) {
+      const bg = getComputedStyle(e).backgroundColor
+      if (!clear(bg)) return bg
+    }
+    return 'rgb(255, 255, 255)'
+  }
+  /** Its shadows: each one's colour, its four lengths, and whether it is inset. */
+  const shadows = (el: Element) =>
+    getComputedStyle(el)
+      .boxShadow.split(/,(?![^(]*\))/)
+      .filter((s) => s.trim() !== 'none')
+      .map((s) => {
+        const colour = s.match(/rgba?\([^)]*\)/)?.[0] ?? ''
+        const [x = 0, y = 0, blur = 0, spread = 0] = (s.replace(colour, '').match(/-?[\d.]+px/g) ?? []).map(parseFloat)
+        return { colour, x, y, blur, spread, inset: /\binset\b/.test(s) }
+      })
+  /** A bar at its foot (an inset line 2 px or more high along its bottom alone), by its contrast on its ground. */
+  const bar = (el: Element) => {
+    const b = shadows(el).find((s) => s.inset && s.x === 0 && s.y <= -2 && s.blur === 0 && s.spread === 0)
+    return b ? contrast(b.colour, ground(el)) : 0
+  }
+  if (what === 'segments')
+    return {
+      parts: [...document.querySelectorAll('.el-radio-button')].map((p) => ({
+        chosen: p.classList.contains('is-active'),
+        bar: bar(p.querySelector('.el-radio-button__inner')!),
+      })),
+    }
+  const chip = document.querySelector('.filter-chips .el-check-tag:not(.is-checked)')!
+  const tag = document.querySelector('.app-tag--outline')!
+  const edge = shadows(chip).find((s) => s.inset && s.spread === 1)?.colour ?? ''
+  return {
+    chipEdge: contrast(edge, ground(chip)),
+    sameEdgeAsTag: edge === getComputedStyle(tag).borderTopColor,
+    chips: [...document.querySelectorAll('.filter-chips .el-check-tag')].map((c) => ({
+      chosen: c.classList.contains('is-checked'),
+      bar: bar(c),
+    })),
+  }
+}
+
+for (const theme of ['light', 'dark'] as const)
+  test(`a filter’s chip is drawn as a control and an identity’s tag as a label, and what is chosen has a bar at its foot, not its hue alone, ${theme}`, async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'en-US' })
+    await context.addInitScript((t) => {
+      try {
+        localStorage.setItem('aishie.theme', t)
+      } catch {}
+    }, theme)
+    const page = await context.newPage()
+    try {
+      await signIn(page, demo().actors.instructor)
+      await page.goto(coursePath('members'))
+      await expect(page.locator('.filter-chips .el-check-tag.is-checked')).toBeVisible()
+      await expect(page.locator('.app-tag--outline').first()).toBeVisible()
+      await page.mouse.move(0, 0)
+      const members = (await page.evaluate(chosenLooks, 'chips' as const)) as {
+        chipEdge: number
+        sameEdgeAsTag: boolean
+        chips: { chosen: boolean; bar: number }[]
+      }
+      // A chip's edge is a control's, 3:1 as a field's is; a tag's outline is not, so that the two are told apart.
+      expect(members.chipEdge).toBeGreaterThanOrEqual(3)
+      expect(members.sameEdgeAsTag).toBe(false)
+      // The chosen chip has a bar that reads on its ground at 3:1 or more; the others have none.
+      expect(members.chips.filter((c) => c.chosen)).toHaveLength(1)
+      for (const c of members.chips)
+        if (c.chosen) expect(c.bar).toBeGreaterThanOrEqual(3)
+        else expect(c.bar).toBe(0)
+
+      // The students' own agents: a segmented control whose chosen part, the policy in force, is marked the same way.
+      await page.goto(coursePath('agents'))
+      await expect(page.locator('.el-radio-button.is-active').first()).toBeVisible()
+      await page.mouse.move(0, 0)
+      const { parts } = (await page.evaluate(chosenLooks, 'segments' as const)) as {
+        parts: { chosen: boolean; bar: number }[]
+      }
+      expect(parts.length).toBeGreaterThan(1)
+      for (const p of parts)
+        if (p.chosen) expect(p.bar).toBeGreaterThanOrEqual(3)
+        else expect(p.bar).toBe(0)
+    } finally {
+      await context.close()
+    }
+  })

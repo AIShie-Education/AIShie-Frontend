@@ -50,7 +50,7 @@ describe('FilterChips', () => {
     await w.findAll('.filter-chip')[1]!.trigger('click')
     expect(value.value).toBe('published')
     expect(w.findAll('.filter-chip')[1]!.attributes('aria-checked')).toBe('true')
-    // Drawn as chosen by Element Plus's own class, which element.css gives the indigo's tint and line.
+    // Drawn as chosen by Element Plus's own class, which element.css gives the indigo's tint and its bar.
     expect(w.findAll('.filter-chip').map((c) => c.classes().includes('is-checked'))).toEqual([false, true, false])
     await w.findAll('.filter-chip')[1]!.trigger('click')
     expect(value.value).toBe('')
@@ -58,6 +58,36 @@ describe('FilterChips', () => {
     expect(value.value).toBe('unpublished')
     await w.findAll('.filter-chip')[0]!.trigger('keydown', { key: ' ' })
     expect(value.value).toBe('')
+  })
+})
+
+// element.css, as written: jsdom computes none of it.
+const elementCss = Object.values(
+  import.meta.glob<string>('../styles/element.css', { query: '?raw', import: 'default', eager: true }),
+)[0]!
+const cssRule = (selector: string) => {
+  const at = elementCss.indexOf(`\n${selector} {`)
+  expect(at, selector).toBeGreaterThanOrEqual(0)
+  return elementCss.slice(at, elementCss.indexOf('}', at))
+}
+
+describe('how a chip and a segmented control draw what is chosen (styles/element.css)', () => {
+  it('draws a chip in a control’s edge, never in the faint line of a tag’s outline, which cannot be pressed', () => {
+    expect(cssRule('.el-check-tag')).toMatch(/box-shadow: inset 0 0 0 1px var\(--app-control-border\);/)
+    expect(cssRule('.el-check-tag:hover')).toMatch(/box-shadow: inset 0 0 0 1px var\(--app-control-border-hover\);/)
+    expect(elementCss).not.toMatch(/\.el-check-tag[^{]*\{[^}]*--app-line-strong/)
+  })
+
+  it('marks the chosen chip and the chosen part of a segmented control by a 2 px bar in the indigo at its foot', () => {
+    const chosenChip = cssRule(
+      '.el-check-tag.el-check-tag--primary.is-checked,\n.el-check-tag.el-check-tag--primary.is-checked:hover',
+    )
+    expect(chosenChip).toMatch(/background-color: var\(--app-indigo-tint\);/)
+    expect(chosenChip).toMatch(/inset 0 -2px 0 var\(--app-indigo\)/)
+    const chosenPart = cssRule(
+      '.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner',
+    )
+    expect(chosenPart).toMatch(/box-shadow: inset 0 -2px 0 var\(--app-indigo\) !important;/)
   })
 })
 

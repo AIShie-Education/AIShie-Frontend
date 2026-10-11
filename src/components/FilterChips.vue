@@ -3,12 +3,13 @@
 // first, then each choice with how many it holds, one chosen at a time;
 // choosing the chosen one again goes back to all. They are Element Plus's
 // check tags, rectangles with the app's 2 px corners (styles/element.css):
-// each on no ground, its words in the ink inside a 1 px line, the chosen one
-// in the indigo's words on its tint inside the indigo's line, and one with
-// nothing in it as the others, its count in the third ink; and, as Element
-// Plus's are not, radios to the keyboard and a screen reader (Enter or Space
-// chooses). A segmented control is for a view's mode (newest first, by
-// owner), never a filter.
+// each on no ground, its words in the ink inside a control's edge (3:1, so
+// that it reads as pressed, never as a tag's faint outline), the chosen one
+// in the indigo's words on its tint with a 2 px bar in the indigo at its
+// foot, as a course's chosen tab has, and one with nothing in it as the
+// others, its count in the third ink; and, as Element Plus's are not, radios
+// to the keyboard and a screen reader (Enter or Space chooses). A segmented
+// control is for a view's mode (newest first, by owner), never a filter.
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 

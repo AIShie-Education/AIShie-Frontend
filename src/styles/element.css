@@ -623,24 +623,30 @@ html.dark .el-card {
 
 /* Segmented controls and badges. A segmented control (an el-radio-group of
    buttons, for a view's mode, never a filter) is one frame in a control's
-   edge, 2 px at its ends, a rule between its parts and no ground; the
-   chosen part is not a second solid button on the screen but the indigo's
-   words on its tint, inside an indigo line. A badge (a count on a tab or a
-   button) is a rectangle with the app's corners; a badge that is a dot
-   alone stays round, a mark. */
+   edge, 2 px at its ends, a rule between its parts and no ground. The
+   chosen part is not a second solid button on the screen: it is marked as
+   a course's chosen tab is, by a 2 px bar in the indigo at its foot, with
+   the indigo's words on its tint. The bar is what says which is chosen
+   without its hue, to a reader who cannot tell the indigo's words from the
+   ink's or its tint from the page (1.3:1 or less apart, in either theme):
+   it is 6:1 or more on the tint, and the others have none. A badge (a count on a tab or a button) is a
+   rectangle with the app's corners; a badge that is a dot alone stays
+   round, a mark. */
 .el-radio-button {
   --el-radio-button-checked-bg-color: var(--app-indigo-tint);
   --el-radio-button-checked-text-color: var(--app-indigo);
-  --el-radio-button-checked-border-color: var(--app-indigo);
+  /* What Element Plus rings a part focused from the keyboard in: the focus colour. The frame is each part's
+     outline in the control's edge, the chosen one's too. */
+  --el-radio-button-checked-border-color: var(--app-focus);
   --el-button-disabled-bg-color: transparent;
 }
 .el-radio-button__inner {
   background: transparent;
 }
-/* An inset line, not Element Plus's shadow cast to its left; important over its own, which takes every shadow
+/* The bar, inset, not Element Plus's shadow cast to its left; important over its own, which takes every shadow
    off the first part. */
 .el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner {
-  box-shadow: inset 0 0 0 1px var(--el-radio-button-checked-border-color) !important;
+  box-shadow: inset 0 -2px 0 var(--app-indigo) !important;
 }
 .el-badge {
   --el-badge-radius: var(--app-radius);
@@ -671,11 +677,15 @@ html.dark .el-card {
 
 /* Tags are rectangles with the app's 2 px corners, never pills: a state on
    its tone's tint without an edge (each type's colour on its light-9,
-   above), an identity on an outline (AppTag). A small one is 20 px tall in
-   the smallest step, a default one 24 px in the next. A filter's chip
-   (el-check-tag, FilterChips) is a rectangle too: on no ground, the ink's
-   words inside a 1 px line, hovered on the lightest fill; chosen, the
-   indigo's words on its tint inside the indigo's line. */
+   above), an identity on an outline (AppTag), a faint line that says it is
+   a label. A small one is 20 px tall in the smallest step, a default one
+   24 px in the next. A filter's chip (el-check-tag, FilterChips) is a
+   rectangle too, but one pressed: on no ground, the ink's words inside a
+   control's edge, 3:1 as a field's is, never the outline's faint line, so
+   that a row of chips over a list of role tags reads as controls over
+   labels; hovered, the lightest fill and the hovered edge. Chosen, it is
+   marked as a segmented control's part is (above): the indigo's words on
+   its tint, with a 2 px bar in the indigo at its foot. */
 .el-tag {
   --el-tag-border-radius: var(--app-radius);
   --el-tag-border-radius-rounded: var(--app-radius);
@@ -694,16 +704,19 @@ html.dark .el-card {
   border-radius: var(--app-radius);
   background-color: transparent;
   color: var(--app-ink);
-  box-shadow: inset 0 0 0 1px var(--app-line-strong);
+  box-shadow: inset 0 0 0 1px var(--app-control-border);
 }
 .el-check-tag:hover {
   background-color: var(--el-fill-color-light);
+  box-shadow: inset 0 0 0 1px var(--app-control-border-hover);
 }
 .el-check-tag.el-check-tag--primary.is-checked,
 .el-check-tag.el-check-tag--primary.is-checked:hover {
   background-color: var(--app-indigo-tint);
   color: var(--app-indigo);
-  box-shadow: inset 0 0 0 1px var(--app-indigo-line);
+  box-shadow:
+    inset 0 -2px 0 var(--app-indigo),
+    inset 0 0 0 1px var(--app-control-border);
 }
 
 /* Surfaces: what floats over the page (a popover, a menu, a tooltip, a

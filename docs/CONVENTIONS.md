@@ -731,7 +731,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     `pill`, its name before wave 3, draws the same until the wave's cleanup takes it out;
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
-    a 1 px line and no ground, as `AgentBadge`'s owner is, with its icon (`:icon`) unless its row
+    a faint 1 px line (`--app-line-strong`) and no ground, as `AgentBadge`'s owner is, never in a
+    control's edge, which is a filter's chip's (Filters, below), with its icon (`:icon`) unless its row
     shows the icon already (`StatusTag`'s and `RoleTag`'s `no-icon`: the members' list, whose rows
     start with a person's icon or an agent's avatar); it has no tone;
   - only a **count** is solid (`variant="count"`), and always in the indigo, its figures in what is
@@ -778,8 +779,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   what creates or goes elsewhere, never Refresh.
 - **Filters** over a list are `<FilterChips v-model :options :all-count :label>`: Element Plus's check
   tags, drawn as rectangles with the app's corners (`styles/element.css`): on no ground, the ink's words
-  inside a 1 px line, the chosen one in the indigo's words on its tint inside the indigo's line, one with
-  nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
+  inside a control's edge (`--app-control-border`, 3:1 as a field's is), never a tag's faint outline,
+  so that a row of chips over a list of role tags reads as controls over labels; the chosen one in the
+  indigo's words on its tint, with a 2 px bar in the indigo at its foot, as a course's chosen tab has;
+  one with nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
   count (a lower bound, "12+", while there is more to load), one at a time, radios to the keyboard and a
   screen reader; counts a list shows by state are these chips too, never a row of tags that cannot be
   pressed. A chip counts the rows it filters, no others: where a select has already narrowed the list to
@@ -788,7 +791,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   choice of many (an assignment, a student, a type) stays a select. A segmented control (`el-radio-group`
   of buttons) is for a view's mode, newest or oldest first, by owner or by model, never a filter: one
   frame in a control's edge, 2 px at its ends, a rule between its parts and no ground, the chosen part
-  the indigo's words on its tint inside an indigo line, never a second solid button on the screen.
+  marked as a chosen chip is, by the bar at its foot, with the indigo's words on its tint, never a
+  second solid button on the screen. What is chosen is said by a mark that is not its hue: the indigo's
+  words and its tint are 1.3:1 or less from the ink's and the page, in either theme, which a reader
+  who sees colours poorly, or a phone in daylight, does not tell apart; the bar is 6:1 or more on the
+  tint, and the others have none (design wave 3 first drew the chosen part and chip inside an indigo
+  line, and the chips in a tag's outline). `e2e/components-style.spec.ts` measures both, in both themes.
 - **Colour** runs along two axes. A hue says an outcome alone: done in green (executed, posted,
   approved), refused, failed or missing in red, waiting on someone in amber (proposed, sent back
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
