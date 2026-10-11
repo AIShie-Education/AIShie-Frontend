@@ -310,7 +310,7 @@ async function revoke(c: Credential) {
   align-items: flex-start;
   gap: 12px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .creds-item:last-child {
   border-bottom: none;

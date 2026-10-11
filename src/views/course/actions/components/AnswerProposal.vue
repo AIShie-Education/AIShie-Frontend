@@ -138,7 +138,7 @@ const closed = computed(() => c.value?.status === 'closed')
   grid-template-columns: minmax(96px, 30%) minmax(0, 1fr);
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   align-items: baseline;
 }
 .answer-proposal__facts dt {

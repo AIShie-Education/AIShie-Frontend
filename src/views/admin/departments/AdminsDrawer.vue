@@ -308,7 +308,7 @@ async function remove(a: Appointment) {
 .admins-drawer__add {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .admins-drawer__add-hint {
   margin: 0 0 12px;

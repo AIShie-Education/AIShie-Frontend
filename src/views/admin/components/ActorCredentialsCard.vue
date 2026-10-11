@@ -540,7 +540,7 @@ defineExpose({ reload: () => list.reload() })
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .creds__item:last-child {
   border-bottom: none;

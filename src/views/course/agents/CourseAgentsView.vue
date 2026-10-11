@@ -264,6 +264,6 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 .course-agents__foot {
   margin: 12px 0 0;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 </style>

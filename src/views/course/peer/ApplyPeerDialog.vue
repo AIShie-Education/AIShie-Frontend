@@ -168,7 +168,7 @@ async function apply() {
 .peer-apply__table th,
 .peer-apply__table td {
   padding: 8px 6px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   text-align: left;
   vertical-align: top;
 }

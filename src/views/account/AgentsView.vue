@@ -214,7 +214,7 @@ function onHosted(_: unknown, actorId: string) {
   gap: 12px;
   padding: 12px 8px;
   margin: 0 -8px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   border-radius: var(--app-radius-control);
   cursor: pointer;
 }

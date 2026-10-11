@@ -218,7 +218,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
 
 <style scoped>
 .transcription-jobs {
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .transcription-jobs__head {
   display: flex;

@@ -237,7 +237,7 @@ async function takeBack(r: AgentRequest) {
 }
 .agent-seat {
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .agent-seat:first-child {
   padding-top: 0;
@@ -319,7 +319,7 @@ async function takeBack(r: AgentRequest) {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .agent-request:last-child {
   border-bottom: none;

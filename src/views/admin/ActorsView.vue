@@ -587,7 +587,7 @@ async function openById() {
 }
 .actors__card {
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .actors__card:last-child {
   border-bottom: none;

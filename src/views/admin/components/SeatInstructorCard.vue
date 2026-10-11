@@ -629,7 +629,7 @@ async function seat() {
 .seat__form.is-another {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .seat__cancel {
   margin-top: 12px;

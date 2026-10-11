@@ -287,7 +287,7 @@ watch(
   gap: 8px 12px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }

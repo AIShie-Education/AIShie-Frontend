@@ -448,11 +448,12 @@ defineExpose({ reload: () => state.reload() })
   font-size: var(--app-text-md);
   font-weight: var(--app-heading-weight);
 }
+/* The group's averages: a block between rules, not a grey box in the section. */
 .peer-task__average {
   margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--app-neutral-bg);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   color: var(--app-ink);
 }
 .peer-task__averages {
@@ -483,7 +484,7 @@ defineExpose({ reload: () => state.reload() })
 }
 .peer-task__entry {
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-task__share-row {
   display: flex;
@@ -516,7 +517,7 @@ defineExpose({ reload: () => state.reload() })
   gap: 8px;
   flex-wrap: wrap;
   padding-top: 10px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-task__total-figure {
   font-weight: var(--app-weight-strong);
@@ -566,7 +567,7 @@ defineExpose({ reload: () => state.reload() })
   flex-wrap: wrap;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-task__hint {
   margin-top: 0;

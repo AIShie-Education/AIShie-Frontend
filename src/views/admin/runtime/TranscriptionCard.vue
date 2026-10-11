@@ -613,7 +613,7 @@ async function withdraw() {
 }
 .transcription-card__credential,
 .transcription-card__today {
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .transcription-card__credential-row {
   display: flex;

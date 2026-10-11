@@ -95,7 +95,7 @@ const differs = computed(
 }
 .bd-list__item {
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .bd-list__head {
   display: flex;

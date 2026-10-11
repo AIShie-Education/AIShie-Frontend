@@ -542,7 +542,7 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
 .group-roster__no-group {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .group-roster__no-group-title {
   display: flex;

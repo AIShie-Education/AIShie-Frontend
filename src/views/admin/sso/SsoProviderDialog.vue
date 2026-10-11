@@ -598,7 +598,7 @@ const title = computed(() =>
   gap: 8px;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .sso-form :deep(.el-select),
 .sso-form__position {
@@ -666,7 +666,7 @@ const title = computed(() =>
 }
 .sso-form__by-email {
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .sso-form__switch {
   display: flex;

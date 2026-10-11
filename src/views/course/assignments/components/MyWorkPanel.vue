@@ -1332,7 +1332,7 @@ defineExpose({ reload })
   gap: 8px 16px;
   flex-wrap: wrap;
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .my-work__attempt-main,

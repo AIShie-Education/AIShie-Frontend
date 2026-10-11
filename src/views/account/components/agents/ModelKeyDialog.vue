@@ -646,7 +646,7 @@ const incomplete = computed(() => (showOwn.value ? !offer.value : plan.value ===
 .model-form__fallback {
   margin: 0 0 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .model-form__fallback-title {
   margin: 0 0 4px;

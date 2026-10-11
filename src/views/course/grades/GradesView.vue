@@ -703,7 +703,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   cursor: pointer;
 }
 .grades-list__item.is-superseded {
