@@ -1,6 +1,6 @@
-// The chat, a window over every signed-in page: whether it is open, and where
-// it was left and how big (this browser's, for everyone who uses it), and
-// what it shows: the course
+// The chat, a pane docked beside every signed-in page: whether it is open,
+// and how wide (this browser's, for everyone who uses it), and what it
+// shows: the course
 // the caller asks in, a new conversation with one of its agents, the
 // caller's conversations across their courses, or one of them. Every
 // conversation in it is in a course and with an agent.
@@ -19,7 +19,7 @@ import { computed, ref, shallowRef, watch } from 'vue'
 import { ApiError, read, type ToolIn, type ToolOut } from '@/api/http'
 import type { MyConversation, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
-import { loadFrame, loadLastCourse, saveFrame, saveLastCourse, type WindowBox } from '@/components/chat/panel'
+import { loadFrame, loadLastCourse, saveFrame, saveLastCourse } from '@/components/chat/panel'
 import { askableCourses } from '@/components/chat/seat'
 import { useSessionStore } from './session'
 
@@ -74,12 +74,12 @@ function emptyHistory(): HistoryList {
 export const useChatStore = defineStore('chat', () => {
   const session = useSessionStore()
 
-  // --- The frame: open, and where and how big (this browser's) --------------------
+  // --- The frame: open, and how wide (this browser's) ------------------------------
   const frame = loadFrame()
   const open = ref(frame.open)
-  /** Where the window was left and how big, or null for its corner at its size until resized. */
-  const box = ref<WindowBox | null>(frame.box)
-  watch([open, box], () => saveFrame({ open: open.value, box: box.value }))
+  /** The pane's width, or null for its default until its edge is dragged. */
+  const width = ref<number | null>(frame.width)
+  watch([open, width], () => saveFrame({ open: open.value, width: width.value }))
 
   /** Opens the chat, or minimizes it: it opens again on what it showed. */
   function setOpen(v: boolean) {
@@ -367,7 +367,7 @@ export const useChatStore = defineStore('chat', () => {
 
   return {
     open,
-    box,
+    width,
     setOpen,
     close,
     courses,

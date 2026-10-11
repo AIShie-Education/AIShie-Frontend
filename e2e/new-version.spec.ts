@@ -3,8 +3,9 @@ import { expect, test } from '@playwright/test'
 import { coursePath, demo, inTraditionalChinese, photograph, signIn } from './support'
 
 // A tab left open runs the build it loaded. While it is shown it reads
-// index.html again every five minutes, and says so, quietly, when another
-// build is live: never reloading by itself. Against the build the tests
+// index.html again every five minutes, and says so, quietly, in a strip at the
+// top of the page column under the header, when another build is live: never
+// reloading by itself, and floating over nothing. Against the build the tests
 // serve (vite preview, as CI runs them), which is one build for the whole
 // run, it says nothing; the dev server has no build to compare, and is not
 // asked.
@@ -53,6 +54,23 @@ test.describe('a newer build', () => {
     await expect(notice).toBeVisible()
     await expect(notice).toHaveAttribute('role', 'status')
     await expect(notice).toContainText('已有新版本')
+    // A strip of the page column, right under the header and as wide as it, in the page's flow, ruled below; its
+    // two buttons words, neither solid.
+    const strip = await notice.evaluate((el) => {
+      const r = el.getBoundingClientRect()
+      const header = document.querySelector('.app-header')!.getBoundingClientRect()
+      const cs = getComputedStyle(el)
+      const buttons = [...el.querySelectorAll('button')].map((b) => getComputedStyle(b).backgroundColor)
+      return {
+        under: Math.round(r.top) === Math.round(header.bottom),
+        width: Math.round(r.width) === Math.round(header.width),
+        position: cs.position,
+        rule: `${cs.borderBottomWidth} ${cs.borderBottomStyle}`,
+        shadow: cs.boxShadow,
+        solid: buttons.filter((b) => b !== 'rgba(0, 0, 0, 0)').length,
+      }
+    })
+    expect(strip).toEqual({ under: true, width: true, position: 'static', rule: '1px solid', shadow: 'none', solid: 0 })
     await photograph(page, 'new-version-notice')
     // It waits: nothing reloads meanwhile, and the page still works under it.
     await page.clock.fastForward('10:00')

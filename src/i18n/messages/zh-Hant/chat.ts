@@ -10,11 +10,10 @@ export default {
     newTip: '開始新對話',
     history: '過往對話',
     close: '關閉對話面板',
-    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
-    minimize: '最小化對話視窗',
-    // Its left edge and its top, which resize it.
-    width: '對話視窗寬度',
-    height: '對話視窗高度',
+    // The pane's head row: minimized, it opens again on what it showed; closed, on a new conversation.
+    minimize: '最小化對話',
+    // Its left edge, which resizes it.
+    width: '對話寬度',
     backToHistory: '返回過往對話',
     backToAgents: '返回代理列表',
     pickTitle: '向代理提問',

@@ -3,24 +3,25 @@
 // left, an activity bar along the window's edge, with a button for each view
 // the caller is offered (their courses, their agents, administration) and,
 // at its bottom, their account (language, theme and signing out are in its
-// menu), and the side bar beside it showing the view chosen; on top, the
-// page's title and, at its right end, the chat's button; and the page, which
-// runs to the window's right edge. The chat with the courses' agents opens
-// from that button, with how many answers are not read, in a window over the
-// page (ChatPanel). On a phone there is no activity bar: three lines at the
-// header's left open the views in a drawer, the wordmark at its top and
-// tabs under it, with the account at its bottom, and the chat opens from a
-// round button floating at the bottom right, which goes out of the way while
-// the page is scrolled down, as a sheet over the page. A newer build
-// deployed while the tab is open is said in a small notice
-// (NewVersionNotice), which reloads only when asked. A file opened from any
-// list of files is shown in the file viewer (FileViewer), over the page,
-// whose code is fetched the first time a file is opened. Back closes the
-// phone's menu, the chat's sheet and the file viewer, the top one first,
-// rather than leaving the page (useBackCloses). On a course's pages the top
-// bar is the way back up, the course and the tab (CourseCrumbs), rather than
-// the page's name again.
-import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+// menu), and the side bar beside it showing the view chosen; then the page
+// column, its header (the page's title and, at its right end, the chat's
+// button) over the page, on the page's own ground; and, while the chat is
+// open, the chat docked at the window's right edge beside the page column,
+// which narrows by its width (ChatPanel). The chat's button says how many
+// answers are not read. On a phone there is no activity bar: three lines at
+// the header's left open the views in a drawer, the wordmark at its top and
+// tabs under it, with the account at its bottom; the chat's button stays at
+// the header's right end, in one row of 56 px, and opens the chat as a sheet
+// over the page. Nothing floats over the page. A newer build deployed while
+// the tab is open is said in a strip under the header (NewVersionNotice),
+// which reloads only when asked. A file opened from any list of files is
+// shown in the file viewer (FileViewer), over the page, whose code is
+// fetched the first time a file is opened. Back closes the phone's menu, the
+// chat's sheet and the file viewer, the top one first, rather than leaving
+// the page (useBackCloses). On a course's pages the top bar is the way back
+// up, the course and the tab (CourseCrumbs), rather than the page's name
+// again.
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
@@ -65,13 +66,9 @@ watch(
 )
 
 // The chat's button, offered where the caller may ask agents somewhere, with
-// how many answers they have not read. From 900 px up it is an icon at the
-// header's right end, which nothing on the page is ever under, and opens the
-// chat or, open, minimizes it. On a phone it floats at the bottom right,
-// in the thumb's reach, while the chat's sheet is closed: it goes out of the
-// way while the page is scrolled down and comes back as soon as it is
-// scrolled up (or reaches its top), and the page keeps room below its last
-// item for it, so that it never covers anything there.
+// how many answers they have not read: at the header's right end, which
+// nothing on the page is ever under, at every width. It opens the chat or,
+// open, minimizes it; on a phone it opens the sheet, which covers it.
 const chatOffered = computed(() => chat.courses.length > 0 || chat.open)
 const chatPanel = ref<InstanceType<typeof ChatPanel> | null>(null)
 const chatLabel = computed(() =>
@@ -85,30 +82,6 @@ function toggleChat() {
   if (chat.open) chat.setOpen(false)
   else openChat()
 }
-
-/** The floating button tucked away, while a phone's page is scrolled down. */
-const fabTucked = ref(false)
-let lastY = 0
-let frame = 0
-function onScroll() {
-  if (frame) return
-  frame = requestAnimationFrame(() => {
-    frame = 0
-    const y = Math.max(0, window.scrollY)
-    // A few pixels either way is a hand resting, not a scroll.
-    if (y < 64 || y < lastY - 4) fabTucked.value = false
-    else if (y > lastY + 4) fabTucked.value = true
-    else return
-    lastY = y
-  })
-}
-onMounted(() => window.addEventListener('scroll', onScroll, { passive: true }))
-onBeforeUnmount(() => {
-  window.removeEventListener('scroll', onScroll)
-  if (frame) cancelAnimationFrame(frame)
-})
-// Back from the chat's sheet, or another page: the button is there.
-watch([() => chat.open, () => route.fullPath, narrow], () => (fabTucked.value = false))
 
 // The file viewer, loaded the first time a file is opened, and kept from then on.
 const FileViewer = defineAsyncComponent(() => import('@/components/preview/FileViewer.vue'))
@@ -171,14 +144,15 @@ const crumbsCourse = computed(() => {
           <CourseCrumbs v-if="crumbsCourse" :course="crumbsCourse" class="app-header__crumbs" />
           <span v-else class="app-header__title">{{ pageTitle }}</span>
         </div>
-        <!-- From 900 px up, the chat's button, at the header's right end. -->
+        <!-- The chat's button, at the header's right end at every width; its shortcut in a tooltip, but on a phone. -->
         <!-- No trigger keys: by default the tooltip takes Enter and Space for itself, and the button would not open the chat from the keyboard. -->
         <el-tooltip
-          v-if="chatOffered && !narrow"
+          v-if="chatOffered"
           :content="t('chat.panel.toggleTip', { key: shortcutLabel() })"
           placement="bottom-end"
           :show-after="300"
           :trigger-keys="[]"
+          :disabled="narrow"
         >
           <el-badge
             :value="chat.unreadCount"
@@ -195,7 +169,7 @@ const crumbsCourse = computed(() => {
               :aria-label="chatLabel"
               :aria-expanded="chat.open"
               aria-controls="chat-panel"
-              aria-haspopup="dialog"
+              :aria-haspopup="narrow ? 'dialog' : undefined"
               aria-keyshortcuts="Control+J Meta+J"
               @click="toggleChat"
             >
@@ -204,41 +178,17 @@ const crumbsCourse = computed(() => {
           </el-badge>
         </el-tooltip>
       </el-header>
+      <!-- A newer build deployed since this tab loaded: said in a strip under the header, never reloaded without asking. -->
+      <NewVersionNotice />
 
       <div class="app-body">
-        <el-main class="app-main" :class="{ 'has-chat-fab': chatOffered && narrow }">
+        <el-main class="app-main">
           <router-view />
         </el-main>
       </div>
-      <!-- On a phone, the chat's button floats at the bottom right while the sheet is closed. -->
-      <el-badge
-        v-if="chatOffered && narrow && !chat.open"
-        :value="chat.unreadCount"
-        :hidden="!chat.unreadCount"
-        :max="99"
-        type="primary"
-        class="app-chat-entry app-chat-fab"
-        :class="{ 'is-tucked': fabTucked }"
-      >
-        <button
-          id="chat-panel-toggle"
-          type="button"
-          class="app-chat-fab__button"
-          :aria-label="chatLabel"
-          aria-expanded="false"
-          aria-controls="chat-panel"
-          aria-haspopup="dialog"
-          aria-keyshortcuts="Control+J Meta+J"
-          @focus="fabTucked = false"
-          @click="openChat"
-        >
-          <el-icon :size="22" aria-hidden="true"><ChatDotRound /></el-icon>
-        </button>
-      </el-badge>
-      <ChatPanel ref="chatPanel" />
     </el-container>
-    <!-- A newer build deployed since this tab loaded: said, never reloaded without asking. -->
-    <NewVersionNotice />
+    <!-- The chat, docked beside the page column at the window's right edge (on a phone, a sheet over the page). -->
+    <ChatPanel ref="chatPanel" />
     <FileViewer v-if="preview.opened" />
   </el-container>
 </template>
@@ -246,18 +196,18 @@ const crumbsCourse = computed(() => {
 <style scoped>
 .app-shell {
   min-height: 100vh;
-  /* The chat's round button on a phone: how big, and how far from the screen's edges. */
-  --app-fab-size: 48px;
-  --app-fab-inset: 16px;
 }
+/* The page column, its header and the page, on the page's own ground: the near-white, not the paper, which the
+   activity bar and the side bar keep. */
 .app-main-wrap {
   min-width: 0;
+  background: var(--app-page);
 }
 .app-header {
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--app-line);
-  background: var(--app-ground);
+  border-bottom: var(--app-rule);
+  background: var(--app-page);
   position: sticky;
   top: 0;
   z-index: var(--app-z-header);
@@ -281,15 +231,15 @@ const crumbsCourse = computed(() => {
   margin-left: -10px;
   padding: 0;
   border: none;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   background: none;
-  color: var(--el-text-color-regular);
+  color: var(--app-ink);
   cursor: pointer;
 }
 .app-header__menu:hover {
   background-color: var(--app-ground-2);
 }
-/* The chat's button, at the header's right end: an icon, the indigo once the chat is open. */
+/* The chat's button, at the header's right end: an icon, the indigo on its tint while the chat is open. */
 .app-header__chat {
   flex-shrink: 0;
 }
@@ -300,8 +250,8 @@ const crumbsCourse = computed(() => {
   width: 36px;
   height: 36px;
   padding: 0;
-  border: 1px solid transparent;
-  border-radius: var(--app-radius-control);
+  border: none;
+  border-radius: var(--app-radius);
   background: none;
   color: var(--app-ink-2);
   cursor: pointer;
@@ -315,19 +265,20 @@ const crumbsCourse = computed(() => {
 }
 .app-header__chat-button.is-open {
   background-color: var(--app-indigo-tint);
-  border-color: var(--app-indigo-line);
   color: var(--app-indigo);
 }
 /* The count at the button's top right corner, half over it, whatever its
    width: Element's own pushes it its whole width past the corner, so that
-   "12" or "99+" ran past the window's edge. The header's 20 px of padding
-   take the half that is outside. */
+   "12" or "99+" ran past the window's edge. The header's padding takes the
+   half that is outside. A count, square-cornered as every count is. */
 .app-header__chat :deep(.el-badge__content.is-fixed) {
   top: 0;
   right: 0;
+  border-radius: var(--app-radius);
   transform: translate(40%, -30%);
 }
-/* On a touch screen, a control pressed often is at least 40 px. */
+/* On a touch screen, a control pressed often is at least 40 px: on a phone the chat's button is the header's
+   44 px square at its right end, as the menu's is at its left. */
 @media (pointer: coarse) {
   .app-header__chat-button {
     width: 44px;
@@ -340,7 +291,7 @@ const crumbsCourse = computed(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The page, to the window's right edge. */
+/* The page, to the page column's right edge: the window's, or the chat's rule while it is open. */
 .app-body {
   flex: 1 0 auto;
   display: flex;
@@ -355,55 +306,8 @@ const crumbsCourse = computed(() => {
   width: 100%;
   margin: 0 auto;
 }
-/* On a phone, the chat's button floats at the bottom right, clear of the
-   rounded corners and home bar (above the safe area), over the page and
-   under everything Element Plus lays over it (the side menu and its dimmed
-   layer among them): see the layers in styles/tokens.css. Scrolled down, it
-   slides below the screen's edge, at once where motion is reduced. */
-.app-chat-fab {
-  position: fixed;
-  right: calc(var(--app-fab-inset) + env(safe-area-inset-right, 0px));
-  bottom: calc(var(--app-fab-inset) + env(safe-area-inset-bottom, 0px));
-  z-index: var(--app-z-fab);
-  transition: transform 0.15s ease-out;
-}
-.app-chat-fab.is-tucked {
-  transform: translateY(calc(100% + var(--app-fab-inset) + env(safe-area-inset-bottom, 0px) + 8px));
-}
-@media (prefers-reduced-motion: reduce) {
-  .app-chat-fab {
-    transition: none;
-  }
-}
-.app-chat-fab__button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--app-fab-size);
-  height: var(--app-fab-size);
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--app-indigo);
-  color: var(--app-on-indigo);
-  box-shadow: var(--app-shadow-pop);
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-.app-chat-fab__button:hover,
-.app-chat-fab__button:active {
-  background: var(--app-indigo-dark);
-}
-.app-chat-fab :deep(.el-badge__content.is-fixed) {
-  top: -2px;
-  right: -2px;
-  transform: none;
-}
-/* Room below the page's last item for the button, so that it never covers it. */
-.app-main.has-chat-fab {
-  padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-}
-/* On a phone, the side menu: the wordmark, the views, and the account at its bottom. */
+/* On a phone, the side menu: the wordmark in a row as high as the header and ruled as it is, the views, and the
+   account at its bottom. */
 .app-nav-drawer__body {
   display: flex;
   flex-direction: column;
@@ -411,7 +315,11 @@ const crumbsCourse = computed(() => {
 }
 .app-nav-drawer__brand {
   flex-shrink: 0;
-  padding: 18px 16px 10px;
+  display: flex;
+  align-items: center;
+  height: 56px;
+  padding: 0 16px;
+  border-bottom: var(--app-rule);
 }
 .app-nav-drawer__brand :deep(.app-wordmark) {
   height: 22px;

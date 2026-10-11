@@ -369,14 +369,17 @@ test.describe('at phone width', () => {
     expect(steps.lastRight).toBeLessThanOrEqual(320)
   })
 
-  test('the chat is a sheet over the whole screen, opened from a floating button, and fits it', async ({ page }) => {
+  test('the chat is a sheet over the whole screen, opened from the button at the header’s right end, and fits it', async ({
+    page,
+  }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('grades'))
-    // No rail: the chat's button floats at the bottom right, within the screen.
+    // No rail, nothing floating: the chat's button at the header's right end, within the screen.
     await expect(page.locator('.page-header').first()).toBeVisible()
     await expectNothingAtRightEdge(page, 'grades on a phone')
-    await expectWithinViewport(page, '.app-chat-fab')
+    await expect(page.locator('.app-chat-fab')).toHaveCount(0)
+    await expectWithinViewport(page, '.app-header .app-chat-entry')
     await chatButton(page).click()
     const sheet = page.locator('#chat-panel')
     await expect(sheet.getByRole('heading', { name: 'Ask an agent' })).toBeVisible()
