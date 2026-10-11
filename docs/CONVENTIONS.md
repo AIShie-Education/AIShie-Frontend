@@ -1532,7 +1532,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
   few ways to begin, which fill the box: at the pane's left as the page's text is, no mark over it,
-  the ways to begin as rows of words between rules. Its history and the agents to ask are rows
+  the ways to begin as rows of words between rules, each ending in an operable row's ›, which alone
+  says on a touch screen that it can be pressed. Its history and the agents to ask are rows
   between rules too, hovered in a tint, the conversation shown marked at its left in the navy as the
   side bar marks the page shown, and the history's groups (today, yesterday…) plain sub-headings in
   the second ink, not tracked. A row says only what departs from the usual or tells it from the

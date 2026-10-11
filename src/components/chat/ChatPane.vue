@@ -1091,7 +1091,8 @@ const closedLine = computed(() => {
           >
             <p class="chat-pane__suggestions-title">{{ t('chat.suggestions.title') }}</p>
             <button v-for="s in suggestions" :key="s" type="button" class="chat-pane__suggestion" @click="suggest(s)">
-              {{ s }}
+              <span class="chat-pane__suggestion-text">{{ s }}</span>
+              <el-icon class="chat-pane__suggestion-go" aria-hidden="true"><ArrowRight /></el-icon>
             </button>
           </div>
         </div>
@@ -1358,7 +1359,12 @@ const closedLine = computed(() => {
   font-weight: var(--app-weight-strong);
   color: var(--app-ink-2);
 }
+/* Each a row a finger or the pointer takes, ending in its › as an operable row does (the agents to ask, a row
+   that opens something): on a touch screen nothing else says it can be pressed. It puts its words in the box. */
 .chat-pane__suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
   padding: 10px 8px;
   border: none;
   border-top: var(--app-rule);
@@ -1376,6 +1382,14 @@ const closedLine = computed(() => {
 }
 .chat-pane__suggestion:last-child {
   border-bottom: var(--app-rule);
+}
+.chat-pane__suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+.chat-pane__suggestion-go {
+  flex-shrink: 0;
+  color: var(--el-color-primary);
 }
 .chat-pane__suggestion:hover {
   background: var(--el-fill-color-light);
