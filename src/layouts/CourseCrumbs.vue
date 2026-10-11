@@ -81,6 +81,13 @@ const sub = computed(() =>
   align-items: baseline;
   min-width: 0;
 }
+/* One row in every language, the course's title cut short with an ellipsis where the row is too narrow (beside
+   the docked chat, say): main.css lets a Chinese list item wrap (text-wrap: pretty sets text-wrap-mode back to
+   wrap), and the title wrapped out of the header's 56 px instead. Named with the list, to outweigh that rule
+   wherever each is loaded. */
+.course-crumbs ol > li {
+  white-space: nowrap;
+}
 /* The separator is drawn, not read: the list says where each step is. */
 .course-crumbs li + li::before {
   content: '›';

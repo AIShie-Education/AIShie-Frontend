@@ -679,7 +679,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
   (`CourseCrumbs`: "CS101·A Introduction to Programming › Materials", the course leading to its
   overview, the tab to its page where the page is one under it, and only the last step marked as the
-  page, `aria-current`); then a line of context, the course's code, its name in the sans and its
+  page, `aria-current`), on one row in every language, the course's title cut short with an ellipsis
+  where the header is narrow (its steps never wrap, as main.css's `text-wrap: pretty` would let a
+  Chinese list item do); then a line of context, the course's code, its name in the sans and its
   status, never a heading, on one line (a long name is cut short with an ellipsis; only on a phone's
   page does it wrap, to two lines at most), where only what departs from the usual is said: the
   course's state only where it is not active (a draft, archived; never 「進行中」), and the reader's

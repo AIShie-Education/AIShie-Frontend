@@ -5,6 +5,7 @@ import {
   call,
   coursePath,
   demo,
+  inTraditionalChinese,
   openAccountMenu,
   openChat,
   photograph,
@@ -302,6 +303,46 @@ test.describe('the frame', () => {
     const width = (await panel.boundingBox())!.width
     expect(Math.round((await page.locator('.app-main-wrap').boundingBox())!.width)).toBe(Math.round(closed - width))
     expect(await offences(page, '#chat-panel')).toEqual([])
+  })
+
+  test('beside the side bar and the docked chat, a course’s way up stays on one row in Chinese, and the page keeps 420 px', async ({
+    page,
+  }) => {
+    await signIn(page, demo().actors.instructor)
+    await inTraditionalChinese(page)
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await page.goto(coursePath('scheme'))
+    await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
+    await expect(page.locator('.course-crumbs')).toBeVisible()
+    await expect(page.locator('#side-bar')).toBeVisible()
+    await page.locator('#chat-panel-toggle').click()
+    await expect(page.locator('#chat-panel')).toHaveClass(/is-docked/)
+    // From the widest a laptop has down to the narrowest the chat docks in. From 1048 px down, the activity bar,
+    // the side bar, the narrowest pane and 420 px of page do not all fit: the side bar gives way while the chat
+    // is open.
+    for (const width of [1280, 1100, 1048, 1047, 1024, 1000, 900]) {
+      const what = `zh-Hant at ${width} px`
+      await page.setViewportSize({ width, height: 800 })
+      await expect(page.locator('#side-bar'), what).toHaveCount(width >= 1048 ? 1 : 0)
+      await expect
+        .poll(async () => Math.round((await page.locator('.app-main-wrap').boundingBox())!.width), { message: what })
+        .toBeGreaterThanOrEqual(420)
+      await oneRowHeader(page, what)
+      // The way up on one line, every step on it: the course's title cut short rather than wrapped.
+      const steps = await page.locator('.course-crumbs li').evaluateAll((lis) =>
+        lis.map((li) => {
+          const r = li.getBoundingClientRect()
+          return { top: Math.round(r.top), height: Math.round(r.height) }
+        }),
+      )
+      expect(steps.length, what).toBe(3)
+      for (const step of steps) {
+        expect(step.top, what).toBe(steps[0]!.top)
+        expect(step.height, what).toBeLessThanOrEqual(32)
+      }
+      if (width === 1048) await photograph(page, 'chrome-crumbs-zh-Hant-1048')
+      if (width === 900) await photograph(page, 'chrome-side-bar-gives-way-900')
+    }
   })
 
   test('dialogs and message boxes are framed by a line and square-cornered, their titles over a rule, and cast no shadow', async ({
