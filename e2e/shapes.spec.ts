@@ -1,0 +1,205 @@
+/// <reference lib="dom" />
+import { expect, test, type Page } from '@playwright/test'
+import { chatButton, coursePath, demo, signIn, signInAsRoot } from './support'
+import { shapeOffences, soloPrimary } from './styleAudit'
+
+// Element Plus's overlays in the app's shapes (docs/CONVENTIONS.md, "Shapes";
+// styles/element.css), as aishie.app draws its own boxes: a dialog, a
+// select's options, a date picker, a message box and a tooltip have 2 px
+// corners and an edge, a drawer none, and none of them casts a shadow, in
+// the light theme and in the dark one, whose Element Plus theme casts shadows
+// of its own. A field focused turns its edge navy and doubles it, with no
+// halo. A dialog and a message box have one solid button each. A page's
+// table is ruled between its rows in the site's line, and an author's heading
+// in rendered Markdown stays under the page's title, a listing ruled above
+// and below with no ground. The audit is checked first: it finds what it is
+// for when it is planted in a page, and lets a round mark through.
+
+/** Reads the app in a theme from the next page load on. */
+async function inTheme(page: Page, theme: 'light' | 'dark') {
+  await page.addInitScript((t) => {
+    try {
+      localStorage.setItem('aishie.theme', t)
+    } catch {}
+  }, theme)
+}
+
+/** What the audit finds within what a CSS selector names (each one shown), one to a line for the failure's message. */
+async function offencesIn(page: Page, within: string) {
+  return (await shapeOffences(page, { within })).map((o) => `${o.kind}: ${o.where}: ${o.value} «${o.text}»`)
+}
+
+test('the audit finds a shadow, a pill, a rounded box, a gradient and frosted glass, and lets a round mark through', async ({
+  page,
+}) => {
+  await signIn(page, demo().actors.instructor)
+  await page.goto(coursePath('materials'))
+  await expect(page.locator('.page-header')).toBeVisible()
+  await page.evaluate(() => {
+    const at = document.createElement('div')
+    at.className = 'planted'
+    at.innerHTML = `
+      <div class="planted-shadow" style="width:80px;height:40px;background:#fff;box-shadow:0 4px 12px rgb(0 0 0 / 20%)"></div>
+      <div class="planted-ring" style="width:80px;height:40px;box-shadow:0 0 0 1px #888 inset, 0 0 0 2px #22407a"></div>
+      <span class="planted-pill" style="display:inline-block;width:80px;height:20px;border-radius:999px;background:#eee"></span>
+      <div class="planted-card" style="width:80px;height:40px;border:1px solid #ccc;border-radius:12px"></div>
+      <div class="planted-quiet" style="width:80px;height:40px;border-radius:12px"></div>
+      <div class="planted-fade" style="width:80px;height:40px;background-image:linear-gradient(red, blue)"></div>
+      <div class="planted-glass" style="width:80px;height:40px;backdrop-filter:blur(8px)"></div>
+      <span class="askable-dot" style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#333"></span>
+      <span class="planted-circle" style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#333"></span>
+      <span class="askable-dot planted-wide" style="display:inline-block;width:24px;height:8px;border-radius:50%;background:#333"></span>`
+    document.body.append(at)
+  })
+  const found = (await offencesIn(page, '.planted')).map((line) => line.replace(/ in .*?:/, ':'))
+  expect(found).toEqual([
+    'shadow: div.planted-shadow: rgba(0, 0, 0, 0.2) 0px 4px 12px 0px «»',
+    'pill: span.planted-pill: 999px «»',
+    'radius: div.planted-card: 12px «»',
+    'gradient: div.planted-fade: linear-gradient(rgb(255, 0, 0), rgb(0, 0, 255)) «»',
+    'backdrop: div.planted-glass: blur(8px) «»',
+    // Round, but not a mark; and a mark is round only where it is as wide as it is tall.
+    'radius: span.planted-circle: 50% «»',
+    'pill: span.askable-dot.planted-wide: 50% «»',
+  ])
+})
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`a dialog, a select’s options, a date picker and a tooltip have 2 px corners and no shadow, in the ${theme} theme`, async ({
+    page,
+  }) => {
+    await inTheme(page, theme)
+    await signIn(page, demo().actors.instructor)
+    if (theme === 'dark') await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+
+    // New assignment: a dialog with fields, a select and a date picker, and one solid button.
+    await page.goto(coursePath('assignments'))
+    await page.locator('.page-header__actions .el-button--primary').click()
+    const dialog = page.locator('.el-dialog:visible')
+    await expect(dialog).toBeVisible()
+    await page.waitForTimeout(400)
+    const shell = await dialog.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { radius: cs.borderTopLeftRadius, shadow: cs.boxShadow }
+    })
+    expect(shell).toEqual({ radius: '2px', shadow: 'none' })
+    expect(await offencesIn(page, '.el-dialog')).toEqual([])
+    expect((await soloPrimary(page)).overlays).toEqual([['Create']])
+
+    // A field focused: its edge in the focus colour, doubled by an outline on it, and no halo.
+    const title = dialog.locator('input').first()
+    await title.focus()
+    const focused = await title.evaluate((input) => {
+      const wrapper = input.closest('.el-input__wrapper')!
+      const cs = getComputedStyle(wrapper)
+      return { radius: cs.borderTopLeftRadius, shadow: cs.boxShadow, outline: `${cs.outlineWidth} ${cs.outlineStyle}` }
+    })
+    expect(focused.radius).toBe('2px')
+    expect(focused.shadow).toMatch(/^rgb\([^)]+\) 0px 0px 0px 1px inset$/)
+    expect(focused.outline).toBe('1px solid')
+
+    // The scheme's component it counts towards: a select's options, a box of their own.
+    await dialog
+      .locator('.el-form-item')
+      .filter({ has: page.locator('.el-select') })
+      .first()
+      .locator('.el-select__wrapper')
+      .click()
+    const options = page.locator('.el-select-dropdown:visible').first()
+    await expect(options).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(await offencesIn(page, '.el-select__popper')).toEqual([])
+    await page.keyboard.press('Escape')
+
+    // Its due date: a date picker, today a square.
+    await dialog.locator('.assignment-form__due .el-input__wrapper').click()
+    const picker = page.locator('.el-picker-panel.el-date-picker:visible')
+    await expect(picker.locator('.el-date-table')).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(await offencesIn(page, '.el-picker__popper')).toEqual([])
+    const today = picker.locator('.el-date-table td.today .el-date-table-cell__text')
+    expect(await today.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('2px')
+    await page.keyboard.press('Escape')
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
+
+    // A tooltip: the chat's button's.
+    await chatButton(page).hover()
+    const tip = page.locator('.el-popper:visible').filter({ hasText: /^Chat with agents/ })
+    await expect(tip).toBeVisible()
+    await page.waitForTimeout(300)
+    expect(await offencesIn(page, '.el-popper.is-dark, .el-popper.is-light')).toEqual([])
+  })
+
+  test(`a drawer has no corners and casts no shadow, in the ${theme} theme`, async ({ page }) => {
+    await inTheme(page, theme)
+    await signInAsRoot(page)
+    if (theme === 'dark') await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+    // A permission preset's details.
+    await page.goto('/admin/presets')
+    await page.getByRole('button', { name: 'Details' }).first().click()
+    const drawer = page.locator('.preset-drawer')
+    await expect(drawer).toBeVisible()
+    await page.waitForTimeout(400)
+    expect(await drawer.evaluate((el) => getComputedStyle(el).boxShadow)).toBe('none')
+    expect(await offencesIn(page, '.el-drawer')).toEqual([])
+  })
+
+  test(`a message box has 2 px corners, no shadow and one solid button, in the ${theme} theme`, async ({ page }) => {
+    await inTheme(page, theme)
+    await signIn(page, demo().actors.instructor)
+    if (theme === 'dark') await expect(page.locator('html')).toHaveClass(/\bdark\b/)
+    // Archiving a material asks first, its last step the one solid button, in red; cancelled.
+    await page.goto(coursePath(`documents/${demo().course.documents.week1}`))
+    await page.locator('.page-header__actions').getByRole('button', { name: 'Archive' }).click()
+    const box = page.locator('.el-message-box')
+    await expect(box).toBeVisible()
+    await page.waitForTimeout(400)
+    expect(await box.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('2px')
+    expect(await offencesIn(page, '.el-message-box')).toEqual([])
+    expect((await soloPrimary(page)).overlays).toEqual([['Archive']])
+    await box.getByRole('button', { name: 'Cancel' }).click()
+    await expect(box).toBeHidden()
+  })
+}
+
+test('a table’s rows are parted by the site’s line, and an author’s headings stay under the page’s title', async ({
+  page,
+}) => {
+  const d = demo()
+  await signIn(page, d.actors.instructor)
+  await page.goto(coursePath('members'))
+  const cell = page.locator('.el-table__body td.el-table__cell').first()
+  await expect(cell).toBeVisible()
+  // --app-line, aishie.app's --line: #d9d4c8.
+  expect(await cell.evaluate((el) => getComputedStyle(el).borderBottomColor)).toBe('rgb(217, 212, 200)')
+
+  // Week 1's material: "# Welcome to CS101", "## Before the lab", a listing and a quotation.
+  await page.goto(coursePath(`documents/${d.course.documents.week1}`))
+  const body = page.locator('.markdown-body').first()
+  await expect(body.locator('h1')).toBeVisible()
+  const sizes = await page.evaluate(() => {
+    const size = (el: Element | null) => (el ? parseFloat(getComputedStyle(el).fontSize) : 0)
+    const md = document.querySelector('.markdown-body')!
+    const pre = md.querySelector('pre')!
+    const cs = getComputedStyle(pre)
+    return {
+      page: size(document.querySelector('.page-header__title')),
+      h1: size(md.querySelector('h1')),
+      h2: size(md.querySelector('h2')),
+      listing: {
+        top: cs.borderTopWidth,
+        bottom: cs.borderBottomWidth,
+        ground: cs.backgroundColor,
+        radius: cs.borderTopLeftRadius,
+      },
+      measure: getComputedStyle(md.querySelector('p')!).maxWidth,
+    }
+  })
+  expect(sizes.page).toBe(24)
+  expect(sizes.h1).toBe(18)
+  expect(sizes.h2).toBe(16)
+  expect(sizes.listing).toEqual({ top: '1px', bottom: '1px', ground: 'rgba(0, 0, 0, 0)', radius: '0px' })
+  // 34em of the text's 15 px.
+  expect(sizes.measure).toBe('510px')
+})
