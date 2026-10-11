@@ -190,8 +190,8 @@ const NOT_GROUNDS: Record<string, string> = {
   'app-line': 'a line between things',
   'app-line-soft': 'a softer line, between the rows of a list',
   'app-line-strong': "a stronger line, under a table's headings",
-  'app-indigo-line': "an indigo line: a quotation's rule, a hovered button's edge",
-  'app-control-border': "a control's edge, 3:1",
+  'app-indigo-line': "an indigo line: a note's rule, a hovered button's edge",
+  'app-control-border': "a control's edge, 3:1: a field's, what floats over the page, a quotation's rule",
   'app-control-border-hover': "a control's edge, hovered",
   'app-focus': 'the focus ring, 3:1',
 }

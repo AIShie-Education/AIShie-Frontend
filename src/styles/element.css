@@ -685,10 +685,22 @@ html.dark .el-card {
 }
 .el-input__wrapper.is-focus,
 .el-textarea__inner:focus,
-.el-select__wrapper.is-focused {
+.el-select__wrapper.is-focused,
+.el-range-editor.is-active {
   box-shadow: 0 0 0 1px var(--app-focus) inset;
   outline: 1px solid var(--app-focus);
   outline-offset: 0;
+}
+/* A field in error keeps the danger's edge when focused, doubled in the same red: Element Plus's rule for an
+   error reddens the inset line, and an outline in the focus colour beside it drew one field in two colours. */
+.el-form-item.is-error
+  :is(
+    .el-input__wrapper.is-focus,
+    .el-textarea__inner:focus,
+    .el-select__wrapper.is-focused,
+    .el-range-editor.is-active
+  ) {
+  outline-color: var(--el-color-danger);
 }
 /* A radio focused by the pointer, not the keyboard: Element Plus glows it. */
 .el-radio:focus:not(:focus-visible):not(.is-focus):not(:active):not(.is-disabled) .el-radio__inner {
@@ -716,6 +728,11 @@ html.dark .el-card {
 }
 .el-tag--small {
   padding: 0 6px;
+}
+/* A closable tag's close button (a filter's owner, a select's chosen ones) is square as the tag is: Element
+   Plus rounds it, and fills it with the tag's colour on hover, a disc in the ink. */
+.el-tag .el-tag__close {
+  border-radius: var(--app-radius);
 }
 .el-tag--default {
   --el-tag-font-size: var(--app-text-sm);
@@ -764,6 +781,14 @@ html.dark .el-card {
 }
 .el-popper {
   --el-popper-border-radius: var(--app-radius);
+}
+/* With no shadow, what floats (a select's options, a menu, the account's menu, a popover, a light tooltip, a date
+   picker) is told from the page by its edge alone, on the page's own ivory: so its edge is a control's, 3:1 or
+   more in either theme, not the line, which is 1.4:1 in the light theme and 1.2:1 in the dark. Its arrow's edge is
+   the same; Element Plus's rules for each popper by its kind come first and are outranked by this one's place. */
+.el-popper.is-light,
+.el-popper.is-light > .el-popper__arrow::before {
+  border-color: var(--app-control-border);
 }
 .el-dropdown-menu,
 .el-select-dropdown__list {

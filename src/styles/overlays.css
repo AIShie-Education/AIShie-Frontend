@@ -1,6 +1,6 @@
 /* What Element Plus lays over the page (dialogs, message boxes, drawers,
-   notifications), drawn as aishie.app draws a box: framed in the line with
-   2 px corners and no shadow, a rule under its title, never a card floating
+   notifications), drawn as aishie.app draws a box: framed with 2 px corners
+   and no shadow, a rule under its title, never a card floating
    on a shadow. The corners and the shadows are set in styles/element.css,
    from the tokens (--app-radius; no shadow anywhere); what is here is each
    one's edge and its rules. Loaded after element.css (main.ts).
@@ -20,12 +20,13 @@
   box-shadow: none;
 }
 
-/* A dialog and a message box: framed in the line, the title over a rule, what they say under it. The frame is a
-   ring of 1 px, a line and no shadow (no offset, no blur), which takes nothing from the width a dialog gives what
-   it holds: a border would, and a table that fits its dialog would scroll by its 2 px. */
+/* A dialog and a message box: framed, the title over a rule, what they say under it. The frame is a ring of 1 px,
+   a line and no shadow (no offset, no blur), which takes nothing from the width a dialog gives what it holds: a
+   border would, and a table that fits its dialog would scroll by its 2 px. It is drawn in a control's edge, 3:1
+   or more, as what floats is (element.css): in the line it was 1.2:1 on the dark theme's mask. */
 .el-dialog,
 .el-message-box {
-  box-shadow: 0 0 0 1px var(--app-line);
+  box-shadow: 0 0 0 1px var(--app-control-border);
 }
 .el-dialog__header {
   margin-bottom: var(--app-space-lg);
@@ -64,8 +65,9 @@
   border-bottom: var(--app-rule);
 }
 
-/* A notification (what a write did, an error that is not a field's): framed and square as a message is. */
+/* A notification (what a write did, an error that is not a field's): framed and square as a message is, in a
+   control's edge as a dialog is, which tells it from the page it lies on. */
 .el-notification {
   --el-notification-radius: var(--app-radius);
-  --el-notification-border-color: var(--app-line);
+  --el-notification-border-color: var(--app-control-border);
 }

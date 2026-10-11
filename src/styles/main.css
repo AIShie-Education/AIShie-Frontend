@@ -420,8 +420,10 @@ tr.app-row-unpublished > td:first-child {
   background: none;
   padding: 0;
 }
+/* A quotation is set apart by its rule, the one mark it has (its words are in the text's ink): drawn in a
+   control's edge, 3:1 or more on the page in either theme, where the indigo's line was 1.7:1. */
 .markdown-body blockquote {
-  border-left: 2px solid var(--app-indigo-line);
+  border-left: 2px solid var(--app-control-border);
   padding-left: 12px;
   color: var(--app-ink-2);
 }

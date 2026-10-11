@@ -789,7 +789,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
   for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
   drawn by what they say and never by an effect chosen on the page. Every one is a rectangle with the
-  app's 2 px corners, never a pill (design wave 3: the pill was the commonest mark of a generated app,
+  app's 2 px corners, its close button too, never a pill (design wave 3: the pill was the commonest mark of a generated app,
   336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
   the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
   - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
@@ -918,8 +918,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   field's inset edge, a one-sided rule as the unpublished row's, a ring of 2 px or less). No gradient
   fills anything; the two that say something are the course tabs' fade at an end with more tabs (a
   mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
-  (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
-  doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
+  (`styles/element.css`, its dark theme's shadows undone too), and a field focused (a date range
+  open) turns its edge navy, doubled by a 1 px outline, with no halo, as the site's form does; a
+  field in error keeps its red edge focused, doubled in red. What floats over the page (a menu, a
+  select's options, a popover, a light tooltip, a date picker, the account's menu, a dialog, a
+  message box, a notification) is told from it by its edge alone, so that edge is a control's
+  (`--app-control-border`, 3:1 in either theme), never the line (1.4:1, 1.2:1 in the dark), as a
+  quotation's rule in rendered Markdown is. `src/styles/shapes.spec.ts` refuses
   anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
   for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
   the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
@@ -1003,8 +1008,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
-  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in the
-  line (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
+  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in a
+  control's edge (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
   and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
   title over a rule too; a notification is framed and square as a message is
@@ -1349,8 +1354,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the account's row at its bottom under a rule; following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name, in a circle (a person's), at the bottom of the activity bar (on a phone,
-  a row at the bottom of the side menu). Its menu, and each submenu, is framed in the line with 2 px
-  corners and casts no shadow, as every menu is; focus from the keyboard is the focus ring inside an
+  a row at the bottom of the side menu). Its menu, and each submenu, is framed in a control's edge
+  with 2 px corners and casts no shadow, as every menu is; focus from the keyboard is the focus ring inside an
   item. Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
   (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place

@@ -27,6 +27,18 @@ async function inTheme(page: Page, theme: 'light' | 'dark') {
   }, theme)
 }
 
+/** A token's colour as the browser computes a colour (rgb()), in the theme the page is in. */
+function tokenColour(page: Page, token: string) {
+  return page.evaluate((name) => {
+    const probe = document.createElement('span')
+    probe.style.color = `var(${name})`
+    document.body.append(probe)
+    const out = getComputedStyle(probe).color
+    probe.remove()
+    return out
+  }, token)
+}
+
 /** What the audit finds within what a CSS selector names (each one shown), one to a line for the failure's message. */
 async function offencesIn(page: Page, within: string) {
   return (await shapeOffences(page, { within })).map((o) => `${o.kind}: ${o.where}: ${o.value} «${o.text}»`)
@@ -89,6 +101,9 @@ for (const theme of ['light', 'dark'] as const) {
     // and nothing cast.
     expect(shell.radius).toBe('2px')
     expect(shell.shadow).toMatch(/^rgb\([^)]+\) 0px 0px 0px 1px$/)
+    // Its ring in a control's edge, 3:1 on the page and on the mask, not the line.
+    const edge = await tokenColour(page, '--app-control-border')
+    expect(shell.shadow).toBe(`${edge} 0px 0px 0px 1px`)
     expect(await offencesIn(page, '.el-dialog')).toEqual([])
     expect((await soloPrimary(page)).overlays).toEqual([['Create']])
 
@@ -115,6 +130,9 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(options).toBeVisible()
     await page.waitForTimeout(300)
     expect(await offencesIn(page, '.el-select__popper')).toEqual([])
+    // Told from the page by its edge alone: a control's, as the dialog's ring is.
+    const popper = page.locator('.el-select__popper:visible').first()
+    expect(await popper.evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(edge)
     await page.keyboard.press('Escape')
 
     // Its due date: a date picker, today a square.
@@ -125,7 +143,21 @@ for (const theme of ['light', 'dark'] as const) {
     expect(await offencesIn(page, '.el-picker__popper')).toEqual([])
     const today = picker.locator('.el-date-table td.today .el-date-table-cell__text')
     expect(await today.evaluate((el) => getComputedStyle(el).borderTopLeftRadius)).toBe('2px')
+    expect(await page.locator('.el-picker__popper:visible').first().evaluate((el) => getComputedStyle(el).borderTopColor)).toBe(
+      edge,
+    )
     await page.keyboard.press('Escape')
+
+    // The title, left empty, is in error: focused again, its edge and the outline doubling it are both the danger's.
+    await expect(dialog.locator('.el-form-item.is-error').first()).toBeVisible()
+    await title.focus()
+    const red = await tokenColour(page, '--el-color-danger')
+    const inError = await title.evaluate((input) => {
+      const cs = getComputedStyle(input.closest('.el-input__wrapper')!)
+      return { shadow: cs.boxShadow, outline: `${cs.outlineWidth} ${cs.outlineStyle} ${cs.outlineColor}` }
+    })
+    expect(inError.shadow).toBe(`${red} 0px 0px 0px 1px inset`)
+    expect(inError.outline).toBe(`1px solid ${red}`)
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
 

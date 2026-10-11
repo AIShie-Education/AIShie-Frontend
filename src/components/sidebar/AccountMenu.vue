@@ -510,12 +510,13 @@ defineExpose({ show, hide })
 }
 
 /* The menu: over the page, beside the activity bar (fixed, from where its button is), or over the side menu's
-   list on a phone; framed in the line with 2 px corners, as every menu is, and casting no shadow. */
+   list on a phone; framed in a control's edge with 2 px corners, as every menu is (element.css), and casting no
+   shadow: its edge alone tells it from the page. */
 .account-menu {
   position: fixed;
   width: 264px;
   padding: 6px;
-  border: var(--app-rule);
+  border: 1px solid var(--app-control-border);
   border-radius: var(--app-radius);
   background: var(--app-overlay);
   color: var(--app-ink);
@@ -633,7 +634,7 @@ defineExpose({ show, hide })
   bottom: -6px;
   width: 200px;
   padding: 6px;
-  border: var(--app-rule);
+  border: 1px solid var(--app-control-border);
   border-radius: var(--app-radius);
   background: var(--app-overlay);
 }

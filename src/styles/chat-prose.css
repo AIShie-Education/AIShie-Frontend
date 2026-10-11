@@ -64,7 +64,7 @@
 .markdown-body.chat-prose blockquote {
   margin-left: 0;
   padding: 2px 0 2px 12px;
-  border-left: 3px solid var(--app-indigo-line);
+  border-left: 3px solid var(--app-control-border);
   color: var(--app-ink-2);
 }
 .markdown-body.chat-prose :not(pre) > code {
