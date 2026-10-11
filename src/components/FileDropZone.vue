@@ -493,7 +493,7 @@ defineExpose({ addFiles, choose, focus })
   gap: 6px;
   padding: 24px 16px;
   border: 1.5px dashed var(--app-line-strong);
-  border-radius: var(--app-radius-item);
+  border-radius: var(--app-radius);
   background: var(--app-field);
   color: var(--app-ink-2);
   text-align: center;
@@ -569,26 +569,25 @@ defineExpose({ addFiles, choose, focus })
 .file-drop__phone .file-drop__hint {
   justify-content: flex-start;
 }
+/* The files, as rows between rules, not a box each: one that failed says so in its state's icon and its line,
+   in the danger's colour. */
 .file-drop__list {
   list-style: none;
   margin: 8px 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
 }
 .file-drop__item {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--app-line-soft);
-  border-radius: var(--app-radius-item);
-  background: var(--app-card);
+  padding: 8px 0;
+  border-top: var(--app-rule);
   min-width: 0;
 }
-.file-drop__item.is-failed {
-  border-color: var(--el-color-danger-light-5);
+.file-drop__item:last-child {
+  border-bottom: var(--app-rule);
 }
 /* A version's files, numbered in the order they go in. */
 .file-drop__n {

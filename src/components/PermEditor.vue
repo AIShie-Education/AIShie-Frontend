@@ -118,7 +118,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
   justify-content: space-between;
   gap: 16px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .perm-editor__row:last-child {
   border-bottom: none;
