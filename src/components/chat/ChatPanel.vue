@@ -540,8 +540,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
   transition: background-color 0.15s;
 }
 .chat-panel__edge:hover::after,
-.chat-panel__edge:focus-visible::after,
-:global(body.is-dragging-chat) .chat-panel__edge::after {
+.chat-panel__edge:focus-visible::after {
   background: var(--app-indigo);
 }
 .chat-panel__edge:focus-visible {
@@ -684,10 +683,15 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
 html.chat-sheet-open {
   overflow: hidden;
 }
-/* While its edge is dragged, the page selects no text, and the cursor stays the edge's. */
+/* While its edge is dragged, the page selects no text, and the cursor stays the edge's; and the edge's line stays
+   navy wherever the pointer goes. Here, not in the scoped block: there Vue would keep only what is in :global(),
+   and turn the body navy. */
 body.is-dragging-chat {
   user-select: none;
   cursor: ew-resize;
+}
+body.is-dragging-chat .chat-panel__edge::after {
+  background: var(--app-indigo);
 }
 /* The courses' names are longer than the list is wide. */
 .chat-panel__course-popper {
