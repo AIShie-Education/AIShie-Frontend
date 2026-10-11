@@ -608,7 +608,6 @@ function onClosed() {
         </div>
         <div v-if="many" class="file-viewer__nav" role="group" :aria-label="t('preview.files')">
           <el-button
-            circle
             size="small"
             :disabled="state.index === 0"
             :aria-label="t('preview.previous')"
@@ -622,7 +621,6 @@ function onClosed() {
             {{ t('preview.position', { n: state.index + 1, total: state.files.length }) }}
           </span>
           <el-button
-            circle
             size="small"
             :disabled="state.index >= state.files.length - 1"
             :aria-label="t('preview.next')"
@@ -635,7 +633,6 @@ function onClosed() {
         </div>
         <el-button
           text
-          circle
           class="file-viewer__close"
           :aria-label="t('preview.close')"
           :title="t('preview.close')"
