@@ -924,13 +924,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   field's inset edge, a one-sided rule as the unpublished row's, a ring of 2 px or less). No gradient
   fills anything; the two that say something are the course tabs' fade at an end with more tabs (a
   mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
-  (`styles/element.css`, its dark theme's shadows undone too), and a field focused (a date range
-  open) turns its edge navy, doubled by a 1 px outline, with no halo, as the site's form does; a
-  field in error keeps its red edge focused, doubled in red. What floats over the page (a menu, a
-  select's options, a popover, a light tooltip, a date picker, the account's menu, a dialog, a
-  message box, a notification) is told from it by its edge alone, so that edge is a control's
-  (`--app-control-border`, 3:1 in either theme), never the line (1.4:1, 1.2:1 in the dark), as a
-  quotation's rule in rendered Markdown is. `src/styles/shapes.spec.ts` refuses
+  (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
+  doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
   anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
   for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
   the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
@@ -1019,7 +1014,12 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
   title over a rule too; a notification is framed and square as a message is
-  (`styles/overlays.css`, after `element.css`).
+  (`styles/overlays.css`, after `element.css`). What floats over the page (a menu, a select's
+  options, a popover, a light tooltip, a date picker, the account's menu, a dialog, a message box,
+  a notification) is told from it by its edge alone, so that edge is a control's
+  (`--app-control-border`, 3:1 in either theme), never the line (1.4:1, 1.2:1 in the dark), as a
+  quotation's rule in rendered Markdown is. A date range open is ringed as a focused field is (Shapes,
+  above), and a field in error keeps its red edge focused, doubled in red.
 - **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else, with the app's
   2 px corners and no outline on any (design wave 3: a solid button beside an outlined one is the
   template's pair, and the site has none). `type="primary"` (solid indigo) for the one main action of
