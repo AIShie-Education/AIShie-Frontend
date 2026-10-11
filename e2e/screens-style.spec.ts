@@ -441,7 +441,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
 
     // The submissions: a State column only while some work listed is not handed in (Submitted, the usual);
     // read from what the page itself was given.
-    const handedIn = page.waitForResponse((r) => new URL(r.url()).pathname.endsWith('/submissions'))
+    const handedIn = page.waitForResponse((r) => /\/v1\/courses\/[^/]+\/submissions$/.test(new URL(r.url()).pathname))
     await page.goto(coursePath('submissions'))
     const work = ((await (await handedIn).json()).result?.submissions ?? []) as { state: string }[]
     const workHeads = page.locator('.submissions-table thead th')

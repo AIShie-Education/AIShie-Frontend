@@ -143,7 +143,9 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await page.goto(`/admin/courses/${d.course.id}`)
     const header = page.locator('.page-header')
     await expect(header).toContainText('Introduction to Programming')
-    await expect(header).toContainText('Active')
+    // Active, the usual state, is said in the facts alone; beside the title, only a state that departs from it.
+    await expect(page.locator('.course-admin__desc')).toContainText('Active')
+    await expect(header).not.toContainText('Active')
     await header.getByRole('button', { name: 'Archive' }).click()
     const box = page.getByRole('dialog', { name: 'Archive CS101 · A?' })
     await box.getByRole('button', { name: 'Archive' }).click()
