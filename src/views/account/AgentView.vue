@@ -188,10 +188,8 @@ function onBrought() {
         </template>
       </template>
       <template v-if="agent">
-        <el-button @click="renaming = true">
-          <el-icon><Edit /></el-icon>
-          <span>{{ t('agents.detail.rename') }}</span>
-        </el-button>
+        <!-- Suspending, which is destructive, comes first, at the row's far end from the one solid button and
+             never beside it; reactivating takes its place. -->
         <el-button v-if="standing === 'active'" type="danger" text :loading="suspendW.pending.value" @click="suspend">
           <el-icon><CircleClose /></el-icon>
           <span>{{ t('agents.detail.suspend') }}</span>
@@ -215,6 +213,10 @@ function onBrought() {
             </el-button>
           </span>
         </el-tooltip>
+        <el-button @click="renaming = true">
+          <el-icon><Edit /></el-icon>
+          <span>{{ t('agents.detail.rename') }}</span>
+        </el-button>
         <el-button type="primary" :disabled="suspended" @click="bringOpen = true">
           <el-icon><Plus /></el-icon>
           <span>{{ t('agents.bring.open') }}</span>

@@ -142,3 +142,31 @@ describe('AgentView: an agent with MCP access', () => {
     expect(document.body.querySelector('.el-dialog__title')?.textContent).toBe('New token for Study helper')
   })
 })
+
+describe('AgentView: its header’s actions', () => {
+  /** The header's actions as they stand, left to right: their words, and whether each is the solid one or red. */
+  const actions = (w: Awaited<ReturnType<typeof page>>) =>
+    w.findAll('.page-header__actions .el-button').map((b) => ({
+      text: b.text(),
+      solid: b.classes().includes('el-button--primary') && !b.classes().includes('is-text'),
+      danger: b.classes().includes('el-button--danger'),
+    }))
+
+  it('puts Suspend, which is destructive, at the far end from the one solid button, never beside it', async () => {
+    s.on('GET', AGENT, () => executed(agent('mcp')))
+    s.on('GET', CORE.credentials, () => executed({ credentials: [] }))
+    const w = await page()
+    expect(actions(w)).toEqual([
+      { text: 'Suspend', solid: false, danger: true },
+      { text: 'Rename', solid: false, danger: false },
+      { text: 'Bring into a course', solid: true, danger: false },
+    ])
+  })
+
+  it('puts Reactivate in its place while the agent is suspended', async () => {
+    s.on('GET', AGENT, () => executed(agent('mcp', { status: 'suspended', suspended_by_me: true })))
+    s.on('GET', CORE.credentials, () => executed({ credentials: [] }))
+    const w = await page()
+    expect(actions(w).map((a) => a.text)).toEqual(['Reactivate', 'Rename', 'Bring into a course'])
+  })
+})
