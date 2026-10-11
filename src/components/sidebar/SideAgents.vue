@@ -73,6 +73,7 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
   <div class="side-agents">
     <div v-if="blocked !== 'noSelfService'" class="side-agents__tools">
       <el-button
+        text
         size="small"
         class="side-agents__new"
         :disabled="!!blocked"
@@ -127,8 +128,11 @@ const STANDING_TAG = { active: 'success', suspendedByMe: 'warning', suspendedByA
 .side-agents__tools {
   padding: 0 4px 8px;
 }
-.side-agents__new {
+/* Registering an agent: words at the list's head, the one solid button being My agents' header's. */
+.side-agents__new.el-button {
+  justify-content: flex-start;
   width: 100%;
+  padding-left: 6px;
 }
 .side-agents__new .el-icon + span {
   margin-left: 4px;

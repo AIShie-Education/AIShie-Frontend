@@ -422,7 +422,7 @@ defineExpose({ show, hide })
 .account__slot {
   display: flex;
 }
-/* On the activity bar: as its view buttons, the initial in a circle. */
+/* On the activity bar: as its view buttons, square, the initial in a circle (a person's). */
 .account__button {
   display: flex;
   align-items: center;
@@ -431,7 +431,7 @@ defineExpose({ show, hide })
   height: 40px;
   padding: 0;
   border: none;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   background: transparent;
   cursor: pointer;
   transition: background-color 0.15s;
@@ -453,7 +453,6 @@ defineExpose({ show, hide })
   border-radius: 50%;
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
-  box-shadow: inset 0 0 0 1px var(--app-indigo-line);
   font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
   line-height: 1;
@@ -463,16 +462,17 @@ defineExpose({ show, hide })
   height: 34px;
   font-size: var(--app-text-lg);
 }
-/* On a phone, a row along the side menu's bottom: the initial, the name and what they sign in with. */
+/* On a phone, a row along the side menu's bottom, under a rule: the initial, the name and what they sign in with. */
 .account__row {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 10px 14px;
+  min-height: 56px;
+  padding: 10px 16px;
   border: none;
-  border-top: 1px solid var(--app-line);
-  background: var(--app-ground-2);
+  border-top: var(--app-rule);
+  background: transparent;
   color: var(--app-ink);
   font: inherit;
   text-align: left;
@@ -509,16 +509,15 @@ defineExpose({ show, hide })
   transform: rotate(180deg);
 }
 
-/* The menu: a card over the page, beside the activity bar (fixed, from where its button is), or over the side
-   menu's list on a phone. */
+/* The menu: over the page, beside the activity bar (fixed, from where its button is), or over the side menu's
+   list on a phone; framed in the line with 2 px corners, as every menu is, and casting no shadow. */
 .account-menu {
   position: fixed;
   width: 264px;
   padding: 6px;
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item);
+  border: var(--app-rule);
+  border-radius: var(--app-radius);
   background: var(--app-overlay);
-  box-shadow: var(--app-shadow-pop);
   color: var(--app-ink);
   font-size: var(--app-text-md);
 }
@@ -575,7 +574,7 @@ defineExpose({ show, hide })
   min-height: 34px;
   padding: 6px 10px;
   border: none;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -593,10 +592,11 @@ defineExpose({ show, hide })
 .account-menu__item:focus-visible,
 .account-menu__item[aria-expanded='true'] {
   background: var(--app-ground-2);
-  outline: none;
 }
+/* Focus from the keyboard: the focus ring, inside the item, which the menu's edge would otherwise cut. */
 .account-menu__item:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--app-focus);
+  outline: 2px solid var(--app-focus);
+  outline-offset: -2px;
 }
 /* The language's mark, where the other items have an icon. */
 .account-menu__glyph {
@@ -633,10 +633,9 @@ defineExpose({ show, hide })
   bottom: -6px;
   width: 200px;
   padding: 6px;
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-item);
+  border: var(--app-rule);
+  border-radius: var(--app-radius);
   background: var(--app-overlay);
-  box-shadow: var(--app-shadow-pop);
 }
 /* beneath its item, indented, in the side menu on a phone. */
 .account-menu.is-drawer .account-menu__sub {
@@ -645,7 +644,6 @@ defineExpose({ show, hide })
   margin: 2px 0 4px 24px;
   padding: 0;
   border: none;
-  box-shadow: none;
   background: transparent;
 }
 .account-menu.is-drawer .account-menu__more {

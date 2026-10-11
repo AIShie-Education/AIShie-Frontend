@@ -1,7 +1,9 @@
 <script setup lang="ts">
 // The side bar's courses: the caller's seats, filtered by what is typed,
-// each with its code and section, title and role, and whether the seat is
-// paused or the course a draft or archived; the course the page shows
+// each with its code and section, title, its role where the caller's roles
+// differ among their courses (a teacher in one, a student in another), and
+// whether the seat is paused or the course a draft or archived; the course
+// the page shows
 // stands out, and archived courses wait behind a switch. Then, for an
 // administrator, the courses they administer without a seat, newest first
 // (the way in is their administration page, as on home), and a link to the
@@ -51,6 +53,9 @@ const courseCurrent = (id: string) =>
 const adminCourse = computed(() =>
   route.name === 'admin-course' && typeof route.params.courseId === 'string' ? route.params.courseId : null,
 )
+
+/** Whether the caller holds more than one role among their courses: only then does a row say which is theirs. */
+const rolesDiffer = computed(() => new Set(session.liveMemberships.map((m) => m.role)).size > 1)
 
 const seated = computed(() =>
   session.liveMemberships
@@ -128,7 +133,7 @@ const archivedCount = computed(
             <span class="side-course__code"
               >{{ m.code }}<template v-if="m.section"><span class="app-sep">·</span>{{ m.section }}</template></span
             >
-            <StatusTag vocab="role" :value="m.role" />
+            <StatusTag v-if="rolesDiffer" vocab="role" :value="m.role" />
           </span>
           <span class="side-course__title">{{ m.title }}</span>
           <span v-if="m.status === 'paused' || m.course_status !== 'active'" class="side-course__flags">
@@ -197,11 +202,10 @@ const archivedCount = computed(
 </template>
 
 <style scoped>
-/* The tabs of the course the page is in, under it in the phone's menu, set in from its edge. */
+/* The tabs of the course the page is in, under it in the phone's menu, set in from its edge, the one shown marked
+   at its left as the course is. */
 .side-course-tabs {
   margin: 2px 0 6px 12px;
-  padding-left: 8px;
-  border-left: 1px solid var(--app-line);
 }
 .side-courses__tools {
   display: flex;
@@ -231,8 +235,7 @@ const archivedCount = computed(
   white-space: nowrap;
   font-size: var(--app-text-xs);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .side-course.is-active .side-course__code {
   color: var(--app-indigo);
@@ -247,9 +250,10 @@ const archivedCount = computed(
   flex-wrap: wrap;
   gap: 4px;
 }
-/* A course without a seat opens on its administration page: marked as the home page marks it. */
+/* A course without a seat opens on its administration page: marked as the home page marks it, a dashed line at
+   its left. */
 .side-course.is-unseated {
-  border: 1px dashed var(--app-line-strong);
+  border-left: 1px dashed var(--app-line-strong);
 }
 .side-course.is-unseated + .side-course.is-unseated {
   margin-top: 4px;

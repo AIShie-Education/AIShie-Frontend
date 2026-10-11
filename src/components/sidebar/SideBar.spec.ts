@@ -388,6 +388,17 @@ describe('the courses view', () => {
     expect(body.get('a.side-link[href="/"]').text()).toBe('My courses')
   })
 
+  it('says no role where the caller holds the same one in every course: only a role that differs is news', async () => {
+    const { w } = await mountAs('instructor', { path: '/courses/k2' })
+    const body = w.get('#side-bar')
+    expect(links(body, '.side-course')).toEqual([
+      'CS101 · A Programming',
+      'MA201 Linear algebra',
+      'PH110 Physics Paused Draft',
+    ])
+    expect(body.findAll('.side-course .el-tag')).toHaveLength(2)
+  })
+
   it('shows archived courses behind a switch that says how many there are', async () => {
     const { w } = await mountAs('student')
     const body = w.get('#side-bar')

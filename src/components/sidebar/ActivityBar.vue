@@ -90,8 +90,8 @@ function onKey(e: KeyboardEvent) {
 </template>
 
 <style scoped>
-/* Along the window's left edge, as tall as the window: a step off the ground,
-   with a hairline between it and what is beside it. */
+/* Along the window's left edge, as tall as the window: the paper's second shade, ruled off from what is beside
+   it. */
 .activity-bar {
   position: sticky;
   top: 0;
@@ -103,7 +103,7 @@ function onKey(e: KeyboardEvent) {
   width: 48px;
   height: 100vh;
   height: 100dvh;
-  border-right: 1px solid var(--app-line);
+  border-right: var(--app-rule);
   background: var(--app-ground-2);
 }
 /* The mark, as high as the header beside it. */
@@ -114,7 +114,7 @@ function onKey(e: KeyboardEvent) {
   flex-shrink: 0;
   width: 100%;
   height: 56px;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
 }
 .activity-bar__home:focus-visible {
   outline-offset: -4px;
@@ -148,7 +148,7 @@ function onKey(e: KeyboardEvent) {
   height: 40px;
   padding: 0;
   border: none;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   cursor: pointer;
@@ -164,9 +164,9 @@ function onKey(e: KeyboardEvent) {
 .activity-bar__button:focus-visible {
   outline-offset: -2px;
 }
-/* Its view shown: tinted, with a bar on the bar's outer edge, as an editor marks the view it shows. */
+/* Its view shown: its icon in the navy, with a 2 px navy line on the bar's outer edge, as an editor marks the
+   view it shows; no tinted ground. */
 .activity-bar__button.is-active {
-  background: var(--app-indigo-tint);
   color: var(--app-indigo);
 }
 .activity-bar__button.is-active::before {
@@ -174,9 +174,8 @@ function onKey(e: KeyboardEvent) {
   position: absolute;
   top: 8px;
   bottom: 8px;
-  left: -3px;
+  left: -4px;
   width: 2px;
-  border-radius: 1px;
   background: var(--app-indigo);
 }
 @media print {

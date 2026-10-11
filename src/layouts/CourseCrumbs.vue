@@ -95,7 +95,7 @@ const sub = computed(() =>
   min-width: 0;
   color: var(--el-text-color-regular);
   text-decoration: none;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 .course-crumbs a:hover {
   color: var(--app-indigo);
