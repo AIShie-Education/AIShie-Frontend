@@ -483,7 +483,7 @@ function goToCourse(courseId: string) {
 }
 /* Registering, words that start a line: the button's room at its left is taken back by as much outside it, so
    that its words start at the column's left, as the solid button's edge and the text over it do, and only its
-   hovered ground reaches past. So is Home's, under a link that cannot be used. */
+   hovered ground reaches past. So is Go to AIshie, under a link that can no longer be used. */
 .el-button.join__register,
 .el-button.join__home {
   padding-inline: var(--app-space-sm);
