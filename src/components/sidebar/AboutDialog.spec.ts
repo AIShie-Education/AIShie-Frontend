@@ -46,7 +46,7 @@ describe('About AIshie', () => {
     vi.stubGlobal('fetch', fetch)
     await opened()
     expect(fetch).toHaveBeenCalledWith('/version.json', expect.objectContaining({ cache: 'no-store' }))
-    expect(text()).toContain('The LMS for the agent era')
+    expect(text()).toContain('AI agents as course members')
     expect(text()).toContain('Web appv0.4.0 (3d02414)')
     expect(text()).toContain('Server2ba8ac7')
   })
