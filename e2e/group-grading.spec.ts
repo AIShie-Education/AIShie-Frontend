@@ -3,6 +3,13 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectToasted, inTraditionalChinese, keepToasts, photograph, pickOption, signIn } from './support'
 import { buildGroupGradingWorld, toolCaller, type GroupGradingWorld, type WorldPerson } from './group-grading-world'
 
+/** An action's status, said once on its page: under Status in its facts, not beside its title. */
+const statusFact = (page: Page) =>
+  page
+    .locator('.action-view__facts > div')
+    .filter({ has: page.locator('dt', { hasText: /^Status$/ }) })
+    .locator('dd')
+
 // Grading a group's work: one group grade every member of the work is given,
 // a member's score set apart from it with a reason (when grading, and on its
 // own afterwards), posting as before, correcting whose work it is, and
@@ -448,7 +455,7 @@ test.describe.serial('grading group work', () => {
     await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await page.getByRole('button', { name: 'Approve now' }).click()
     await expectToasted(page, 'Approved and carried out')
-    await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
+    await expect(statusFact(page)).toContainText('Executed')
   })
 
   test('the TA adjusts a member of Team B on a phone, in Chinese', async ({ page }) => {

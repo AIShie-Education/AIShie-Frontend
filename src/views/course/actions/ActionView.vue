@@ -319,16 +319,8 @@ const errorTitle = computed(() => {
       @retry="state.reload"
     >
       <template v-if="action">
+        <!-- Its status and its review are said once, under Status in its facts, not again beside its title. -->
         <PageHeader :title="typeLabel(action.action_type)" :back="back">
-          <template #tags>
-            <StatusTag vocab="actionStatus" :value="action.status" size="default" />
-            <StatusTag
-              v-if="action.review_state && action.review_state !== 'none'"
-              vocab="reviewState"
-              :value="action.review_state"
-              size="default"
-            />
-          </template>
           <template #subtitle>
             <span class="action-view__subtitle">
               <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" />
