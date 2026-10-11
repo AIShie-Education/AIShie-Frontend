@@ -126,7 +126,7 @@ function rowClass({ row }: { row: Row }): string {
   background: none;
   border: none;
   padding: 2px 4px;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   cursor: pointer;
   font: inherit;
   color: var(--el-color-primary);

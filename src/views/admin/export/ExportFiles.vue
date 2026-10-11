@@ -167,9 +167,8 @@ const shortSum = (s: string) => {
   justify-content: space-between;
   gap: 12px;
   padding: 14px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
   min-width: 0;
 }
 .is-compact .export-file {

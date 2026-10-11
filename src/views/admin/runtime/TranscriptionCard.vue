@@ -435,7 +435,7 @@ async function withdraw() {
             <el-button
               v-if="tr.credential.status !== 'none'"
               type="danger"
-              plain
+              text
               :loading="credentialBusy === 'withdraw'"
               :disabled="!!credentialBusy && credentialBusy !== 'withdraw'"
               class="transcription-card__withdraw"

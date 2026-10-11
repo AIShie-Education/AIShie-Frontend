@@ -224,7 +224,7 @@ async function reactivate() {
             <el-button
               v-else
               type="danger"
-              plain
+              text
               :disabled="!!standingBlocker"
               :loading="suspendW.pending.value"
               @click="suspend"
@@ -242,7 +242,7 @@ async function reactivate() {
           <span>
             <el-button
               type="danger"
-              plain
+              text
               :disabled="!!standingBlocker"
               :loading="suspendW.pending.value"
               @click="suspend"

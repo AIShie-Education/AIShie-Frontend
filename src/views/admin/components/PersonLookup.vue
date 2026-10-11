@@ -201,10 +201,9 @@ defineExpose({ find, show, clear })
 }
 .lookup__found {
   margin-top: 16px;
-  padding: 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  padding: var(--app-space-lg) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   display: flex;
   flex-direction: column;
   gap: 12px;

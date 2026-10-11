@@ -289,17 +289,24 @@ function toPrices() {
   font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
+/* The totals: figures side by side, a rule between them and the section's
+   rules above and below, not three boxes. */
 .costs-card__totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
   margin: 0 0 8px;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .costs-card__total {
-  padding: 12px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) var(--app-space-lg);
   min-width: 0;
+}
+.costs-card__total:first-child {
+  padding-left: 0;
+}
+.costs-card__total + .costs-card__total {
+  border-left: var(--app-rule);
 }
 .costs-card__total dt {
   font-size: var(--app-text-xs);
@@ -350,6 +357,13 @@ function toPrices() {
 @container (max-width: 559px) {
   .costs-card__totals {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .costs-card__total {
+    padding-left: 0;
+  }
+  .costs-card__total + .costs-card__total {
+    border-left: none;
+    border-top: var(--app-rule);
   }
 }
 </style>

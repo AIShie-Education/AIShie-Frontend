@@ -273,7 +273,7 @@ async function openById() {
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button native-type="submit" type="primary" plain :loading="opening" :disabled="!openId.trim()">
+          <el-button native-type="submit" type="primary" text :loading="opening" :disabled="!openId.trim()">
             {{ t('admin.actors.openById.submit') }}
           </el-button>
         </form>

@@ -215,7 +215,7 @@ watch(
           <el-table-column :label="narrow ? '' : t('common.labels.actions')" :width="phone ? 56 : narrow ? 64 : 96" align="center" fixed="right">
             <template #default="{ row }">
               <el-dropdown v-if="actionsFor(row).length" trigger="click" @command="(a: Action) => onAction(row, a)">
-                <el-button text circle :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
+                <el-button text :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>

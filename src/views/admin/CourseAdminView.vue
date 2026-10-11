@@ -142,7 +142,7 @@ function onSeated(_memberId: string, actorId: string) {
           <el-icon><VideoPlay /></el-icon>
           <span>{{ course.status === 'archived' ? t('admin.course.reopen') : t('admin.course.activate') }}</span>
         </el-button>
-        <el-button v-if="course.status !== 'archived'" type="danger" plain :loading="archiveW.pending.value" @click="archive">
+        <el-button v-if="course.status !== 'archived'" type="danger" text :loading="archiveW.pending.value" @click="archive">
           <el-icon><Box /></el-icon>
           <span>{{ t('admin.course.archive') }}</span>
         </el-button>

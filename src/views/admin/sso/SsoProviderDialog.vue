@@ -651,9 +651,9 @@ const title = computed(() =>
 }
 .sso-form__report {
   margin: -4px 0 18px;
-  padding: 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .sso-form__secret-mode {
   display: flex;
