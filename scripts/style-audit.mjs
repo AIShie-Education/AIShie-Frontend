@@ -249,8 +249,9 @@ const fill = (p) =>
     .replace('{conversation}', setup?.conversation ?? '')
     .replace(/\{([a-z0-9_]+)\}/g, (m, k) => c.assignments?.[k] ?? c.documents?.[k] ?? c.submissions?.[k] ?? c[k] ?? m)
 
+/** A page has loaded what it shows: the network quiet, or 5 s gone (the chat and the activity hold a request open). */
 const settle = async (page) => {
-  await page.waitForLoadState('networkidle').catch(() => {})
+  await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(600)
 }
 

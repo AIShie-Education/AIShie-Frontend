@@ -100,12 +100,8 @@ function audit(args: AuditArgs): Offence[] {
         y: y.endsWith('%') ? (px(y) / 100) * h : px(y),
       }
     })
-    const [tl, tr, br, bl] = corners as [
-      (typeof corners)[0],
-      (typeof corners)[0],
-      (typeof corners)[0],
-      (typeof corners)[0],
-    ]
+    type Corner = { x: number; y: number }
+    const [tl, tr, br, bl] = corners as [Corner, Corner, Corner, Corner]
     const fit = (side: number, a: number, b: number) => (a + b > side ? side / (a + b) : 1)
     const f = Math.min(1, fit(w, tl.x, tr.x), fit(w, bl.x, br.x), fit(h, tl.y, bl.y), fit(h, tr.y, br.y))
     return Math.max(...corners.map((c) => (c.x > 0 && c.y > 0 ? Math.max(c.x, c.y) * f : 0)))
@@ -160,11 +156,11 @@ function audit(args: AuditArgs): Offence[] {
     })
   }
   const roots = args.within ? [...document.querySelectorAll(args.within)].filter(shown) : [document.body]
-  const seen = new Set<Element>()
+  const visited = new Set<Element>()
   for (const root of roots) {
     for (const el of [root, ...root.querySelectorAll('*')]) {
-      if (seen.has(el)) continue
-      seen.add(el)
+      if (visited.has(el)) continue
+      visited.add(el)
       if (args.except.some((s) => el.closest(s))) continue
       if (!shown(el)) continue
       const text = (el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 40)

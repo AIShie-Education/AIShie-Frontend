@@ -30,7 +30,8 @@ textarea {
 }
 /* The page's and its sections' titles, and every dialog's, are set in the
    serif, at the weight and tracking of the page's language, and at the
-   site's leading for a heading, 1.25; smaller headings stay in the sans. */
+   site's leading for a heading, 1.25; smaller headings stay in the sans, but
+   for an author's ### in rendered Markdown (below). */
 h1,
 h2,
 .el-dialog__title,
@@ -276,13 +277,18 @@ tr.app-row-unpublished > td:first-child {
 
 /* Rendered Markdown (course material, submissions, feedback): running text,
    set as the site sets its own. The words are in the second ink at 1.7, and
-   a paragraph, an item or a quotation stops at the measure (a table and a
-   listing run the column's width). The author's headings are in the ink and
-   stay under the page's title whatever level they were written at: an h1 is
-   18 px, an h2 16, an h3 the text's size in its strong weight, so that the
-   page's own h1, 24 px, is the largest heading it has. A listing is ruled
-   above and below, as in print, with no ground; a table, ruled between its
-   rows, with no frame around it and no grid; an image, framed in the line. */
+   a paragraph, an item or a quotation stops at the measure (an image, a
+   table and a listing run the column's width). The author's headings are in
+   the ink and a heading's weight, and stay under the page's title whatever
+   level they were written at. Its sections are in the serif, a step apart:
+   an h1 is 20 px, an h2 18, an h3 16, so that the page's own h1, 24 px, is
+   the largest heading it has. An h4 is the site's h4, the text's size in the
+   sans, told from an author's bold words, which keep a heading's weight in
+   the text's ink, by its ink and the room above it, as the site's is from
+   its strong words. An h3, larger and in the serif, never reads as a bold
+   line, nor an h4 as an h3. A listing is ruled above and below, as in
+   print, with no ground; a table, ruled between its rows, with no frame
+   around it and no grid; an image, framed in the line. */
 .markdown-body {
   line-height: var(--app-lh-prose);
   font-size: var(--app-text-prose);
@@ -305,18 +311,19 @@ tr.app-row-unpublished > td:first-child {
   color: var(--app-ink);
 }
 .markdown-body h1 {
-  font-size: var(--app-text-xl);
+  font-size: var(--app-text-prose-h1);
 }
 .markdown-body h2 {
-  font-size: var(--app-text-lg);
+  font-size: var(--app-text-xl);
 }
-.markdown-body h3,
+/* The h1 and the h2 take the serif from the rule for every h1 and h2, above. */
+.markdown-body h3 {
+  font-size: var(--app-text-lg);
+  font-family: var(--app-font-serif);
+  letter-spacing: var(--app-heading-tracking);
+}
 .markdown-body h4 {
   font-size: var(--app-text-prose);
-  font-weight: var(--app-weight-strong);
-}
-.markdown-body h4 {
-  color: var(--app-ink-2);
 }
 .markdown-body p,
 .markdown-body ul,
@@ -328,6 +335,15 @@ tr.app-row-unpublished > td:first-child {
 }
 .markdown-body :is(p, li, blockquote) {
   max-width: var(--app-measure);
+}
+/* What is not running text runs the column's width wherever it is: a
+   paragraph with an image in it (markdown-it sets an image written on its own
+   line in one), and an item or a quotation that holds an image, a listing, a
+   table or a displayed formula. Their own paragraphs of words still stop at
+   the measure. */
+.markdown-body p:has(img),
+.markdown-body :is(li, blockquote):has(img, pre, .md-code, table, .md-math) {
+  max-width: none;
 }
 .markdown-body code {
   font-family: var(--app-font-mono);
