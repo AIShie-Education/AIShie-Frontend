@@ -12,8 +12,9 @@
    theme; the corner, the rule, the leading and the measure) has the site's
    values, so that the app looks like the pages that show it: an academic
    publication's, straight corners and thin rules rather than rounded cards
-   on shadows. contrast.spec.ts writes them out beside the site's names, and
-   fails when one side changes alone. */
+   on shadows. contrast.spec.ts writes the site's values out beside its
+   names, copied by hand: it fails when the app's change alone, and a change
+   on aishie.app has to be copied in to be checked. */
 :root {
   /* Grounds and surfaces */
   --app-ground: #f6f3ec;

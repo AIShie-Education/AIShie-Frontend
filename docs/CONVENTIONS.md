@@ -887,18 +887,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   placeholder's ink is quieter still, for a field's placeholder. The three
   inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
   fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
-  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  fill alone, not on a hovered or chosen row, a state tag's ground or the ground's second shade. Text that
   may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
   that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
   `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
-  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every state tag
   (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
   colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
   It also writes out what the app shares with aishie.app's `:root` (navy, amber, paper, line, the
   field's edge, the inks, the state colours, the corner, the rule, the leading, the measure), by the
-  site's names, and fails when one side changes alone; a value the app keeps of its own is listed there
-  with why. The page column (its header and its page) is read on `--app-page`, the ivory, and the paper
-  (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
+  site's names, copied from the site by hand: it fails when the app's side changes alone, and a change
+  on aishie.app has to be copied in by hand before it is checked; a value the app keeps of its own is
+  listed there with why. The page column (its header and its page) is read on `--app-page`, the
+  ivory, and the paper (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
   paper, would add to the warm paper, the serif and the amber dot, which the app is not to add to. The
   brand is the navy; the amber (`--app-light`) is the logo's dot alone, never an avatar's, an empty
   place's or the chat's (the wait colour is a state's, not the amber).

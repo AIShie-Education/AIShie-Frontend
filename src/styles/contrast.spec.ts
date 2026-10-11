@@ -372,11 +372,13 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
 })
 
 /**
- * What the app shares with aishie.app, written out as the site's :root has it
+ * What the app shares with aishie.app, copied by hand from the site's :root
  * (AIShie-Website: public/index.html, and docs-src/template/base.css, which
  * its build holds equal to it), by the site's name for each of the app's
- * tokens. A change on either side fails here: make it on both, or write the
- * difference in DIFFERS with why.
+ * tokens. A change to the app's tokens fails here: make it on the site too,
+ * or write the difference in DIFFERS with why. A change on aishie.app fails
+ * nothing here, as this repository cannot read the site's: copy it in by
+ * hand, then make the app's tokens agree.
  */
 const SITE: { light: Record<string, string>; dark: Record<string, string>; root: Record<string, string> } = {
   light: {
