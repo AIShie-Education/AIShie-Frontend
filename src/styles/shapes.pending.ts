@@ -17,24 +17,5 @@ export const PENDING = {
   screens: [] as string[],
 
   /** The chrome (sign-in, the header, the side bar, the phone's menu, dialogs and drawers, the chat, the file viewer). */
-  chrome: [
-    '/src/components/NewVersionNotice.vue',
-    '/src/components/chat/ChatAttachmentChips.vue',
-    '/src/components/chat/ChatComposer.vue',
-    '/src/components/chat/ChatDraftSteps.vue',
-    '/src/components/chat/ChatMessage.vue',
-    '/src/components/chat/ChatMessageFiles.vue',
-    '/src/components/chat/ChatMessageSources.vue',
-    '/src/components/chat/ChatPane.vue',
-    '/src/components/chat/ChatPanel.vue',
-    '/src/components/chat/ChatStatusLine.vue',
-    '/src/components/preview/FileViewer.vue',
-    '/src/components/preview/ImageView.vue',
-    '/src/components/preview/PdfView.vue',
-    '/src/components/sidebar/AccountMenu.vue',
-    '/src/layouts/AppLayout.vue',
-    '/src/styles/chat-prose.css',
-    '/src/styles/main.css: .app-auth-page__card',
-    '/src/views/join/JoinView.vue',
-  ] as string[],
+  chrome: [] as string[],
 }

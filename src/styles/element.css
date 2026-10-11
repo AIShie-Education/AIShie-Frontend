@@ -671,8 +671,6 @@ html.dark .el-card {
    no halo: its edge is Element Plus's inset line, the outline the second. */
 .el-button:focus-visible,
 .el-radio__original:focus-visible + .el-radio__inner,
-/* A text button's too, which Element Plus rings in its pale primary by a rule of its own (2.5:1 on the page). */
-.el-button.is-text:not(.is-disabled):focus-visible,
 .el-checkbox__original:focus-visible + .el-checkbox__inner,
 .el-switch__input:focus-visible ~ .el-switch__core {
   outline: 2px solid var(--app-focus);
