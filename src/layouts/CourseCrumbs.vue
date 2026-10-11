@@ -129,9 +129,13 @@ const sub = computed(() =>
   font-weight: var(--app-weight-strong);
   color: var(--app-ink);
 }
-/* On a phone: the course's code alone, then the tab. Where they do not all fit (a long code, a narrow phone),
-   the code gives way, cut short with an ellipsis, rather than run under the tab. */
+/* On a phone: the course's code alone, then the tab, the separators closer, in a row it shares with the menu's and
+   the chat's buttons. Where they do not all fit (a long code, a narrow phone), the code gives way, cut short with
+   an ellipsis, rather than run under the tab. */
 @media (max-width: 640px) {
+  .course-crumbs li + li::before {
+    margin: 0 5px;
+  }
   .course-crumbs__title {
     display: none;
   }

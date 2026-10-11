@@ -3,8 +3,7 @@
 // each with its code and section, title, its role where the caller's roles
 // differ among their courses (a teacher in one, a student in another), and
 // whether the seat is paused or the course a draft or archived; the course
-// the page shows
-// stands out, and archived courses wait behind a switch. Then, for an
+// the page shows stands out, and archived courses wait behind a switch. Then, for an
 // administrator, the courses they administer without a seat, newest first
 // (the way in is their administration page, as on home), and a link to the
 // whole list, My courses. In the phone's menu, where there is no tab strip

@@ -338,4 +338,16 @@ const crumbsCourse = computed(() => {
     padding: 16px;
   }
 }
+/* On a phone, one row of 56 px holds the menu's button, the way up and the chat's button: the header's gutters are
+   the page's 16 px, and the chat's square reaches a little into its gutter as the menu's does into its own (not
+   so far that its count leaves the screen), so that the way up keeps its words whole as long as it can. */
+@media (max-width: 899px) {
+  .app-header {
+    padding: 0 16px;
+    gap: 8px;
+  }
+  .app-header__chat {
+    margin-right: -4px;
+  }
+}
 </style>
