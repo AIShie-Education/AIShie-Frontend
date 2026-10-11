@@ -12,7 +12,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { User } from '@element-plus/icons-vue'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { useAsync, usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { formatDate, isUuid } from '@/utils/format'
@@ -119,6 +119,17 @@ const list = usePaged<ActorRow>(
   { watch: [q, kind, status, owner] },
 )
 const filtered = computed(() => !!q.value || !!kind.value || !!status.value || !!owner.value)
+/**
+ * A Status column only while someone listed is not active (suspended), and
+ * the filter above does not say so already: one that says Active, or
+ * Suspended, on every row says nothing (docs/CONVENTIONS.md, "Building a
+ * view"). A phone's rows say Suspended beside the name, and nothing else.
+ */
+const statusVaries = computed(
+  () => (!status.value || !!byId.value) && list.items.value.some((a) => a.status !== 'active'),
+)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, statusVaries)
 const emptyText = computed(() => {
   if (byId.value) return t('admin.actors.notFound')
   return filtered.value ? t('admin.actors.emptyFiltered') : t('admin.actors.empty')
@@ -351,7 +362,7 @@ async function openById() {
             </ActorSummary>
           </li>
         </ul>
-        <el-table v-else :data="list.items.value" row-key="id" class="actors__table" @row-click="open">
+        <el-table v-else ref="tableRef" :data="list.items.value" row-key="id" class="actors__table" @row-click="open">
           <el-table-column :label="t('admin.actors.col.name')" min-width="200">
             <template #default="{ row }">
               <div class="actors__name">
@@ -416,7 +427,7 @@ async function openById() {
               </div>
             </template>
           </el-table-column>
-          <el-table-column :label="t('admin.actors.col.status')" width="110">
+          <el-table-column v-if="statusVaries" :label="t('admin.actors.col.status')" width="110">
             <template #default="{ row }"><StatusTag vocab="actorStatus" :value="row.status" /></template>
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.role')" width="120">

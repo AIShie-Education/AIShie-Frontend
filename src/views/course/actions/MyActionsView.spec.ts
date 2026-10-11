@@ -178,3 +178,42 @@ describe('My actions, a proposal sent back for changes', () => {
     expect(row.textContent).toContain(status)
   })
 })
+
+describe('My actions, a column the same on every row', () => {
+  const heads = () =>
+    [...document.body.querySelectorAll('.my-actions__table thead th')]
+      .map((th) => th.textContent?.trim())
+      .filter(Boolean)
+  /** Grades entered at once: each carried out, and decided by nobody. */
+  const done = ACTIONS.map((a) => ({
+    ...a,
+    status: 'executed',
+    decided_by_member_id: null,
+    decided_at: null,
+    result: undefined,
+  }))
+
+  it('is not shown: no Status while every action is in one, which the chips say once, and no Decided while nobody decided one', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'action.list_mine') return { actions: done }
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    const w = await mountAsTa()
+    expect(rows()).toHaveLength(2)
+    expect(heads()).toEqual(['Action', 'When'])
+    expect(document.body.querySelector('.my-actions__table tbody')!.textContent).not.toContain('Executed')
+    expect(w.findAll('.filter-chips .filter-chip').map((c) => c.text())).toEqual(['All 2', 'Executed 2'])
+  })
+
+  it('is shown while the actions listed differ, and goes again once a chip keeps one status alone', async () => {
+    const w = await mountAsTa()
+    expect(heads()).toEqual(['Action', 'Status', 'When', 'Decided'])
+    await w
+      .findAll('.filter-chips .filter-chip')
+      .find((c) => c.attributes('data-value') === 'executed')!
+      .trigger('click')
+    await flushPromises()
+    expect(heads()).toEqual(['Action', 'When', 'Decided'])
+  })
+})

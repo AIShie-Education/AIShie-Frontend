@@ -187,6 +187,17 @@ describe('My actions', () => {
           created_at: '2026-09-28T10:00:00Z',
           decided_at: '2026-09-28T10:00:00Z',
         },
+        // Another, rejected: their statuses differ, and so there is a Status column to fold.
+        {
+          id: 'act-2',
+          action_type: 'submission.create',
+          target_type: 'assignment',
+          target_id: 'hw1',
+          status: 'rejected',
+          review_state: 'none',
+          created_at: '2026-09-29T10:00:00Z',
+          decided_at: '2026-09-29T11:00:00Z',
+        },
       ],
       next: null,
     })
@@ -197,6 +208,7 @@ describe('My actions', () => {
     await flushPromises()
     expect(heads(w, '.my-actions__table')).toEqual(['Action'])
     expect(w.find('.my-actions__stack').exists()).toBe(true)
+    expect(w.find('.my-actions__stack').text()).toMatch(/Rejected|Executed/)
   })
 })
 
