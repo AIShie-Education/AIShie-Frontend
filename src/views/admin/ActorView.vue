@@ -224,7 +224,7 @@ async function reactivate() {
             <el-button
               v-else
               type="danger"
-              plain
+              text
               :disabled="!!standingBlocker"
               :loading="suspendW.pending.value"
               @click="suspend"
@@ -242,7 +242,7 @@ async function reactivate() {
           <span>
             <el-button
               type="danger"
-              plain
+              text
               :disabled="!!standingBlocker"
               :loading="suspendW.pending.value"
               @click="suspend"
@@ -472,8 +472,7 @@ async function reactivate() {
 .actor__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-top: 16px;
+  margin-top: var(--app-space-2xl);
 }
 .actor__grid > .app-card + .app-card {
   margin-top: 0;
@@ -482,7 +481,7 @@ async function reactivate() {
   grid-column: 1 / -1;
 }
 /* Two cards side by side while each keeps 420 px or more. */
-@container (max-width: 855px) {
+@container (max-width: 871px) {
   .actor__grid {
     grid-template-columns: minmax(0, 1fr);
   }

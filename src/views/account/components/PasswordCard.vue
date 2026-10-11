@@ -90,10 +90,6 @@ async function save() {
   <section class="app-card password-card">
     <h2 class="app-card__title">{{ t('account.password.title') }}</h2>
     <div class="password-card__body">
-      <el-icon :size="28" class="password-card__icon" :class="{ 'is-set': !!current && hasEmail }">
-        <Lock v-if="current && hasEmail" />
-        <Unlock v-else />
-      </el-icon>
       <div class="password-card__text">
         <p v-if="!hasEmail">{{ t('account.password.noEmail') }}</p>
         <template v-else-if="current">
@@ -115,7 +111,7 @@ async function save() {
         <el-icon><Refresh /></el-icon>
         <span>{{ t('common.actions.retry') }}</span>
       </el-button>
-      <el-button v-else type="primary" plain :disabled="!known" @click="start">
+      <el-button v-else type="primary" text :disabled="!known" @click="start">
         <el-icon><Key /></el-icon>
         <span>{{ current ? t('account.password.change') : t('account.password.set') }}</span>
       </el-button>
@@ -166,14 +162,6 @@ async function save() {
   display: flex;
   gap: 14px;
   align-items: flex-start;
-}
-.password-card__icon {
-  color: var(--el-text-color-secondary);
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.password-card__icon.is-set {
-  color: var(--el-color-success);
 }
 .password-card__text p {
   margin: 0 0 4px;

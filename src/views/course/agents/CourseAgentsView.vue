@@ -7,14 +7,13 @@
 // start conversations (member.update_perms_bulk, role student). Those who
 // decide actions here, whether or not they manage the members, read each
 // answering agent's conversation log.
-import { computed, markRaw, ref, type Component } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { ActionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
-import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
@@ -26,7 +25,7 @@ import AddCourseAgentDialog from './components/AddCourseAgentDialog.vue'
 import AgentConversationLog from './components/AgentConversationLog.vue'
 import AgentList from './components/AgentList.vue'
 import StudentPolicyCard from './components/StudentPolicyCard.vue'
-import { AGENT_GROUPS, agentRows, isLive, loadAllMembers, type AgentGroup } from './components/courseAgents'
+import { AGENT_GROUPS, agentRows, isLive, loadAllMembers } from './components/courseAgents'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -115,11 +114,6 @@ function onAdded(out: { status: 'executed'; memberId: string } | { status: 'prop
   void refresh()
 }
 
-const GROUP_ICONS: Record<AgentGroup, string | Component> = {
-  course: 'School',
-  personal: 'User',
-  unowned: markRaw(AgentSeatIcon),
-}
 </script>
 
 <template>
@@ -190,7 +184,6 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
         <section v-for="g in groups" :key="g.group" class="app-card">
           <h2 class="app-card__title">
             <span class="course-agents__heading">
-              <el-icon><component :is="GROUP_ICONS[g.group]" /></el-icon>
               {{ t(`courseAgents.groups.${g.group}.title`) }}
               <span class="app-muted course-agents__count">{{ g.rows.length }}</span>
             </span>
@@ -210,7 +203,8 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
             @log="openLog"
           />
           <AppEmpty v-else :text="t(`courseAgents.groups.${g.group}.empty`)">
-            <el-button v-if="canManage && canAdd && course.writable" type="primary" plain @click="addOpen = true">
+            <!-- The empty place's way in: the header's Add a course agent is the page's one solid button. -->
+            <el-button v-if="canManage && canAdd && course.writable" type="primary" text @click="addOpen = true">
               {{ t('courseAgents.add') }}
             </el-button>
           </AppEmpty>
@@ -264,11 +258,6 @@ const GROUP_ICONS: Record<AgentGroup, string | Component> = {
 .course-agents__foot {
   margin: 12px 0 0;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-@media (max-width: 600px) {
-  .app-card {
-    padding: 14px;
-  }
+  border-top: var(--app-rule);
 }
 </style>

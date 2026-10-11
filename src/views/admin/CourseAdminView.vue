@@ -142,7 +142,7 @@ function onSeated(_memberId: string, actorId: string) {
           <el-icon><VideoPlay /></el-icon>
           <span>{{ course.status === 'archived' ? t('admin.course.reopen') : t('admin.course.activate') }}</span>
         </el-button>
-        <el-button v-if="course.status !== 'archived'" type="danger" plain :loading="archiveW.pending.value" @click="archive">
+        <el-button v-if="course.status !== 'archived'" type="danger" text :loading="archiveW.pending.value" @click="archive">
           <el-icon><Box /></el-icon>
           <span>{{ t('admin.course.archive') }}</span>
         </el-button>
@@ -242,14 +242,13 @@ function onSeated(_memberId: string, actorId: string) {
 .course-admin__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
   margin-top: 4px;
 }
 .course-admin__grid > .app-card + .app-card {
   margin-top: 0;
 }
 /* Two columns (3 : 2) while the details keep room for their own two (a card of 590 px). */
-@container (max-width: 999px) {
+@container (max-width: 1015px) {
   .course-admin__grid {
     grid-template-columns: minmax(0, 1fr);
   }

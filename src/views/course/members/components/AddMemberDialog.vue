@@ -881,9 +881,8 @@ function capToMine() {
   flex-direction: column;
   gap: 2px;
   font-size: var(--app-text-sm);
-  padding: 8px 12px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-light);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
   line-height: var(--app-lh-ui);
 }
 .add-member__gap {

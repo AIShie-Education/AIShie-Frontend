@@ -358,7 +358,7 @@ async function seat() {
 
       <div class="seat__next">
         <router-link v-if="mySeat || seatedSelf" :to="{ name: 'course-members', params: { courseId } }">
-          <el-button type="primary" plain>
+          <el-button type="primary" text>
             <el-icon><User /></el-icon>
             <span>{{ t('admin.seat.membersPage') }}</span>
           </el-button>
@@ -386,7 +386,7 @@ async function seat() {
           </el-button>
         </template>
         <template #missing="{ email }">
-          <el-button v-if="email" type="primary" plain :disabled="disabled" @click="startInvite(email)">
+          <el-button v-if="email" type="primary" text :disabled="disabled" @click="startInvite(email)">
             <el-icon><Message /></el-icon>
             <span>{{ t('deptAdmin.invite.new') }}</span>
           </el-button>
@@ -573,10 +573,9 @@ async function seat() {
 }
 .seat__found {
   margin-top: 16px;
-  padding: 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  padding: var(--app-space-lg) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -629,7 +628,7 @@ async function seat() {
 .seat__form.is-another {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .seat__cancel {
   margin-top: 12px;

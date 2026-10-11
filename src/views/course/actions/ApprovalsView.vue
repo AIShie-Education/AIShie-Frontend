@@ -68,6 +68,23 @@ function count(list: { items: { value: unknown[] }; hasMore: { value: boolean } 
   return `${list.items.value.length}${list.hasMore.value ? '+' : ''}`
 }
 
+/**
+ * A queue has one solid button (docs/CONVENTIONS.md, "Buttons"). While no
+ * decision is open it is the first's Approve: the queue is oldest first, so
+ * that one is the next to decide. Once one is opened, wherever in the queue,
+ * it is that decision's confirm, and the first's Approve is indigo words
+ * meanwhile, as the others' are; with several open, the one opened last.
+ * The decisions open, in the order they were opened, by their action's id.
+ */
+const opened = ref<string[]>([])
+function choosing(id: string, isOpen: boolean) {
+  opened.value = [...opened.value.filter((x) => x !== id), ...(isOpen ? [id] : [])]
+}
+function leads(items: ActionRow[], i: number): boolean {
+  const latest = [...opened.value].reverse().find((id) => items.some((a) => a.id === id))
+  return latest ? items[i]!.id === latest : i === 0
+}
+
 interface Recent {
   key: number
   action: ActionRow
@@ -314,14 +331,18 @@ function toggleRules() {
             @retry="reloadProposed"
           >
             <div class="approvals__list">
+              <!-- One solid button in the queue (leads): the first's Approve, the queue being oldest first, or the
+                   confirm of the decision opened last. -->
               <ActionCard
-                v-for="a in proposed.items.value"
+                v-for="(a, i) in proposed.items.value"
                 :key="a.id"
                 :action="a"
                 :course-id="courseId"
+                :lead="leads(proposed.items.value, i)"
                 mode="decide"
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'proposed')"
+                @choosing="(open) => choosing(a.id, open)"
               />
             </div>
             <LoadMore :has-more="proposed.hasMore.value" :loading="proposed.loading.value" @more="proposed.loadMore" />
@@ -345,13 +366,15 @@ function toggleRules() {
           >
             <div class="approvals__list">
               <ActionCard
-                v-for="a in review.items.value"
+                v-for="(a, i) in review.items.value"
                 :key="a.id"
                 :action="a"
                 :course-id="courseId"
+                :lead="leads(review.items.value, i)"
                 mode="review"
                 :waiting="myPending.get(a.id)"
                 @done="(d) => onDone(a, d, 'review')"
+                @choosing="(open) => choosing(a.id, open)"
               />
             </div>
             <LoadMore :has-more="review.hasMore.value" :loading="review.loading.value" @more="review.loadMore" />
@@ -418,7 +441,7 @@ function toggleRules() {
   flex-direction: column;
   gap: 6px;
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .approvals__recent-head {
   display: flex;
@@ -447,12 +470,13 @@ function toggleRules() {
 .approvals__card {
   position: relative;
 }
-/* Over the tabs' header, which runs the card's width under it (its padding keeps the tabs clear of the
-   button): without the layer, the header takes every click and tap meant for Refresh. */
+/* Over the tabs' header, which runs the section's width under it (its padding keeps the tabs clear of the
+   button): without the layer, the header takes every click and tap meant for Refresh. At the section's top
+   right, under its rule and its 24 px (16 on a phone). */
 .approvals__toolbar {
   position: absolute;
   top: 24px;
-  right: 24px;
+  right: 0;
   z-index: 1;
 }
 .approvals__tabs :deep(.el-tabs__header) {
@@ -461,7 +485,7 @@ function toggleRules() {
 @media (max-width: 600px) {
   .approvals__toolbar {
     top: 16px;
-    right: 16px;
+    right: 0;
   }
   .approvals__tabs :deep(.el-tabs__header) {
     padding-right: 52px;

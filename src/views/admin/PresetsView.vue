@@ -52,6 +52,11 @@ const presets = useAsync(
 )
 const list = computed(() => presets.data.value ?? [])
 const ownCount = computed(() => list.value.filter((p) => !isBuiltin(p)).length)
+/**
+ * Whether built-in and a department's own presets are listed together: only
+ * then does each say which it is. Built in on every row says nothing.
+ */
+const mixed = computed(() => ownCount.value > 0 && ownCount.value < list.value.length)
 const canWrite = computed(() => session.isAdmin)
 
 // --- Details ----------------------------------------------------------------
@@ -129,14 +134,14 @@ function onSaved(savedDept: string | null) {
           {{ t('adminSetup.presets.noOwn', { name: deptName(deptId) ?? deptId }) }}
         </p>
         <div class="presets-grid">
-          <article v-for="p in list" :key="p.id" class="preset-card" :class="{ 'is-own': !isBuiltin(p) }">
+          <article v-for="p in list" :key="p.id" class="preset-card">
             <header class="preset-card__head">
               <span class="preset-card__name">{{ presetLabel(p) }}</span>
               <code v-if="hasOwnLabel(p)" class="preset-card__key">{{ p.name }}</code>
-              <AppTag v-if="isBuiltin(p)" variant="outline" :icon="Box">
+              <AppTag v-if="isBuiltin(p) && mixed" variant="outline" :icon="Box">
                 {{ t('adminSetup.presets.builtin') }}
               </AppTag>
-              <AppTag v-else variant="outline" :icon="OfficeBuilding" class="preset-card__dept">
+              <AppTag v-else-if="!isBuiltin(p)" variant="outline" :icon="OfficeBuilding" class="preset-card__dept">
                 {{ deptName(p.dept_id) ?? t('adminSetup.presets.own') }}
               </AppTag>
             </header>
@@ -209,23 +214,17 @@ function onSaved(savedDept: string | null) {
 .presets-hint {
   margin: -6px 0 12px;
 }
+/* The presets as a list, a preset a row between rules: not a grid of cards of the same size. */
 .presets-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
+  border-top: var(--app-rule);
 }
 .preset-card {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 14px 16px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--app-radius-card);
-  background: var(--el-bg-color);
+  gap: 6px;
+  padding: var(--app-space-md) 0;
+  border-bottom: var(--app-rule);
   min-width: 0;
-}
-.preset-card.is-own {
-  border-color: var(--el-color-primary-light-7);
 }
 .preset-card__head {
   display: flex;
@@ -243,7 +242,7 @@ function onSaved(savedDept: string | null) {
   font-size: var(--app-text-mark);
   color: var(--el-text-color-secondary);
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 1px 5px;
 }
 .preset-card__dept {
@@ -261,6 +260,7 @@ function onSaved(savedDept: string | null) {
   -webkit-box-orient: vertical;
   overflow: hidden;
   word-break: break-word;
+  max-width: var(--app-measure);
 }
 .preset-card__facts {
   display: flex;
@@ -275,7 +275,6 @@ function onSaved(savedDept: string | null) {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: auto;
   font-size: var(--app-text-xs);
 }
 .preset-card__actions {

@@ -58,8 +58,8 @@
          nothing else has loaded yet; its colours are the brand's (src/styles/tokens.css). */
       .boot {
         --boot-bg: #f6f3ec;
-        --boot-fg: #1b1d24;
-        --boot-track: #e2ddd1;
+        --boot-fg: #1c1c1c;
+        --boot-track: #d9d4c8;
         --boot-bar: #22407a;
         --boot-on-bar: #ffffff;
         --boot-wordmark: #22407a;
@@ -122,7 +122,7 @@
         width: 160px;
         max-width: 60vw;
         height: 3px;
-        border-radius: 3px;
+        border-radius: 0;
         overflow: hidden;
         background: var(--boot-track);
       }
@@ -133,7 +133,7 @@
         bottom: 0;
         left: 0;
         width: 40%;
-        border-radius: 3px;
+        border-radius: 0;
         background: var(--boot-bar);
         animation: boot-slide 1.1s ease-in-out infinite;
       }
@@ -185,7 +185,7 @@
       .boot__retry {
         padding: 8px 20px;
         border: 0;
-        border-radius: 8px;
+        border-radius: 2px;
         background: var(--boot-bar);
         color: var(--boot-on-bar);
         font: inherit;

@@ -55,10 +55,10 @@ const { t } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
 // The seat's facts in one column, each label above its value, where the page is
-// narrower than 720 px (the seat card's title 669 px or less), by its own
+// narrower than 720 px (the seat section's title 719 px or less), by its own
 // width, not the window's: the side bar takes from it. Wider, two columns.
 const seatTitle = useTemplateRef<HTMLElement>('seatTitle')
-const narrow = useContainerNarrow(seatTitle, 669)
+const narrow = useContainerNarrow(seatTitle, 719)
 const presets = usePresets()
 
 const state = useAsync<Member>(() => read('member.get', { course_id: props.courseId, member_id: props.memberId }), {
@@ -393,7 +393,8 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
         <template v-if="m">
           <AgentBadge v-if="m.kind === 'agent'" :owner-name="m.owner_name" :mine="mineAgent" size="default" />
           <RoleTag :member="m" size="default" hide-none />
-          <StatusTag vocab="memberStatus" :value="m.status" size="default" />
+          <!-- A seat's usual state (active) is said in its facts alone; beside the name, only what departs from it. -->
+          <StatusTag v-if="m.status !== 'active'" vocab="memberStatus" :value="m.status" size="default" />
           <AppTag v-if="expired" size="default">{{ t('members.expired') }}</AppTag>
           <AppTag v-if="isSelf" variant="outline" :icon="User" size="default">{{ t('common.labels.you') }}</AppTag>
         </template>
@@ -432,7 +433,7 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
             </el-button>
             <el-button
               type="danger"
-              plain
+              text
               :disabled="!manageable || busy"
               :loading="removeWrite.pending.value"
               @click="remove"
@@ -875,11 +876,10 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
 }
+/* Each scope a block under a rule, side by side while there is room: not a grey box in the section. */
 .member__scope-block {
-  padding: 12px 14px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: var(--app-space-md) 0 0;
+  border-top: var(--app-rule);
   min-width: 0;
 }
 .member__scope-head {
@@ -945,11 +945,6 @@ const back = computed(() => ({ name: 'course-members', params: { courseId: props
   flex-wrap: wrap;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-@media (max-width: 600px) {
-  .app-card {
-    padding: 14px;
-  }
+  border-top: var(--app-rule);
 }
 </style>

@@ -165,9 +165,12 @@ function onCommand(c: string) {
 </template>
 
 <style scoped>
+/* A group is one thing the reader operates (a place to drop a student, its
+   own menu): a box, 2 px corners, no ground; dropping on it, an inset indigo
+   stroke. */
 .group-card {
   border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-card);
+  border-radius: var(--app-radius);
   padding: var(--app-space-md);
   min-width: 0;
   transition: border-color 0.15s;

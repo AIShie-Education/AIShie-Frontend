@@ -439,7 +439,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
         <el-tooltip :content="t('materials.document.text.actions.refresh')" placement="top">
           <el-button
             size="small"
-            circle
+            text
             :loading="loading"
             :disabled="editing"
             :aria-label="t('materials.document.text.actions.refresh')"
@@ -638,13 +638,14 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
 .text-pane__body :deep(h2[id]) {
   scroll-margin-top: 72px;
 }
+/* Waiting for its text: a block between rules, not a box. */
 .text-pane__queued {
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 16px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: var(--app-radius-item);
+  padding: var(--app-space-lg) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .text-pane__queued-icon {
   font-size: var(--app-text-2xl);

@@ -86,7 +86,7 @@ const rows = computed<Row[]>(() =>
 .deletion-proposal__table td {
   padding: 6px 8px;
   text-align: left;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .deletion-proposal__table thead th {
   color: var(--app-ink-3);

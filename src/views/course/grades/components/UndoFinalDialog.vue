@@ -78,8 +78,8 @@ async function submit() {
     <el-form label-position="top" :disabled="pending" @submit.prevent="submit">
       <el-form-item :label="t('grades.undoFinal.who')">
         <el-radio-group v-model="who" class="undo-final__who">
-          <el-radio value="all" border class="undo-final__option">{{ t('grades.undoFinal.all') }}</el-radio>
-          <el-radio value="one" border class="undo-final__option">{{ t('grades.undoFinal.oneStudent') }}</el-radio>
+          <el-radio value="all" class="undo-final__option">{{ t('grades.undoFinal.all') }}</el-radio>
+          <el-radio value="one" class="undo-final__option">{{ t('grades.undoFinal.oneStudent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
       <el-form-item

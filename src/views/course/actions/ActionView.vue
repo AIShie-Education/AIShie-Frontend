@@ -646,10 +646,9 @@ const errorTitle = computed(() => {
 .action-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 360px);
-  gap: 16px;
 }
 /* Two columns while the main one keeps 420 px or more beside the 360 px one. */
-@container (max-width: 799px) {
+@container (max-width: 815px) {
   .action-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -668,7 +667,7 @@ const errorTitle = computed(() => {
   grid-template-columns: 180px minmax(0, 1fr);
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   align-items: baseline;
 }
 .action-view__facts > div:last-child {
@@ -712,11 +711,10 @@ const errorTitle = computed(() => {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  padding: 10px 12px;
+  padding: var(--app-space-sm) 0;
   margin-bottom: 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .action-view__about-label {
   font-size: var(--app-text-xs);

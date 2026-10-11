@@ -16,11 +16,12 @@ const text = computed(() => {
 </template>
 
 <style scoped>
+/* A listing, as aishie.app sets one: a rule above it and below, no ground and no corners. */
 .json-view {
   margin: 0;
-  padding: 12px;
-  background: var(--el-fill-color-light);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   line-height: 1.5;

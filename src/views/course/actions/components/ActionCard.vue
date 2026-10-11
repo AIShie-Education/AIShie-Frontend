@@ -25,14 +25,22 @@ import PeerProposal from '@/views/course/peer/PeerProposal.vue'
 import { payloadOf, str, typeLabel, useJudgeRules, type ActionRow } from './actionText'
 import type { Done } from './decide'
 
-const props = defineProps<{
-  action: ActionRow
-  courseId: string
-  mode: 'decide' | 'review'
-  /** The caller's own decision on this is waiting for approval. */
-  waiting?: string | null
-}>()
-const emit = defineEmits<{ done: [Done] }>()
+const props = withDefaults(
+  defineProps<{
+    action: ActionRow
+    courseId: string
+    mode: 'decide' | 'review'
+    /** The caller's own decision on this is waiting for approval. */
+    waiting?: string | null
+    /**
+     * Whether the queue's one solid button is here (DecidePanel): its Approve (Reviewed), or the confirm of the
+     * decision it has open.
+     */
+    lead?: boolean
+  }>(),
+  { waiting: null, lead: true },
+)
+const emit = defineEmits<{ done: [Done]; choosing: [open: boolean] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const rules = useJudgeRules()
@@ -144,8 +152,10 @@ const excerpt = computed(() => {
         :course-id="courseId"
         :mode="mode"
         :waiting="waiting"
+        :lead="lead"
         size="small"
         @done="(d) => emit('done', d)"
+        @choosing="(open) => emit('choosing', open)"
       />
       <div class="action-card__side">
         <el-button
@@ -160,7 +170,6 @@ const excerpt = computed(() => {
         </el-button>
         <router-link :to="{ name: 'course-action', params: { courseId, actionId: action.id } }" class="action-card__details">
           {{ t('actions.link.details') }}
-          <el-icon><ArrowRight /></el-icon>
         </router-link>
       </div>
     </footer>
@@ -168,14 +177,15 @@ const excerpt = computed(() => {
 </template>
 
 <style scoped>
+/* A proposal is one thing the reader decides as a whole: a box, the one kept
+   in the queue, its edge the site's line, 2 px corners, no ground of its own. */
 .action-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding: 14px 16px;
-  border: 1px solid var(--el-border-color-light);
-  border-radius: var(--app-radius-card);
-  background: var(--el-bg-color);
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
   min-width: 0;
 }
 .action-card__head {
@@ -235,14 +245,13 @@ const excerpt = computed(() => {
   gap: 8px;
   flex-wrap: wrap;
 }
+/* What the agent wrote, quoted: a rule at its left, no ground. */
 .action-card__message {
   max-height: 240px;
   overflow: auto;
   margin: 0;
-  padding: 6px 12px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-lighter);
-  border-left: 3px solid var(--el-color-primary);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-indigo);
 }
 .action-card__message :deep(.markdown-body) {
   font-size: var(--app-text-sm);
@@ -250,11 +259,9 @@ const excerpt = computed(() => {
 .action-card__excerpt {
   margin: 0;
   font-size: var(--app-text-sm);
-  color: var(--el-text-color-regular);
-  background: var(--el-fill-color-lighter);
-  border-left: 3px solid var(--el-border-color);
-  padding: 6px 10px;
-  border-radius: 4px;
+  color: var(--app-ink-2);
+  border-left: 2px solid var(--app-line-strong);
+  padding: 2px 0 2px var(--app-space-md);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -279,9 +286,6 @@ const excerpt = computed(() => {
   flex-wrap: wrap;
 }
 .action-card__details {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
   font-size: var(--app-text-sm);
   text-decoration: none;
   white-space: nowrap;

@@ -23,16 +23,8 @@ watch(open, (v) => {
   }
 })
 
-const items: { key: string; icon: string }[] = [
-  { key: 'tree', icon: 'Share' },
-  { key: 'bucket', icon: 'Collection' },
-  { key: 'group', icon: 'FolderOpened' },
-  { key: 'direct', icon: 'EditPen' },
-  { key: 'drop', icon: 'Bottom' },
-  { key: 'ungraded', icon: 'Clock' },
-  { key: 'graded', icon: 'Warning' },
-  { key: 'posted', icon: 'View' },
-]
+/** The rules, in the order they are read: words alone, a rule between them, no icon beside each. */
+const items = ['tree', 'bucket', 'group', 'direct', 'drop', 'ungraded', 'graded', 'posted'] as const
 </script>
 
 <template>
@@ -40,15 +32,11 @@ const items: { key: string; icon: string }[] = [
     <el-collapse v-model="open">
       <el-collapse-item name="rules">
         <template #title>
-          <span class="scheme-help__title">
-            <el-icon><QuestionFilled /></el-icon>
-            {{ t('scheme.help.title') }}
-          </span>
+          <span class="scheme-help__title">{{ t('scheme.help.title') }}</span>
         </template>
         <ul class="scheme-help__list">
-          <li v-for="it in items" :key="it.key">
-            <el-icon class="scheme-help__icon"><component :is="it.icon" /></el-icon>
-            <span>{{ t(`scheme.help.${it.key}`) }}</span>
+          <li v-for="key in items" :key="key">
+            <span class="scheme-help__text">{{ t(`scheme.help.${key}`) }}</span>
           </li>
         </ul>
       </el-collapse-item>
@@ -57,10 +45,6 @@ const items: { key: string; icon: string }[] = [
 </template>
 
 <style scoped>
-.scheme-help {
-  padding-top: 4px;
-  padding-bottom: 4px;
-}
 .scheme-help :deep(.el-collapse) {
   border: none;
 }
@@ -70,31 +54,25 @@ const items: { key: string; icon: string }[] = [
   background: transparent;
 }
 .scheme-help__title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   font-size: var(--app-text-lg);
   font-weight: var(--app-heading-weight);
 }
+/* The rules as rows between rules, each a sentence at the measure. */
 .scheme-help__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
-  gap: 12px 24px;
+  border-top: var(--app-rule);
 }
 .scheme-help__list li {
-  display: flex;
-  gap: 10px;
-  align-items: flex-start;
+  padding: var(--app-space-sm) 0;
+  border-bottom: var(--app-rule);
   font-size: var(--app-text-sm);
   line-height: var(--app-lh-text);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
 }
-.scheme-help__icon {
-  flex-shrink: 0;
-  margin-top: 4px;
-  color: var(--el-color-primary);
+.scheme-help__text {
+  display: block;
+  max-width: var(--app-measure);
 }
 </style>

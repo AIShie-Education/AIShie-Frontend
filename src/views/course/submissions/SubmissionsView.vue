@@ -263,23 +263,26 @@ function open(row: SubmissionSummary) {
               :to="{ name: 'course-submission', params: { courseId, submissionId: row.id } }"
               class="submission-cards__item"
             >
-              <div class="submission-cards__top">
-                <span class="submission-cards__title">
-                  {{ course.assignmentTitle(row.assignment_id) ?? '' }}
-                  <IdText v-if="!course.assignmentTitle(row.assignment_id)" :id="row.assignment_id" />
-                </span>
-                <StatusTag vocab="submissionState" :value="row.state" />
+              <div class="submission-cards__body">
+                <div class="submission-cards__top">
+                  <span class="submission-cards__title">
+                    {{ course.assignmentTitle(row.assignment_id) ?? '' }}
+                    <IdText v-if="!course.assignmentTitle(row.assignment_id)" :id="row.assignment_id" />
+                  </span>
+                  <StatusTag vocab="submissionState" :value="row.state" />
+                </div>
+                <div class="submission-cards__meta">
+                  <template v-if="row.group_id">
+                    <strong>{{ row.group_name }}</strong>
+                    <span v-if="!isStudent && row.members?.length">{{ namesOf(row.members) }}</span>
+                  </template>
+                  <MemberName v-else-if="!isStudent" :id="row.student_member_id" />
+                  <span>{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
+                  <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
+                  <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
+                </div>
               </div>
-              <div class="submission-cards__meta">
-                <template v-if="row.group_id">
-                  <strong>{{ row.group_name }}</strong>
-                  <span v-if="!isStudent && row.members?.length">{{ namesOf(row.members) }}</span>
-                </template>
-                <MemberName v-else-if="!isStudent" :id="row.student_member_id" />
-                <span>{{ t('submissions.detail.attempt', { n: row.attempt }) }}</span>
-                <TimeText v-if="row.submitted_at" :value="row.submitted_at" />
-                <span v-else class="app-muted">{{ t('submissions.notHandedIn') }}</span>
-              </div>
+              <el-icon class="submission-cards__go"><ArrowRight /></el-icon>
             </router-link>
           </li>
         </ul>
@@ -342,9 +345,6 @@ function open(row: SubmissionSummary) {
   width: 260px;
   max-width: 100%;
 }
-.submissions-card {
-  padding: 8px 12px;
-}
 .submissions-table :deep(.el-table__row) {
   cursor: pointer;
 }
@@ -382,23 +382,37 @@ function open(row: SubmissionSummary) {
   flex: none;
   margin-top: 3px;
 }
+/* On a phone, a row each between rules, not a box each, opening the work as
+   the table's rows do, with the › at its end that says so. */
 .submission-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.submission-cards > li {
+  border-bottom: var(--app-rule);
 }
 .submission-cards__item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  align-items: center;
+  gap: var(--app-space-sm);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
+}
+.submission-cards__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.submission-cards__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .submission-cards__item:active,
 .submission-cards__item:hover {

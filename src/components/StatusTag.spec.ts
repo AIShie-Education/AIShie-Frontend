@@ -28,14 +28,15 @@ describe('StatusTag', () => {
     expect(tag('submissionState', 'draft').classes()).toContain('el-tag--info')
   })
 
-  it('draws every state as a tinted pill, never an outline or a dark one', () => {
+  it('draws every state on its tint, never an outline or a solid one', () => {
     for (const [vocab, value] of [
       ['actionStatus', 'executed'],
       ['memberStatus', 'paused'],
       ['courseStatus', 'archived'],
     ] as const) {
       const t = tag(vocab, value)
-      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--pill', 'el-tag--light']))
+      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--state', 'el-tag--light']))
+      expect(t.classes()).not.toContain('is-round')
     }
   })
 

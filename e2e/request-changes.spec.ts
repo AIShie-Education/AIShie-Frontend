@@ -259,7 +259,8 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
 
   test('at a phone’s width, the queue card’s revision line keeps its icon beside its words', async ({ page }) => {
     const d = demo()
-    await page.setViewportSize({ width: 375, height: 812 })
+    // The narrowest phone's: the queue's section has no padding of its own, and at 375 px the line fits on one.
+    await page.setViewportSize({ width: 320, height: 700 })
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath('approvals'))
     const card = page.locator('.action-card').filter({ hasText: REVISED })

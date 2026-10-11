@@ -312,7 +312,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
 }
 .peer-member {
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-member__head {
   display: flex;
@@ -369,7 +369,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
 }
 .peer-sheet {
   padding: 8px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .peer-sheet:first-child {

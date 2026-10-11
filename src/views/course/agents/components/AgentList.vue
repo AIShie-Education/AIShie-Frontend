@@ -305,7 +305,7 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
   align-items: flex-start;
   gap: 10px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .agent-row__avatar {
   margin-top: -2px;

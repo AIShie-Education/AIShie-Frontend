@@ -121,10 +121,9 @@ async function submit() {
   gap: 8px;
   align-items: flex-start;
   margin: 0 0 16px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--el-color-primary-light-9);
-  color: var(--el-text-color-regular);
+  padding: 2px 0 2px var(--app-space-lg);
+  border-left: 2px solid var(--app-indigo-line);
+  color: var(--app-ink-2);
   line-height: var(--app-lh-text);
 }
 .join-form__clock {

@@ -46,12 +46,12 @@ const route = useRoute()
 const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
-// A card per grade, with its own checkbox, where the card is as narrow as on a
-// phone: its toolbar 542 px or less, the width it has in a window of 640 px
-// without the side bar. By the card's own width, not the window's: the side bar
+// A card per grade, with its own checkbox, where the section is as narrow as on
+// a phone: its toolbar 592 px or less, the width it has in a window of 640 px
+// without the side bar (a section has no padding of its own). By the card's own width, not the window's: the side bar
 // takes from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 542)
+const narrow = useContainerNarrow(toolbar, 592)
 
 /** A student sees their own posted grades: "My grades". */
 const mine = computed(() => course.role === 'student')
@@ -643,9 +643,9 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
@@ -703,7 +703,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   cursor: pointer;
 }
 .grades-list__item.is-superseded {

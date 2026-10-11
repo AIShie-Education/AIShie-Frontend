@@ -23,10 +23,10 @@ const { t } = useI18n()
           <el-avatar :size="48" class="profile-card__avatar">{{ me.display_name.slice(0, 1) }}</el-avatar>
           <div class="profile-card__who">
             <div class="profile-card__name">{{ me.display_name }}</div>
-            <div class="profile-card__tags">
-              <StatusTag vocab="actorKind" :value="me.kind" />
-              <StatusTag vocab="actorStatus" :value="me.status" />
-              <StatusTag v-if="me.platform_role" vocab="platformRole" :value="me.platform_role" />
+            <!-- What kind of account it is and that it is active are said in the facts below; beside the name
+                 only a platform role, which most accounts have not. -->
+            <div v-if="me.platform_role" class="profile-card__tags">
+              <StatusTag vocab="platformRole" :value="me.platform_role" />
             </div>
           </div>
         </div>

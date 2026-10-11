@@ -56,11 +56,12 @@ function scopeText(which: 'student' | 'assignment'): string {
       <div class="seat__row">
         <dt>{{ t('common.labels.role') }}</dt>
         <dd class="seat__tags">
+          <!-- Only the role: whoever reads their own seat here is a person, so "person" would never vary. -->
           <StatusTag vocab="role" :value="m.role" />
-          <StatusTag v-if="seat" vocab="actorKind" :value="seat.kind" />
         </dd>
       </div>
-      <div class="seat__row">
+      <!-- A seat's state only where it is not the usual one (active): paused, say. -->
+      <div v-if="m.status !== 'active'" class="seat__row">
         <dt>{{ t('common.labels.status') }}</dt>
         <dd>
           <StatusTag vocab="memberStatus" :value="m.status" />
@@ -142,7 +143,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   grid-template-columns: minmax(96px, 36%) minmax(0, 1fr);
   gap: 12px;
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   font-size: var(--app-text-md);
 }
 .seat__row:last-child {
@@ -153,7 +154,7 @@ function scopeText(which: 'student' | 'assignment'): string {
   gap: 6px;
 }
 .seat__row dt {
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   font-size: var(--app-text-sm);
 }
 .seat__row dd {

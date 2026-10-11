@@ -38,7 +38,8 @@ const solidIconInTemplate = {
 
 /**
  * Element Plus's own look, which the app draws through its shared components
- * instead (docs/CONVENTIONS.md, "Tags", "Notes and alerts"): a template that
+ * instead (docs/CONVENTIONS.md, "Tags", "Notes and alerts", "Buttons",
+ * "Shapes"): a template that
  * writes one of these is refused, wherever it is but in the component that
  * draws it, however it is written: `<el-tag>` or `<ElTag>` (main.ts registers
  * both), or `<component is="el-tag">`.
@@ -76,8 +77,51 @@ const ELEMENT_LOOK = {
   'el-empty': {
     allowedIn: [],
     message:
-      'Nothing to show is an AppEmpty (one line in a card, or the line icon where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
+      'Nothing to show is an AppEmpty (one line in a section, or its words at the page’s left where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
   },
+  // A button is solid (the view's one primary) or words; nothing is outlined, a pill or a disc.
+  'el-button': {
+    allowedIn: [],
+    pending: () => LOOK_PENDING,
+    when: (node) => BUTTON_LOOKS.some((look) => hasLook(node, look)),
+    message:
+      'A button is solid (the one primary of a view or a dialog) or words: a text button (text, or link inline) with type="primary" for an item’s own action or type="danger" for a destructive one; never outlined (plain), a pill (round) or a disc (circle): an icon alone is a square text button (docs/CONVENTIONS.md, "Buttons").',
+  },
+  // A checkbox or a radio is its mark and its words, never a bordered box among the page's buttons.
+  'el-checkbox': {
+    allowedIn: [],
+    when: (node) => hasLook(node, 'border'),
+    message:
+      'A checkbox is its box and its words, never bordered as a button is (border); a list of choices with words under each is plain radios on rows between rules (docs/CONVENTIONS.md, "Shapes").',
+  },
+  'el-radio': {
+    allowedIn: [],
+    when: (node) => hasLook(node, 'border'),
+    message:
+      'A radio is its circle and its words, never a bordered box (border); a list of choices with words under each is plain radios on rows between rules (docs/CONVENTIONS.md, "Shapes").',
+  },
+  'el-card': {
+    allowedIn: [],
+    message:
+      'A section is an .app-card, a rule above it and room, never Element Plus’s card, a box on a shadow; a box is kept only around one thing the reader operates as a whole (docs/CONVENTIONS.md, "Shapes").',
+  },
+}
+/** The looks a button may not be given. */
+const BUTTON_LOOKS = ['plain', 'round', 'circle']
+/**
+ * The files whose outlined or round buttons another part of design wave 3
+ * takes away (the chat's, the chrome), refused here once they have:
+ * src/lint/elementLook.spec.ts fails when one of them no longer writes the
+ * look, so the list only shrinks.
+ */
+export const LOOK_PENDING = ['src/components/chat/ChatPanel.vue']
+/** Whether an element is given a look, written (`plain`) or bound to anything but false (`:plain="x"`). */
+function hasLook(node, name) {
+  const a = attributeOf(node, name)
+  if (!a) return false
+  if (!a.directive) return true
+  const e = a.value?.expression
+  return !(e?.type === 'Literal' && e.value === false)
 }
 /** The types an el-alert may say: a warning, an error, an outcome in green. */
 const ALERT_TYPES = new Set(['warning', 'error', 'success'])
@@ -135,6 +179,7 @@ const elementLook = {
         for (const name of drawnAs(node)) {
           const rule = ELEMENT_LOOK[name]
           if (!rule || rule.allowedIn.some((f) => file.endsWith(f))) continue
+          if (rule.pending?.().some((f) => file.endsWith(f))) continue
           if (rule.when && !rule.when(node)) continue
           context.report({ node: node.startTag, message: rule.message })
         }

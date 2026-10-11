@@ -255,11 +255,11 @@ describe('the whole class’s gradebook', () => {
     expect(w.findAll('thead th')[1]!.attributes('aria-sort')).toBe('ascending')
   })
 
-  it('is a list a student at a time where the toolbar is 542 px or less', async () => {
-    const sizes = fakeContainerWidths({ '.classbook__toolbar': 543 })
+  it('is a list a student at a time where the toolbar is 592 px or less', async () => {
+    const sizes = fakeContainerWidths({ '.classbook__toolbar': 593 })
     const { w } = await mountClass()
     expect(w.find('.matrix__table').exists()).toBe(true)
-    await sizes.resize('.classbook__toolbar', 542)
+    await sizes.resize('.classbook__toolbar', 592)
     await flushPromises()
     expect(w.find('.matrix__table').exists()).toBe(false)
     expect(w.findAll('.sgl__item')).toHaveLength(N)

@@ -80,7 +80,7 @@ const mode = ref<'group' | 'student'>('group')
 
 // A card per group where the roster is as narrow as on a phone, as RosterTable's.
 const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
-const narrow = useContainerNarrow(summaryLine, 566)
+const narrow = useContainerNarrow(summaryLine, 592)
 
 const stateFilter = ref('')
 const view = computed(() =>
@@ -293,28 +293,31 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
               class="group-cards__item"
               :class="{ 'group-cards__link': g.submission_id }"
             >
-              <div class="group-cards__top">
-                <span class="group-cards__name">{{ g.name }}</span>
-                <WorkStateTag :value="g.state" />
-              </div>
-              <div class="group-cards__members">
-                <template v-if="g.members?.length">{{ namesOf(g.members) }}</template>
-                <span v-else class="app-muted">{{ t('groupWork.roster.nobody') }}</span>
-                <div v-if="unreached(g)" class="group-roster__work-of group-roster__unreached">
-                  {{ unreachedLine(g) }}
+              <div class="group-cards__body">
+                <div class="group-cards__top">
+                  <span class="group-cards__name">{{ g.name }}</span>
+                  <WorkStateTag :value="g.state" />
                 </div>
-                <div v-if="otherWorkLine(g)" class="group-roster__work-of group-roster__other-work">
-                  {{ otherWorkLine(g) }}
+                <div class="group-cards__members">
+                  <template v-if="g.members?.length">{{ namesOf(g.members) }}</template>
+                  <span v-else class="app-muted">{{ t('groupWork.roster.nobody') }}</span>
+                  <div v-if="unreached(g)" class="group-roster__work-of group-roster__unreached">
+                    {{ unreachedLine(g) }}
+                  </div>
+                  <div v-if="otherWorkLine(g)" class="group-roster__work-of group-roster__other-work">
+                    {{ otherWorkLine(g) }}
+                  </div>
+                  <div v-if="workLine(g)" class="group-roster__work-of">{{ workLine(g) }}</div>
                 </div>
-                <div v-if="workLine(g)" class="group-roster__work-of">{{ workLine(g) }}</div>
+                <div class="group-cards__meta">
+                  <span v-if="g.attempt">{{ t('submissions.detail.attempt', { n: g.attempt }) }}</span>
+                  <TimeText v-if="g.submitted_at" :value="g.submitted_at" />
+                  <span v-if="g.submitted_by_member_id">{{
+                    t('groupWork.roster.handedInBy', { name: nameIn(g.submitted_by_member_id, g.members) })
+                  }}</span>
+                </div>
               </div>
-              <div class="group-cards__meta">
-                <span v-if="g.attempt">{{ t('submissions.detail.attempt', { n: g.attempt }) }}</span>
-                <TimeText v-if="g.submitted_at" :value="g.submitted_at" />
-                <span v-if="g.submitted_by_member_id">{{
-                  t('groupWork.roster.handedInBy', { name: nameIn(g.submitted_by_member_id, g.members) })
-                }}</span>
-              </div>
+              <el-icon v-if="g.submission_id" class="group-cards__go"><ArrowRight /></el-icon>
             </component>
             <div v-if="markable(g)" class="roster-action group-cards__action">
               <el-button
@@ -484,13 +487,17 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
 .roster-action--end {
   justify-content: flex-end;
 }
+/* On a phone, a row each between rules, not a box each. */
 .group-cards {
   list-style: none;
   margin: 0;
-  padding: 4px 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
+}
+.group-cards > li {
+  border-bottom: var(--app-rule);
 }
 .group-cards > li {
   display: flex;
@@ -499,13 +506,24 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
 }
 .group-cards__item {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  align-items: center;
+  gap: var(--app-space-sm);
+  padding: 10px var(--app-space-sm);
   color: inherit;
   text-decoration: none;
+}
+.group-cards__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+/* A group's row that opens its work: the › at its end says so, as a tint
+   under the pointer cannot on a touch screen. */
+.group-cards__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
 }
 .group-cards__link:active,
 .group-cards__link:hover {
@@ -540,7 +558,7 @@ const emptyText = computed(() => (props.studentId ? t('groupWork.roster.emptyStu
 .group-roster__no-group {
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .group-roster__no-group-title {
   display: flex;

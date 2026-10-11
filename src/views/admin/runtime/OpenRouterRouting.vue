@@ -1161,12 +1161,12 @@ const pctLabel = (p: Percentile) => t(`runtimeAdmin.openrouter.pct.${p}`)
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
+/* A route, a row between rules: not a box each. */
 .or-card {
-  padding: 10px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: var(--app-radius-control);
+  padding: 10px 0;
+  border-bottom: var(--app-rule);
 }
 .or-card__figures {
   margin-top: 4px;

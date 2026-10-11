@@ -70,7 +70,8 @@ test.describe.serial('a student hands in work', () => {
     // saved it first) and the file.
     await attempt.getByRole('link', { name: 'View' }).click()
     await expect(page).toHaveURL(/\/submissions\/[0-9a-f-]{36}$/)
-    await expect(page.locator('.page-header')).toContainText('Submitted')
+    // Its state is said once, in its facts, not beside its title.
+    await expect(page.locator('.facts')).toContainText('Submitted')
     await expect(page.getByText('Mei tested -40, 0 and 37.5.')).toBeVisible()
     await expect(page.locator('.submission-view__files')).toContainText(FILE)
     await expect(page.getByText('A first try.')).toHaveCount(0)

@@ -12,7 +12,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { User } from '@element-plus/icons-vue'
 import { isApiError, MCP_ENDPOINT, read } from '@/api/http'
 import { useAsync, usePaged } from '@/composables/useAsync'
-import { useContainerNarrow } from '@/composables/useContainerWidth'
+import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { formatDate, isUuid } from '@/utils/format'
@@ -38,10 +38,10 @@ const route = useRoute()
 const router = useRouter()
 const session = useSessionStore()
 // A card per actor where the page is narrower than 720 px (its list's toolbar
-// 669 px or less), by its own width, not the window's: the side bar takes from
+// 719 px or less), by its own width, not the window's: the side bar takes from
 // it. Wider, the table, which scrolls sideways where its columns do not all fit.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 669)
+const narrow = useContainerNarrow(toolbar, 719)
 
 const PAGE = 50
 const KINDS = ['human', 'agent'] as const
@@ -119,6 +119,17 @@ const list = usePaged<ActorRow>(
   { watch: [q, kind, status, owner] },
 )
 const filtered = computed(() => !!q.value || !!kind.value || !!status.value || !!owner.value)
+/**
+ * A Status column only while someone listed is not active (suspended), and
+ * the filter above does not say so already: one that says Active, or
+ * Suspended, on every row says nothing (docs/CONVENTIONS.md, "Building a
+ * view"). A phone's rows say Suspended beside the name, and nothing else.
+ */
+const statusVaries = computed(
+  () => (!status.value || !!byId.value) && list.items.value.some((a) => a.status !== 'active'),
+)
+const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
+useTableRelayout(tableRef, statusVaries)
 const emptyText = computed(() => {
   if (byId.value) return t('admin.actors.notFound')
   return filtered.value ? t('admin.actors.emptyFiltered') : t('admin.actors.empty')
@@ -242,7 +253,6 @@ async function openById() {
               t('admin.registered.human.inviteButton')
             }}</span>
             <span v-else>{{ t('admin.registered.human.emailButton') }}</span>
-            <el-icon class="el-icon--right"><Right /></el-icon>
           </el-button>
         </router-link>
       </div>
@@ -273,7 +283,7 @@ async function openById() {
               <el-icon><Search /></el-icon>
             </template>
           </el-input>
-          <el-button native-type="submit" type="primary" plain :loading="opening" :disabled="!openId.trim()">
+          <el-button native-type="submit" type="primary" text :loading="opening" :disabled="!openId.trim()">
             {{ t('admin.actors.openById.submit') }}
           </el-button>
         </form>
@@ -352,7 +362,7 @@ async function openById() {
             </ActorSummary>
           </li>
         </ul>
-        <el-table v-else :data="list.items.value" row-key="id" class="actors__table" @row-click="open">
+        <el-table v-else ref="tableRef" :data="list.items.value" row-key="id" class="actors__table" @row-click="open">
           <el-table-column :label="t('admin.actors.col.name')" min-width="200">
             <template #default="{ row }">
               <div class="actors__name">
@@ -417,7 +427,7 @@ async function openById() {
               </div>
             </template>
           </el-table-column>
-          <el-table-column :label="t('admin.actors.col.status')" width="110">
+          <el-table-column v-if="statusVaries" :label="t('admin.actors.col.status')" width="110">
             <template #default="{ row }"><StatusTag vocab="actorStatus" :value="row.status" /></template>
           </el-table-column>
           <el-table-column :label="t('admin.actors.col.role')" width="120">
@@ -587,7 +597,7 @@ async function openById() {
 }
 .actors__card {
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .actors__card:last-child {
   border-bottom: none;

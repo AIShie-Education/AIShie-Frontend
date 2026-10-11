@@ -405,9 +405,9 @@ async function submit() {
   align-items: baseline;
   gap: 10px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
   margin-bottom: 8px;
 }
 .regrade__intro {
@@ -426,9 +426,8 @@ async function submit() {
   max-height: 260px;
   overflow: auto;
   margin-bottom: 16px;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 2px solid var(--app-line-strong);
 }
 .regrade__score {
   display: flex;

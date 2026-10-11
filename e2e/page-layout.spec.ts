@@ -22,12 +22,13 @@ import { startStandInIdp } from './stand-in-idp'
 // side bar open on the left takes 260 px from it, and the chat, docked at the
 // right edge while it is open, takes its own width (400 px until its edge is
 // dragged). Each page stacks its columns where its main one would be left less
-// than about 420 px, and keeps them side by side where there is room; side by
-// side, the two columns of cards end on one line. Opening or resizing the
-// chat's pane lays the page out again by its own width, as the side bar does.
-// What a page lays out in its template (a table or a card per row, which
-// columns a table shows, el-descriptions' columns) follows its own width, or
-// its card's, as its columns do; so do a course's tabs.
+// than about 420 px, and keeps them side by side where there is room, 32 px
+// apart; each column is a stack of sections, each under a rule, none drawn as
+// a card (no ground, no frame, no corners), as tall as what it holds. Opening
+// or resizing the chat's pane lays the page out again by its own width, as the
+// side bar does. What a page lays out in its template (a table or a card per
+// row, which columns a table shows, el-descriptions' columns) follows its own
+// width, or its card's, as its columns do; so do a course's tabs.
 
 /**
  * The side bar open on a view (or collapsed), in a window this size; the chat's pane docked beside the page where
@@ -97,10 +98,35 @@ async function pageWidth(page: Page) {
   return Math.round((await box(page.locator('.app-main'))).width)
 }
 
-/** Where a column's last card ends. */
-async function lastCardBottom(column: Locator) {
+/** Where a column's last section ends. */
+async function lastSectionBottom(column: Locator) {
   const b = await box(column.locator(':scope > .app-card').last())
   return b.y + b.height
+}
+
+/**
+ * Each section within, as drawn: a rule above it (1 px, the site's line) and nothing else, no ground of its own
+ * (it lies on the page's) and no corners. Returns what departs from that, by the section's title.
+ */
+async function sectionsNotRuled(within: Locator) {
+  return within.locator('.app-card').evaluateAll((cards) =>
+    cards
+      .filter((c) => (c as HTMLElement).offsetParent)
+      .map((c) => {
+        const s = getComputedStyle(c)
+        const title = c.querySelector('.app-card__title, h2, h3')?.textContent?.trim() ?? c.className
+        const odd: string[] = []
+        if (s.borderTopStyle === 'none' || parseFloat(s.borderTopWidth) !== 1) odd.push(`top ${s.borderTop}`)
+        for (const side of ['Right', 'Bottom', 'Left'] as const)
+          if (s[`border${side}Style`] !== 'none' && parseFloat(s[`border${side}Width`]) > 0)
+            odd.push(`${side.toLowerCase()} ${s[`border${side}Width`]}`)
+        if (s.backgroundColor !== 'rgba(0, 0, 0, 0)' && s.backgroundColor !== 'transparent') odd.push(`ground ${s.backgroundColor}`)
+        if (parseFloat(s.borderTopLeftRadius) > 0) odd.push(`corners ${s.borderTopLeftRadius}`)
+        if (parseFloat(s.paddingLeft) > 0 || parseFloat(s.paddingRight) > 0) odd.push(`side padding ${s.paddingLeft}`)
+        return odd.length ? `${title}: ${odd.join(', ')}` : ''
+      })
+      .filter(Boolean),
+  )
 }
 
 /** Whether the second column sits under the first, not beside it. */
@@ -199,7 +225,7 @@ test.describe('pages beside the side bar and the chat’s pane', () => {
     expect(await stacked(main, side)).toBe(true)
   })
 
-  test('an agent’s page ends its two columns of cards on one line, and stacks them where it is narrow', async ({
+  test('an agent’s page lays its sections out in two columns where there is room, each under a rule and none a card, and stacks them where it is narrow', async ({
     page,
   }) => {
     const d = demo()
@@ -219,53 +245,59 @@ test.describe('pages beside the side bar and the chat’s pane', () => {
     await expect(right.locator('.site-chat')).toBeVisible()
     await expect(left.locator(':scope > .app-card')).toBeVisible()
 
-    // 1280 px, the side bar collapsed, the chat's window over the page: two columns.
-    await layout(page, 1280, 800, { side: false })
+    // 1280 px, the side bar collapsed: two columns, 32 px apart.
+    await layout(page, 1280, 800, { side: false, chat: false })
     await page.mouse.move(0, 400)
-    // Where the two columns end, and the courses below them.
     await page
       .locator('.agent-view__section')
       .first()
       .evaluate((el) => el.scrollIntoView({ block: 'center' }))
     await photograph(page, 'layout-agent-1280')
     expect(await stacked(left, right)).toBe(false)
-    expect(Math.abs((await lastCardBottom(left)) - (await lastCardBottom(right)))).toBeLessThanOrEqual(1)
-    // The cards keep what they hold at their top.
-    const [card, title] = [
+    const [l, r] = [await box(left), await box(right)]
+    expect(Math.round(r.x - (l.x + l.width))).toBe(32)
+    // Every section of the page under a rule, none a card.
+    expect(await sectionsNotRuled(page.locator('.agent-view'))).toEqual([])
+    // A section holds what it holds at its top: its title 24 px under its rule.
+    const [section, title] = [
       await box(left.locator(':scope > .app-card').last()),
       await box(left.locator(':scope > .app-card').last().locator('.app-card__title, h2, h3').first()),
     ]
-    expect(title.y - card.y).toBeLessThan(40)
-    // The courses below begin under both.
+    expect(Math.round(title.y - section.y)).toBe(25)
+    // The courses below begin under both columns, a section's room under the longer.
     const below = await box(page.locator('.agent-view__section').first())
-    expect(below.y).toBeGreaterThanOrEqual((await lastCardBottom(left)) + 15)
+    const longer = Math.max(await lastSectionBottom(left), await lastSectionBottom(right))
+    expect(below.y).toBeGreaterThanOrEqual(longer + 31)
 
-    // 1000 px with the side bar open, under 720 px of page: one column, nothing stretched.
-    await layout(page, 1000, 800, { side: true })
+    // 1000 px with the side bar open, under 736 px of page: one column.
+    await layout(page, 1000, 800, { side: true, chat: false })
     expect(await stacked(left, right)).toBe(true)
-    const site = await box(right.locator('.site-chat'))
-    const content = await right.locator('.site-chat').evaluate((el) => {
-      const kids = [...el.children].map((c) => c.getBoundingClientRect().bottom)
-      return Math.max(...kids) + parseFloat(getComputedStyle(el).paddingBottom) + 1
-    })
-    expect(site.y + site.height).toBeLessThanOrEqual(content + 1)
   })
 
-  test('the course overview ends its two columns of cards on one line where it has room for both', async ({ page }) => {
+  test('the course overview lays its sections in two columns 32 px apart where it has room for both, each under a rule and none a card', async ({
+    page,
+  }) => {
     const d = demo()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
     await expect(page.locator('.overview .about')).toBeVisible()
     const main = page.locator('.overview__main')
     const side = page.locator('.overview__side')
-    // 1600 px with the side bar: about 1240 px of page, two columns.
-    await layout(page, 1600, 900, { side: true })
+    // 1600 px with the side bar: about 1290 px of page, two columns.
+    await layout(page, 1600, 900, { side: true, chat: false })
     expect(await stacked(main, side)).toBe(false)
-    expect(Math.abs((await lastCardBottom(main)) - (await lastCardBottom(side)))).toBeLessThanOrEqual(1)
+    const [m, s] = [await box(main), await box(side)]
+    expect(Math.round(s.x - (m.x + m.width))).toBe(32)
+    expect(await sectionsNotRuled(page.locator('.overview'))).toEqual([])
+    // Sections in a column stand 32 px apart: the next one's rule 32 px under the last one's end.
+    const cards = main.locator(':scope > .app-card')
+    const [first, second] = [await box(cards.nth(0)), await box(cards.nth(1))]
+    expect(Math.round(second.y - (first.y + first.height))).toBe(32)
     await photograph(page, 'layout-overview-1600')
     // At 1100 px: one column.
-    await layout(page, 1100, 800, { side: true })
+    await layout(page, 1100, 800, { side: true, chat: false })
     expect(await stacked(main, side)).toBe(true)
+    expect(await sectionsNotRuled(page.locator('.overview'))).toEqual([])
   })
 
   test('the overview lays itself out again by its own width as the chat’s pane beside it is resized', async ({
@@ -575,14 +607,15 @@ test.describe('a course’s tables beside the side bar', () => {
     await expect(seat).not.toHaveClass(/is-narrow/)
     await expect.poll(() => cellsInFirstRow(seat)).toBe(4)
 
-    // My actions: status and when under each action in 644 px of page.
+    // My actions: status and when under each action in 644 px of page (a status only where the actions differ in
+    // it, and a column of it likewise wider).
     await page.goto(coursePath('my-actions'))
     await expect(page.locator('.my-actions__table')).toBeVisible()
     await layout(page, 1000, 800, { side: true })
     await expect.poll(() => headingsOf(page, '.my-actions__table')).toEqual(['Action'])
     await expect(page.locator('.my-actions__stack').first()).toBeVisible()
     await layout(page, 1000, 800, { side: false })
-    await expect.poll(() => headingsOf(page, '.my-actions__table')).toContain('Status')
+    await expect.poll(() => headingsOf(page, '.my-actions__table')).toContain('When')
   })
 
   test('a course’s assignments and grades are laid out for the page’s width, not the window’s', async ({ page }) => {

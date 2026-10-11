@@ -100,19 +100,26 @@ defineExpose({ reload: state.reload })
 </template>
 
 <style scoped>
+/* The figures side by side, parted by a rule, between the section's rules:
+   figures of the page, not tiles on it. */
 .work-summary {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
   margin-bottom: 12px;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .work-summary__tile {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) var(--app-space-md);
+}
+.work-summary__tile:first-child {
+  padding-left: 0;
+}
+.work-summary__tile + .work-summary__tile {
+  border-left: var(--app-rule);
 }
 .work-summary__num {
   font-size: var(--app-text-2xl);
@@ -122,7 +129,7 @@ defineExpose({ reload: state.reload })
 }
 .work-summary__label {
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .work-summary__states {
   list-style: none;

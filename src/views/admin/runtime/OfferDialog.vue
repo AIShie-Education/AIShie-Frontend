@@ -799,7 +799,7 @@ const errorText = computed(() =>
 .offer-form__section {
   margin: 8px 0 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-md);
   font-weight: var(--app-heading-weight);
 }

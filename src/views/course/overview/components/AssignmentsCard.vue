@@ -109,7 +109,6 @@ const groups = computed(() => [
       <span>{{ t('overview.assignments.title') }}</span>
       <router-link :to="{ name: 'course-assignments', params: { courseId } }" class="assignments__all">
         {{ t('overview.assignments.all') }}
-        <el-icon><ArrowRight /></el-icon>
       </router-link>
     </h2>
 
@@ -131,28 +130,30 @@ const groups = computed(() => [
             class="assignments__row"
             :class="{ 'is-urgent': r.urgent }"
           >
-            <span class="assignments__main">
-              <span class="assignments__name">{{ r.a.title }}</span>
-              <span class="assignments__meta">
-                <el-icon><Clock /></el-icon>
-                <span>{{ t('overview.assignments.due') }}</span>
-                <TimeText :value="r.a.due_at" relative cutoff />
-                <span class="assignments__dot">·</span>
-                <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
+            <span class="assignments__body">
+              <span class="assignments__main">
+                <span class="assignments__name">{{ r.a.title }}</span>
+                <span class="assignments__meta">
+                  <span>{{ t('overview.assignments.due') }}</span>
+                  <TimeText :value="r.a.due_at" relative cutoff />
+                  <span class="assignments__dot">·</span>
+                  <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
+                </span>
+              </span>
+              <span class="assignments__tags">
+                <AppTag v-if="!r.a.published_at" tone="wait">
+                  {{ t('overview.assignments.unpublished') }}
+                </AppTag>
+                <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
+                <AppTag
+                  v-else-if="r.standing?.none"
+                  :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
+                >
+                  {{ t(`overview.assignments.${r.standing.none}`) }}
+                </AppTag>
               </span>
             </span>
-            <span class="assignments__tags">
-              <AppTag v-if="!r.a.published_at" tone="wait">
-                {{ t('overview.assignments.unpublished') }}
-              </AppTag>
-              <StatusTag v-if="r.standing?.state" vocab="submissionState" :value="r.standing.state" />
-              <AppTag
-                v-else-if="r.standing?.none"
-                :tone="toneOf(r.standing.none === 'notHandedIn' ? 'danger' : 'info')"
-              >
-                {{ t(`overview.assignments.${r.standing.none}`) }}
-              </AppTag>
-            </span>
+            <el-icon class="assignments__go"><ArrowRight /></el-icon>
           </router-link>
         </div>
       </template>
@@ -168,49 +169,59 @@ const groups = computed(() => [
 
 <style scoped>
 .assignments__all {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
   font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
 }
 .assignments__group + .assignments__group {
-  margin-top: 12px;
+  margin-top: var(--app-space-lg);
 }
+/* A group's heading (Due soon, Later): a plain sub-heading in the second
+   ink, in the case it is written in, not a grey capitalised label above it. */
 .assignments__group-title {
-  margin: 0 0 6px;
-  font-size: var(--app-text-xs);
+  margin: 0 0 var(--app-space-sm);
+  font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--el-text-color-secondary);
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink-2);
 }
 .assignments__empty {
   margin: 0;
   font-size: var(--app-text-sm);
 }
+/* Rows between rules, each opening its assignment, as the › at its end
+   says (a tint under the pointer alone is not seen on a touch screen); one
+   due within days has the amber line at its left. */
 .assignments__row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-primary);
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-sm) var(--app-space-md) var(--app-space-md);
+  border-bottom: var(--app-rule);
+  color: var(--app-ink);
   text-decoration: none;
 }
-.assignments__row + .assignments__row {
-  margin-top: 6px;
+.assignments__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--app-space-sm) var(--app-space-md);
+  flex-wrap: wrap;
+}
+.assignments__go {
+  flex-shrink: 0;
+  color: var(--el-text-color-secondary);
+}
+.assignments__row:first-of-type {
+  border-top: var(--app-rule);
 }
 .assignments__row:hover {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-fill-color-lighter);
+  background: var(--el-fill-color-light);
 }
 .assignments__row.is-urgent {
-  border-left: 3px solid var(--el-color-warning);
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
 }
 .assignments__main {
   display: flex;
@@ -230,7 +241,7 @@ const groups = computed(() => [
   gap: 4px;
   flex-wrap: wrap;
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .assignments__dot {
   margin: 0 2px;

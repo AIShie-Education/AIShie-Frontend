@@ -184,7 +184,7 @@ async function remove(a: Appointment) {
                 v-if="staffs && !a.removed_at"
                 size="small"
                 type="danger"
-                plain
+                text
                 :loading="removing === a.id"
                 class="admins-drawer__remove"
                 @click="remove(a)"
@@ -267,20 +267,19 @@ async function remove(a: Appointment) {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
+/* An administrator, a row between rules; one whose appointment has ended in the third ink. */
 .admins-drawer__item {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 2px 12px;
   align-items: center;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-blank);
+  padding: 10px 0;
+  border-bottom: var(--app-rule);
 }
 .admins-drawer__item.is-ended {
-  background: var(--el-fill-color-lighter);
+  color: var(--app-ink-3);
 }
 .admins-drawer__who {
   display: flex;
@@ -308,7 +307,7 @@ async function remove(a: Appointment) {
 .admins-drawer__add {
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .admins-drawer__add-hint {
   margin: 0 0 12px;

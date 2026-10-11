@@ -51,12 +51,12 @@ const { t } = useI18n()
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  border-top: var(--app-rule);
 }
+/* An export, a row between rules; its files are the boxes in it. */
 .recent-export {
-  padding: 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: var(--app-space-lg) 0;
+  border-bottom: var(--app-rule);
 }
 .recent-export__files {
   margin-top: 12px;

@@ -131,7 +131,7 @@ function onSaved(out: WriteOutcome<unknown>, id: string | null) {
       <div class="app-toolbar">
         <h2 class="groups__heading">{{ t('groups.list.heading') }}</h2>
         <span class="app-toolbar__spacer" />
-        <el-checkbox v-if="!studentView" v-model="showArchived" :label="t('groups.list.showArchived')" border />
+        <el-checkbox v-if="!studentView" v-model="showArchived" :label="t('groups.list.showArchived')" />
         <RefreshButton :loading="list.loading.value && !!list.data.value" @click="list.reload" />
       </div>
       <AsyncState

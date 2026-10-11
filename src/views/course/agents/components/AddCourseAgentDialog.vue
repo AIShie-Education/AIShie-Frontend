@@ -398,7 +398,7 @@ async function submit() {
   grid-template-columns: minmax(96px, 30%) minmax(0, 1fr);
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   align-items: baseline;
 }
 .add-agent__facts dt {

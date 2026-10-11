@@ -6,6 +6,15 @@
 import { describe, expect, it } from 'vitest'
 import { ESLint } from 'eslint'
 
+// Node's fs and the lint config itself, imported by names the app's types (the browser's) do not resolve.
+interface Fs {
+  readFileSync(path: string, encoding: 'utf8'): string
+}
+const NODE_FS: string = 'node:fs'
+const CONFIG: string = '../../eslint.config.js'
+const { readFileSync } = (await import(/* @vite-ignore */ NODE_FS)) as Fs
+const { LOOK_PENDING } = (await import(/* @vite-ignore */ CONFIG)) as { LOOK_PENDING: string[] }
+
 const eslint = new ESLint()
 async function problems(template: string, file = 'src/views/course/SomeView.vue') {
   const [result] = await eslint.lintText(`<template>${template}</template>\n`, { filePath: file })
@@ -95,5 +104,51 @@ describe('the element-look lint rule', () => {
   it('lets AppTag, which draws every tag, use one', async () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/AppTag.vue')).toEqual([])
     expect(await problems('<AppTag tone="wait">x</AppTag>')).toEqual([])
+  })
+
+  it('refuses an outlined, pill or round button, written or bound, and lets a solid one or words be', async () => {
+    for (const button of [
+      '<el-button plain>x</el-button>',
+      '<el-button type="danger" plain size="small">Revoke</el-button>',
+      '<el-button type="primary" :plain="true">x</el-button>',
+      '<el-button round>x</el-button>',
+      '<el-button text circle aria-label="More"><el-icon /></el-button>',
+      '<ElButton circle aria-label="Next" />',
+      '<component is="el-button" plain>x</component>',
+    ])
+      expect(await problems(button), button).toEqual([expect.stringContaining('text button')])
+    for (const button of [
+      '<el-button type="primary">Publish</el-button>',
+      '<el-button>Cancel</el-button>',
+      '<el-button type="primary" text>Approve</el-button>',
+      '<el-button type="danger" text>Archive</el-button>',
+      '<el-button link type="primary">Details</el-button>',
+      '<el-button text aria-label="More"><el-icon /></el-button>',
+      '<el-button :plain="false">x</el-button>',
+    ])
+      expect(await problems(button), button).toEqual([])
+  })
+
+  it('refuses a bordered checkbox or radio, and an el-card, anywhere', async () => {
+    expect(await problems('<el-checkbox v-model="on" label="Show archived" border />')).toEqual([
+      expect.stringContaining('checkbox'),
+    ])
+    expect(await problems('<el-radio value="a" border>A</el-radio>')).toEqual([expect.stringContaining('radio')])
+    expect(await problems('<ElRadio value="a" :border="wide">A</ElRadio>')).toHaveLength(1)
+    expect(await problems('<el-checkbox v-model="on" label="Show archived" />')).toEqual([])
+    expect(await problems('<el-radio value="a">A</el-radio>')).toEqual([])
+    expect(await problems('<el-card>x</el-card>')).toEqual([expect.stringContaining('.app-card')])
+    expect(await problems('<el-card>x</el-card>', 'src/components/SomeCard.vue')).toHaveLength(1)
+  })
+
+  it('lets the files another part of the wave sweeps keep their buttons only while they still write them', async () => {
+    // A file listed as pending is let through; once its look is gone it leaves the list, which only shrinks.
+    for (const file of LOOK_PENDING) {
+      expect(await problems('<el-button plain>x</el-button>', file), file).toEqual([])
+      const eslint2 = new ESLint()
+      const [result] = await eslint2.lintText(readFileSync(file, 'utf8'), { filePath: 'src/views/Pending.vue' })
+      const looks = result!.messages.filter((m) => m.ruleId === 'app/element-look')
+      expect(looks.length, `${file} no longer writes an outlined or round button: take it off LOOK_PENDING`).toBeGreaterThan(0)
+    }
   })
 })

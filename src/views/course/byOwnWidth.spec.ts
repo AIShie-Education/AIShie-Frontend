@@ -23,7 +23,8 @@ import SubmissionsView from './submissions/SubmissionsView.vue'
 // threshold: the wide layout at one pixel more, the narrow one at it. The
 // thresholds are where a window of 767 px (the members, a member's page, My
 // actions) or of 640 px (the rest) left the page without the side bar, so
-// that without it nothing changes (docs/CONVENTIONS.md).
+// that without it nothing changes (docs/CONVENTIONS.md); a section has no
+// padding of its own, so what it holds is as wide as the page.
 
 const COURSE = '01a0d79f-0000-70da-a7cc-f009b1efe423'
 const read = vi.fn()
@@ -119,7 +120,7 @@ async function mountPage(view: Component, path: string, props: Record<string, un
 const heads = (w: VueWrapper, table: string) => w.findAll(`${table} thead th`).map((th) => th.text().trim())
 
 describe('the members', () => {
-  it('fold role and status under the name where the list’s toolbar is 669 px or less (719 of page)', async () => {
+  it('fold role and status under the name where the list’s toolbar is 719 px or less (as wide as the page)', async () => {
     answers['member.list'] = () => ({
       members: [
         {
@@ -136,11 +137,11 @@ describe('the members', () => {
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.app-toolbar': 670 })
+    const sizes = fakeContainerWidths({ '.app-toolbar': 720 })
     const w = await mountPage(MembersView, '/members')
     expect(heads(w, '.members__table')).toContain('Role')
     expect(w.find('.members__stack').exists()).toBe(false)
-    await sizes.resize('.app-toolbar', 669)
+    await sizes.resize('.app-toolbar', 719)
     await flushPromises()
     expect(heads(w, '.members__table')).toEqual(['Name', 'Reach'])
     expect(w.find('.members__stack').exists()).toBe(true)
@@ -148,7 +149,7 @@ describe('the members', () => {
 })
 
 describe('a member’s page', () => {
-  it('lays the seat’s facts out in one column where its title is 669 px or less (719 of page)', async () => {
+  it('lays the seat’s facts out in one column where its title is 719 px or less (as wide as the page)', async () => {
     answers['member.get'] = () => ({
       id: 'm-yuki',
       actor_id: 'a-yuki',
@@ -161,19 +162,19 @@ describe('a member’s page', () => {
       joined_at: '2026-09-01T00:00:00Z',
       perms: {},
     })
-    const sizes = fakeContainerWidths({ '.app-card__title': 670 })
+    const sizes = fakeContainerWidths({ '.app-card__title': 720 })
     const w = await mountPage(MemberView, '/members/m-yuki', { memberId: 'm-yuki' })
     const desc = () => w.find('.member__desc')
     expect(desc().exists()).toBe(true)
     expect(desc().classes()).not.toContain('is-narrow')
-    await sizes.resize('.app-card__title', 669)
+    await sizes.resize('.app-card__title', 719)
     await flushPromises()
     expect(desc().classes()).toContain('is-narrow')
   })
 })
 
 describe('My actions', () => {
-  it('folds status and when under each action where the help above them is 669 px or less (719 of page)', async () => {
+  it('folds status and when under each action where the help above them is 719 px or less (as wide as the page)', async () => {
     answers['action.list_mine'] = () => ({
       actions: [
         {
@@ -186,16 +187,28 @@ describe('My actions', () => {
           created_at: '2026-09-28T10:00:00Z',
           decided_at: '2026-09-28T10:00:00Z',
         },
+        // Another, rejected: their statuses differ, and so there is a Status column to fold.
+        {
+          id: 'act-2',
+          action_type: 'submission.create',
+          target_type: 'assignment',
+          target_id: 'hw1',
+          status: 'rejected',
+          review_state: 'none',
+          created_at: '2026-09-29T10:00:00Z',
+          decided_at: '2026-09-29T11:00:00Z',
+        },
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.my-actions__help': 670 })
+    const sizes = fakeContainerWidths({ '.my-actions__help': 720 })
     const w = await mountPage(MyActionsView, '/my-actions')
     expect(heads(w, '.my-actions__table')).toContain('Status')
-    await sizes.resize('.my-actions__help', 669)
+    await sizes.resize('.my-actions__help', 719)
     await flushPromises()
     expect(heads(w, '.my-actions__table')).toEqual(['Action'])
     expect(w.find('.my-actions__stack').exists()).toBe(true)
+    expect(w.find('.my-actions__stack').text()).toMatch(/Rejected|Executed/)
   })
 })
 
@@ -214,15 +227,15 @@ describe('the assignments', () => {
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.page-header': 776 })
+    const sizes = fakeContainerWidths({ '.page-header': 726 })
     const w = await mountPage(AssignmentsView, '/assignments')
     expect(heads(w, '.assignments-view__table')).toContain('Points')
     // Whoever writes assignments has each row's ⋯ in a column of its own, at the row's end, where the table has
-    // room for it beside the rest: 776 px of page.
+    // room for it beside the rest: 726 px of page, its section as wide as the page.
     expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', 'Points', 'Published', 'Actions'])
     expect(w.find('.assignments-view__more').exists()).toBe(false)
     // Where it has not, the ⋯ is at the title's right, and the rest of the columns stay.
-    await sizes.resize('.page-header', 775)
+    await sizes.resize('.page-header', 725)
     await flushPromises()
     expect(heads(w, '.assignments-view__table')).toEqual(['Assignment', 'Due', 'Points', 'Published'])
     expect(w.findAll('.assignments-view__cell .assignments-view__more .assignment-more')).toHaveLength(1)
@@ -240,7 +253,7 @@ describe('the assignments', () => {
 })
 
 describe('the grades', () => {
-  it('are a card each where the list’s toolbar is 542 px or less (592 of page)', async () => {
+  it('are a card each where the list’s toolbar is 592 px or less (as wide as the page)', async () => {
     answers['grade.list'] = () => ({
       grades: [
         {
@@ -257,11 +270,11 @@ describe('the grades', () => {
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.app-toolbar': 543 })
+    const sizes = fakeContainerWidths({ '.app-toolbar': 593 })
     const w = await mountPage(GradesView, '/grades')
     expect(w.find('.grades-list').exists()).toBe(false)
     expect(w.findAll('.el-table').length).toBeGreaterThan(0)
-    await sizes.resize('.app-toolbar', 542)
+    await sizes.resize('.app-toolbar', 592)
     await flushPromises()
     expect(w.find('.grades-list').exists()).toBe(true)
     expect(w.findAll('.el-table')).toHaveLength(0)
@@ -290,7 +303,7 @@ describe('the submissions', () => {
     expect(w.find('.submissions-table').exists()).toBe(false)
   })
 
-  it('and an assignment’s roster a card each where its summary is 566 px or less (its card padded 12 px)', async () => {
+  it('and an assignment’s roster a card each where its summary is 592 px or less (its section as wide as the page)', async () => {
     answers['submission.roster'] = () => ({
       students: [
         {
@@ -305,11 +318,11 @@ describe('the submissions', () => {
       ],
       next: null,
     })
-    const sizes = fakeContainerWidths({ '.roster-summary': 567 })
+    const sizes = fakeContainerWidths({ '.roster-summary': 593 })
     const w = await mountPage(SubmissionsView, '/submissions?assignment=hw1')
     expect(w.find('.roster-table').exists()).toBe(true)
     expect(w.find('.roster-cards').exists()).toBe(false)
-    await sizes.resize('.roster-summary', 566)
+    await sizes.resize('.roster-summary', 592)
     await flushPromises()
     expect(w.find('.roster-cards').exists()).toBe(true)
     expect(w.find('.roster-table').exists()).toBe(false)
