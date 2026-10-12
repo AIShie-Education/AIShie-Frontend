@@ -3,6 +3,13 @@ import { expect, test, type Page } from '@playwright/test'
 import { expectToasted, inTraditionalChinese, keepToasts, photograph, pickOption, signIn } from './support'
 import { buildGroupGradingWorld, toolCaller, type GroupGradingWorld, type WorldPerson } from './group-grading-world'
 
+/** An action's status, said once on its page: under Status in its facts, not beside its title. */
+const statusFact = (page: Page) =>
+  page
+    .locator('.action-view__facts > div')
+    .filter({ has: page.locator('dt', { hasText: /^Status$/ }) })
+    .locator('dd')
+
 // Grading a group's work: one group grade every member of the work is given,
 // a member's score set apart from it with a reason (when grading, and on its
 // own afterwards), posting as before, correcting whose work it is, and
@@ -448,7 +455,7 @@ test.describe.serial('grading group work', () => {
     await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await page.getByRole('button', { name: 'Approve now' }).click()
     await expectToasted(page, 'Approved and carried out')
-    await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
+    await expect(statusFact(page)).toContainText('Executed')
   })
 
   test('the TA adjusts a member of Team B on a phone, in Chinese', async ({ page }) => {
@@ -517,6 +524,19 @@ test.describe.serial('grading group work', () => {
     expect(Number(draft.group.score)).toBe(72)
     expect(draft.group.adjustment).toMatchObject({ kind: 'delta', reason: 'Built the model' })
     expect(Number(draft.group.adjustment.points)).toBe(8)
+
+    // The grades page says so as an empty page does: its title, its words and its first way on (Submissions, a
+    // button of words, by its icon) start at one left edge, nothing centred.
+    await page.goto(path('grades'))
+    const empty = page.locator('.app-empty--page')
+    await expect(empty.locator('.app-empty__title')).toHaveText('This seat does not read grades')
+    await expect(empty.locator('.app-empty__more .el-button')).toHaveText(['Submissions', 'My actions'])
+    const lefts = await empty.evaluate((el) => {
+      const left = (sel: string) => Math.round(el.querySelector(sel)!.getBoundingClientRect().left)
+      return [left('.app-empty__title'), left('.app-empty__text'), left('.app-empty__more .el-button .el-icon')]
+    })
+    expect(new Set(lefts).size, JSON.stringify(lefts)).toBe(1)
+    await photograph(page, 'grades-no-read')
   })
 
   test('the class’s gradebook shows a member’s adjusted draft whole, in English and in Chinese', async ({ page }) => {

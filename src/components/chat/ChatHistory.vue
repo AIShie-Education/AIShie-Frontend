@@ -247,7 +247,6 @@ function more() {
 .hist-row__course {
   font-size: var(--app-text-xs);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
 .hist-row__agent {

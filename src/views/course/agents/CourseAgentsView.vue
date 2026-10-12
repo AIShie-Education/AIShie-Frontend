@@ -16,6 +16,7 @@ import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
+import AppResult from '@/components/AppResult.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
@@ -135,9 +136,9 @@ function onAdded(out: { status: 'executed'; memberId: string } | { status: 'prop
       </template>
     </PageHeader>
 
-    <el-result
+    <AppResult
       v-if="!canManage && !canOversee"
-      icon="warning"
+      kind="forbidden"
       :title="t('common.errors.forbidden')"
       :sub-title="t('courseAgents.noPermission')"
     />

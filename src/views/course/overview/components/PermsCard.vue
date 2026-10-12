@@ -74,8 +74,9 @@ const ceilings = computed(() => ceilingsOf(course.membership))
         </div>
         <ul class="perms__names">
           <li v-for="p in g.perms" :key="p">
-            <el-tooltip :content="permTip(p)" placement="top">
-              <span class="perms__name">{{ t(`enums.perm.${p}`) }}</span>
+            <!-- What it allows, in its tooltip: on hover, and on focus, from the keyboard or a tap. -->
+            <el-tooltip :content="permTip(p)" placement="top" :trigger="['hover', 'focus']">
+              <span class="perms__name" tabindex="0">{{ t(`enums.perm.${p}`) }}</span>
             </el-tooltip>
           </li>
         </ul>
@@ -139,13 +140,19 @@ const ceilings = computed(() => ceilingsOf(course.membership))
   gap: var(--app-space-xs) var(--app-space-lg);
 }
 /* A permission's name is words, not a chip: a dotted underline says its
-   tooltip tells what it allows. */
+   tooltip tells what it allows, which focus opens too, from the keyboard or
+   a tap, as hovering does. */
 .perms__name {
   font-size: var(--app-text-sm);
   color: var(--app-ink);
   text-decoration: underline dotted var(--app-ink-3);
   text-underline-offset: 3px;
   cursor: help;
+}
+.perms__name:focus-visible {
+  outline: 2px solid var(--app-focus);
+  outline-offset: 2px;
+  border-radius: var(--app-radius);
 }
 .perms__denied {
   margin: 8px 0 0;

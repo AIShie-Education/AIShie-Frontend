@@ -435,7 +435,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
           size="small"
         />
         <el-dropdown v-if="!archived" trigger="click" placement="bottom-end" @command="archiveSet(true)">
-          <el-button class="set-view__more" :aria-label="t('groups.set.more', { name: set.name })">
+          <el-button class="set-view__more app-icon-button" :aria-label="t('groups.set.more', { name: set.name })">
             <el-icon aria-hidden="true"><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
@@ -691,10 +691,6 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
   line-height: var(--app-lh-text);
   white-space: pre-line;
   overflow-wrap: anywhere;
-}
-.set-view__more {
-  padding-left: 9px;
-  padding-right: 9px;
 }
 .set-view__note {
   margin-bottom: 16px;

@@ -92,7 +92,6 @@ export default {
     archived: '課程已封存',
     statusHelp: {
       draft: '草稿：講師可在開課前指派成員、準備教材。開課時請將其啟用。',
-      active: '進行中：課程開放使用。',
       archived: '已封存：課程拒絕一切更改，包括這裡的設定。如需修改，請先重新開放。',
     },
     openCourse: '進入課程',

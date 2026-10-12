@@ -50,6 +50,12 @@ const emit = defineEmits<{
   done: [Done]
   /** A decision's form opened (true) or closed (false): the list it is in moves its lead here, and back. */
   choosing: [open: boolean]
+  /**
+   * Whether the reader can approve it here (or mark it reviewed), as soon as that is known and whenever it
+   * changes: not when it is their own party's, theirs to decide elsewhere, their own decision on it waits for
+   * approval, or the course is archived. The list it is in leads with the first that can be.
+   */
+  decidable: [can: boolean]
 }>()
 const { t, locale } = useI18n()
 const course = useCourseStore()
@@ -100,6 +106,11 @@ const blockedText = computed(() => {
   const key = b === 'ownAgentLevel' && props.mode === 'review' ? 'ownAgentLevelReview' : b
   return t(`actions.decision.blocked.${key}`, { who: deciders.value })
 })
+watch(
+  () => !blocked.value && !approveBlocked.value,
+  (can) => emit('decidable', can),
+  { immediate: true },
+)
 /** The caller's own agent's: decided as its owner, at once (by_owner). */
 const asOwner = computed(() => rules.isOwnAgent(props.action))
 const needsApproval = computed(() => course.needsApproval('action_decide') && !asOwner.value)

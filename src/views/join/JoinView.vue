@@ -17,6 +17,7 @@ import { useCountdown } from '@/composables/useCountdown'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppResult from '@/components/AppResult.vue'
 import AppWordmark from '@/components/AppWordmark.vue'
 import { emailDomainAllowed, tokenFromRoute } from '@/utils/joinLink'
 import JoinRegisterForm from './components/JoinRegisterForm.vue'
@@ -250,9 +251,9 @@ function goToCourse(courseId: string) {
     <main class="app-auth-page__card join__card" :aria-busy="loading || leaving">
       <div v-if="loading" v-loading="true" class="join__loading" />
 
-      <el-result
+      <AppResult
         v-else-if="invalid"
-        icon="warning"
+        kind="missing"
         :title="t('join.page.invalidTitle')"
         :sub-title="t('join.page.invalid')"
         class="join__result"
@@ -262,11 +263,11 @@ function goToCourse(courseId: string) {
             <el-button type="primary">{{ t('join.page.toHome') }}</el-button>
           </router-link>
         </template>
-      </el-result>
+      </AppResult>
 
-      <el-result
+      <AppResult
         v-else-if="loadError || !preview"
-        icon="error"
+        kind="failed"
         :title="t('join.page.loadFailed')"
         :sub-title="loadError ? errorMessage(loadError) : ''"
         class="join__result"
@@ -274,7 +275,7 @@ function goToCourse(courseId: string) {
         <template #extra>
           <el-button type="primary" @click="load">{{ t('join.page.retry') }}</el-button>
         </template>
-      </el-result>
+      </AppResult>
 
       <template v-else>
         <!-- The course's title is the page's h1, first in the column, its code under it: nothing over it. -->
@@ -284,19 +285,19 @@ function goToCourse(courseId: string) {
         </section>
 
         <!-- Nobody can join through it now -->
-        <el-result
+        <AppResult
           v-if="closed"
-          icon="warning"
+          kind="missing"
           :title="t('join.page.closedTitle')"
           :sub-title="t(`join.page.closed.${closed}`)"
           class="join__result join__result--closed"
         >
           <template #extra>
             <router-link :to="{ name: 'home' }">
-              <el-button>{{ t('join.page.toHome') }}</el-button>
+              <el-button class="join__home">{{ t('join.page.toHome') }}</el-button>
             </router-link>
           </template>
-        </el-result>
+        </AppResult>
 
         <template v-else>
           <p class="join__what">{{ t('join.page.asStudent') }}</p>
@@ -367,7 +368,7 @@ function goToCourse(courseId: string) {
                 <router-link :to="signInRoute" class="join__path">
                   <el-button type="primary" size="large" class="join__primary">{{ t('join.page.signIn') }}</el-button>
                 </router-link>
-                <el-button v-if="mayRegister" text size="large" class="join__primary" @click="registering = true">
+                <el-button v-if="mayRegister" text size="large" class="join__register" @click="registering = true">
                   {{ t('join.page.register') }}
                 </el-button>
               </div>
@@ -383,7 +384,7 @@ function goToCourse(courseId: string) {
                 class="join__alert"
               >
                 <router-link v-if="emailTaken" :to="signInRoute">
-                  <el-button type="primary" size="small" class="join__instead">{{ t('join.page.signInInstead') }}</el-button>
+                  <el-button type="primary" link class="join__instead">{{ t('join.page.signInInstead') }}</el-button>
                 </router-link>
               </el-alert>
               <JoinRegisterForm
@@ -480,6 +481,14 @@ function goToCourse(courseId: string) {
   align-items: flex-start;
   gap: 10px;
 }
+/* Registering, words that start a line: the button's room at its left is taken back by as much outside it, so
+   that its words start at the column's left, as the solid button's edge and the text over it do, and only its
+   hovered ground reaches past. So is Go to AIshie, under a link that can no longer be used. */
+.el-button.join__register,
+.el-button.join__home {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
+}
 .join__path {
   display: block;
 }
@@ -496,11 +505,10 @@ function goToCourse(courseId: string) {
 .join__instead {
   margin-top: 6px;
 }
-/* A result (the link not valid, closed, not read): its words and its button at the column's left. */
+/* A result (the link not valid, closed, not read): its words and its button at the column's left, as every
+   result's are (element.css), close under what is over it. */
 .join__result {
   padding: 8px 0 0;
-  align-items: flex-start;
-  text-align: left;
 }
 .join__result--closed {
   padding-top: 0;

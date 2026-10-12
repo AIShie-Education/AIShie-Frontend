@@ -40,7 +40,7 @@ const props = withDefaults(
   }>(),
   { waiting: null, lead: true },
 )
-const emit = defineEmits<{ done: [Done]; choosing: [open: boolean] }>()
+const emit = defineEmits<{ done: [Done]; choosing: [open: boolean]; decidable: [can: boolean] }>()
 const { t } = useI18n()
 const course = useCourseStore()
 const rules = useJudgeRules()
@@ -156,6 +156,7 @@ const excerpt = computed(() => {
         size="small"
         @done="(d) => emit('done', d)"
         @choosing="(open) => emit('choosing', open)"
+        @decidable="(can) => emit('decidable', can)"
       />
       <div class="action-card__side">
         <el-button

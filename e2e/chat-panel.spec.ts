@@ -980,6 +980,17 @@ test.describe.serial('the chat panel', () => {
         '0px',
         'none',
       ])
+      // A modal dialog in fact: the page column under it is inert, and Tab, going round, never leaves the sheet for
+      // the crumbs, the menu's button or the chat's own under it.
+      await expect(page.locator('.app-main-wrap')).toHaveAttribute('inert', '')
+      for (let i = 0; i < 24; i++) {
+        await page.keyboard.press('Tab')
+        const where = await page.evaluate(() => {
+          const el = document.activeElement
+          return !el || el === document.body ? 'body' : el.closest('#chat-panel') ? 'sheet' : el.className || el.tagName
+        })
+        expect(where, `Tab ${i + 1}`).toMatch(/^(sheet|body)$/)
+      }
 
       await showHistory(page)
       await panel.locator('.hist-row').filter({ hasText: TITLE }).click()
@@ -1004,6 +1015,7 @@ test.describe.serial('the chat panel', () => {
       await panel.getByRole('button', { name: 'Close the chat' }).click()
       await expect(panelOf(page)).toHaveCount(0)
       await expect(page.locator('.course-head')).toBeVisible()
+      await expect(page.locator('.app-main-wrap')).not.toHaveAttribute('inert')
       await expect(chatButton(page)).toBeFocused()
     })
 

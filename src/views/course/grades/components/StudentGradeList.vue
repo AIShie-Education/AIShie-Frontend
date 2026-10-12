@@ -191,7 +191,6 @@ const bodyId = (id: string) => `sgl-body-${id}`
           class="sgl__book"
         >
           {{ t('classbook.openGradebook', { name: nameOf(r.student) }) }}
-          <el-icon aria-hidden="true"><ArrowRight /></el-icon>
         </router-link>
       </div>
     </li>
@@ -392,10 +391,9 @@ const bodyId = (id: string) => `sgl-body-${id}`
   color: var(--el-text-color-placeholder);
   font-size: var(--app-text-xs);
 }
+/* A text link, its words alone: no › after them (docs/CONVENTIONS.md, "Building a view"). */
 .sgl__book {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
   margin-top: 8px;
   font-size: var(--app-text-sm);
 }

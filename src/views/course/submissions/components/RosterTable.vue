@@ -452,7 +452,7 @@ const emptyText = computed(() =>
 .roster-action--end {
   justify-content: flex-end;
 }
-/* On a phone, a row each between rules, not a box each. */
+/* On a phone, a row each between rules, not a box each: a rule over the first, under the chips. */
 .roster-cards {
   list-style: none;
   margin: 0;
@@ -463,6 +463,11 @@ const emptyText = computed(() =>
 }
 .roster-cards > li {
   border-bottom: var(--app-rule);
+}
+/* With nothing over the rows (no chips, where one student is shown; no note; not under the group roster's choice
+   of view), the section's own rule is above the first row, which draws no second one under it. */
+.roster:not(:has(> .roster__notice), .group-roster > .roster) .roster-summary:empty + .roster-cards {
+  border-top: none;
 }
 .roster-cards__item {
   display: flex;

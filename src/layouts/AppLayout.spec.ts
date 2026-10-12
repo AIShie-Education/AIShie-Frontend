@@ -345,6 +345,34 @@ describe('on a phone', () => {
     expect(document.activeElement).toBe(w.get('.app-header #chat-panel-toggle').element)
   })
 
+  it('keeps Tab and a screen reader in the open sheet: the page column under it, header and page, is inert', async () => {
+    const { w } = await mountAs('autonomous', { phone: true })
+    const column = w.get('.app-main-wrap')
+    expect(column.attributes('inert')).toBeUndefined()
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    // The sheet, a modal dialog, outside the column; the crumbs, the menu's button, the chat's own and the page in it.
+    const sheet = w.get('#chat-panel')
+    expect(sheet.attributes('aria-modal')).toBe('true')
+    expect(column.element.contains(sheet.element)).toBe(false)
+    expect(column.attributes('inert')).toBeDefined()
+    for (const el of ['.app-header__menu', '#chat-panel-toggle', '.app-main'])
+      expect(column.element.contains(w.get(el).element), el).toBe(true)
+
+    await w.get('.chat-panel__close').trigger('click')
+    await flushPromises()
+    expect(column.attributes('inert')).toBeUndefined()
+    expect(document.activeElement).toBe(w.get('#chat-panel-toggle').element)
+  })
+
+  it('leaves the page column as it is beside the docked chat on a wide screen', async () => {
+    const { w } = await mountAs('autonomous', { width: 1280 })
+    await w.get('#chat-panel-toggle').trigger('click')
+    await flushPromises()
+    expect(w.get('#chat-panel').classes()).toContain('is-docked')
+    expect(w.get('.app-main-wrap').attributes('inert')).toBeUndefined()
+  })
+
   it('counts the answers not read yet on the header’s button', async () => {
     unread = 1
     const { w } = await mountAs('autonomous', { phone: true })

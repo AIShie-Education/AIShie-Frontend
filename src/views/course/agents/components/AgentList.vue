@@ -62,6 +62,10 @@ function presetText(r: CourseAgentRow): string | null {
 function isMine(r: CourseAgentRow): boolean {
   return !!r.member.owner_actor_id && r.member.owner_actor_id === session.me?.id
 }
+/** Whom it acts for, which its row's meta line names (For …): then that says whose it is, and no tag again. */
+function actsFor(r: CourseAgentRow): boolean {
+  return !!(r.principal || r.member.principal_member_id)
+}
 function presence(r: CourseAgentRow) {
   return presenceFor(r.member, props.myAgents, props.askable)
 }
@@ -164,13 +168,14 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             <router-link :to="{ name: 'course-member', params: { courseId, memberId: r.member.id } }">
               <AgentName :name="r.member.display_name" />
             </router-link>
-            <AgentBadge :owner-name="r.member.owner_name" :mine="isMine(r)" no-ai />
+            <!-- Whose it is, said once: by the meta line's For … where it names the principal, else here. -->
+            <AgentBadge v-if="!actsFor(r)" :owner-name="r.member.owner_name" :mine="isMine(r)" no-ai />
             <StatusTag v-if="r.member.status !== 'active'" vocab="memberStatus" :value="r.member.status" />
             <AppTag v-else-if="!r.live">{{ t('members.expired') }}</AppTag>
           </div>
           <div class="agent-row__meta">
             <span v-if="presetText(r)">{{ presetText(r) }}</span>
-            <template v-if="r.principal || r.member.principal_member_id">
+            <template v-if="actsFor(r)">
               <span class="agent-row__dot" aria-hidden="true">·</span>
               <span>
                 {{ t('courseAgents.row.actsFor') }}
@@ -258,7 +263,12 @@ async function onCommand(r: CourseAgentRow, cmd: 'pause' | 'resume' | 'remove') 
             trigger="click"
             @command="(c: 'pause' | 'resume' | 'remove') => onCommand(r, c)"
           >
-            <el-button size="small" :loading="busy === r.member.id" :aria-label="t('courseAgents.row.more')">
+            <el-button
+              size="small"
+              class="app-icon-button"
+              :loading="busy === r.member.id"
+              :aria-label="t('courseAgents.row.more')"
+            >
               <el-icon><MoreFilled /></el-icon>
             </el-button>
             <template #dropdown>

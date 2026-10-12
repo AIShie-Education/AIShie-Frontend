@@ -258,3 +258,30 @@ describe('AgentPicker', () => {
     expect(w.text()).toContain('這裡暫時沒有可以回答你問題的代理。')
   })
 })
+
+describe('AgentPicker’s notes', () => {
+  // Its style as written: jsdom lays nothing out.
+  const style = Object.values(
+    import.meta.glob<string>('./AgentPicker.vue', { query: '?raw', import: 'default', eager: true }),
+  )[0]!
+    .replace(/^[\s\S]*<style scoped>/, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+  /** The size, the leading and the ink a selector is given, by every rule that names it alone or in a list. */
+  function look(selector: string) {
+    const out: Record<string, string> = {}
+    for (const m of style.matchAll(/\n([^{}]+)\{([^}]*)\}/g)) {
+      const selectors = m[1]!.split(',').map((x) => x.trim())
+      if (!selectors.includes(selector)) continue
+      for (const d of m[2]!.matchAll(/(font-size|line-height|color):\s*([^;]+);/g)) out[d[1]!] = d[2]!.trim()
+    }
+    return out
+  }
+
+  it('are in one size, leading and ink, whether the course agents’ note is said once over the list or on its row', () => {
+    const once = look('.resp-shared')
+    expect(once).toEqual({ 'font-size': 'var(--app-text-sm)', 'line-height': 'var(--app-lh-text)', color: 'var(--app-ink-2)' })
+    expect(look('.resp-row__note')).toEqual(once)
+    // Not running keeps the wait colour, in the same size and leading.
+    expect(look('.resp-row__warn')).toEqual({ ...once, color: 'var(--el-color-warning-dark-2)' })
+  })
+})

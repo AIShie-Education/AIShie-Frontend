@@ -254,6 +254,59 @@ test.describe('the whole class’s gradebook', () => {
     await expect(order(page)).resolves.toEqual(['Eve Santos', 'Ada Lovelace'])
   })
 
+  test('keeps a component’s name whole in its total’s heading in every language, sorted by that total or not', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 })
+    await signIn(page, instructor())
+    /** Each total's title, line by line as drawn: where each of its characters is shown. */
+    const lines = () =>
+      matrix(page)
+        .locator('thead th.is-total .matrix__head-title')
+        .evaluateAll((spans) =>
+          spans.map((span) => {
+            const text = span.firstChild as Text
+            const range = document.createRange()
+            const out: string[] = []
+            let top: number | null = null
+            for (let i = 0; i < text.length; i++) {
+              range.setStart(text, i)
+              range.setEnd(text, i + 1)
+              const at = Math.round(range.getBoundingClientRect().top)
+              if (at !== top) out.push('')
+              top = at
+              out[out.length - 1] += text.data[i]
+            }
+            return out.map((l) => l.trim())
+          }),
+        )
+    for (const [locale, assignmentsTotal] of [
+      ['en', ['Assignments', 'total']],
+      ['zh-Hant', ['Assignments', '總分']],
+      ['zh-Hans', ['Assignments', '总分']],
+    ] as const) {
+      await page.addInitScript((l) => {
+        try {
+          localStorage.setItem('aishie.locale', l)
+        } catch {}
+      }, locale)
+      await page.goto(`/courses/${courseId}/gradebook`)
+      await expect(matrix(page).locator('thead th.is-total')).toHaveCount(2)
+      const unsorted = await lines()
+      // 「Assignments總分」 broke as 「Assignment|s總分」 while the column was 96 px, and again once sorted by at 112.
+      expect(unsorted, locale).toContainEqual([...assignmentsTotal])
+      // Sorted by each total, the arrow beside its title takes none of the title's room: its lines are as they were.
+      const totals = matrix(page).locator('thead th.is-total')
+      for (let i = 0; i < 2; i++) {
+        await totals.nth(i).locator('.matrix__sort').click()
+        await expect(totals.nth(i)).toHaveAttribute('aria-sort', 'descending')
+        await expect(totals.nth(i).locator('.matrix__arrow')).toBeVisible()
+        expect(await lines(), `${locale}, sorted by total ${i + 1}`).toEqual(unsorted)
+      }
+      await photograph(page, `class-gradebook-total-sorted-1280-${locale}-light`)
+    }
+  })
+
   test('exports what is shown as CSV, UTF-8 with a byte-order mark, drafts and missing work marked', async ({
     page,
   }) => {

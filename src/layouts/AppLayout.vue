@@ -28,7 +28,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import { useChatStore } from '@/stores/chat'
 import ChatPanel from '@/components/chat/ChatPanel.vue'
-import { shortcutLabel } from '@/components/chat/panel'
+import { PANEL_SHEET_MAX_WIDTH, shortcutLabel } from '@/components/chat/panel'
 import AccountMenu from '@/components/sidebar/AccountMenu.vue'
 import AppWordmark from '@/components/AppWordmark.vue'
 import NewVersionNotice from '@/components/NewVersionNotice.vue'
@@ -84,6 +84,13 @@ function toggleChat() {
   if (chat.open) chat.setOpen(false)
   else openChat()
 }
+// On a phone the chat is a sheet over the whole screen, a modal dialog: while it is open, the page column under it
+// (its header, the crumbs, the menu's button, the chat's own, and the page) is inert, so that Tab, a screen
+// reader's cursor and a tap stay in the sheet, as its aria-modal says. Overlays opened from the sheet (a
+// confirmation, a list, the file viewer) are laid on the body, outside the column, and stay usable. Closed, the
+// attribute is left out, never written false: an inert="false" is inert all the same where it is an attribute.
+const sheet = useMediaQuery(`(max-width: ${PANEL_SHEET_MAX_WIDTH}px)`)
+const underSheet = computed(() => sheet.value && chat.open)
 
 // The file viewer, loaded the first time a file is opened, and kept from then on.
 const FileViewer = defineAsyncComponent(() => import('@/components/preview/FileViewer.vue'))
@@ -128,7 +135,7 @@ const crumbsCourse = computed(() => {
       </div>
     </el-drawer>
 
-    <el-container direction="vertical" class="app-main-wrap">
+    <el-container direction="vertical" class="app-main-wrap" :inert="underSheet || undefined">
       <el-header class="app-header" height="56px">
         <div class="app-header__left">
           <!-- On a phone, three lines open the menu: 20 px, in a 44 px square a thumb hits. -->

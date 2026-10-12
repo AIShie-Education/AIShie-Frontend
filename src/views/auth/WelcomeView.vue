@@ -13,6 +13,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppResult from '@/components/AppResult.vue'
 import AppWordmark from '@/components/AppWordmark.vue'
 import { tokenFromHash } from '@/utils/invitation'
 import { passwordProblem } from '@/utils/password'
@@ -171,13 +172,13 @@ function proceed() {
         </div>
       </div>
     </header>
-    <div class="app-auth-page__card welcome__card">
+    <main class="app-auth-page__card welcome__card">
       <div class="welcome__brand">
         <h1 class="app-auth-page__title welcome__title">{{ t('auth.invite.title') }}</h1>
         <p class="app-auth-page__sub welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
-      <el-result v-if="done" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
+      <AppResult v-if="done" kind="done" :title="t('auth.invite.doneTitle')" class="welcome__result">
         <template #sub-title>
           <p class="welcome__done">{{ doneText }}</p>
         </template>
@@ -186,11 +187,11 @@ function proceed() {
             {{ t('auth.invite.continue') }}
           </el-button>
         </template>
-      </el-result>
+      </AppResult>
 
-      <el-result
+      <AppResult
         v-else-if="!token || invalid"
-        icon="warning"
+        kind="missing"
         :title="invalid ? t('auth.invite.invalidTitle') : t('auth.invite.incompleteTitle')"
         :sub-title="invalid ? t('auth.invite.invalid') : t('auth.invite.incomplete')"
         class="welcome__result"
@@ -203,7 +204,7 @@ function proceed() {
             <el-button type="primary">{{ t('auth.invite.signIn') }}</el-button>
           </router-link>
         </template>
-      </el-result>
+      </AppResult>
 
       <template v-else>
         <p class="welcome__intro">{{ t('auth.invite.intro') }}</p>
@@ -253,7 +254,7 @@ function proceed() {
           </el-button>
         </el-form>
       </template>
-    </div>
+    </main>
   </div>
 </template>
 
@@ -274,8 +275,6 @@ function proceed() {
 /* A result (done, or the link not whole): its words and its one button at the column's left, as the page's are. */
 .welcome__result {
   padding: 8px 0 0;
-  align-items: flex-start;
-  text-align: left;
 }
 .welcome__done {
   margin: 0;

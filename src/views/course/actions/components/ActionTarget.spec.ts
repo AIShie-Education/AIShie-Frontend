@@ -236,3 +236,19 @@ describe('ActionTarget, peer evaluation', () => {
     w.unmount()
   })
 })
+
+describe('ActionTarget’s proposed score', () => {
+  // Its style as written: jsdom lays nothing out.
+  const style = Object.values(
+    import.meta.glob<string>('./ActionTarget.vue', { query: '?raw', import: 'default', eager: true }),
+  )[0]!.replace(/^[\s\S]*<style scoped>/, '')
+
+  it('is bold tabular figures on no ground of its own, never a chip in the proposal’s box', () => {
+    const at = style.indexOf('\n.action-target__score {')
+    expect(at).toBeGreaterThanOrEqual(0)
+    const rule = style.slice(at, style.indexOf('}', at))
+    expect(rule).toMatch(/font-weight: var\(--app-weight-strong\);/)
+    expect(rule).toMatch(/font-variant-numeric: tabular-nums;/)
+    expect(rule).not.toMatch(/background|border|padding/)
+  })
+})

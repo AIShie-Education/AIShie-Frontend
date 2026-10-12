@@ -124,7 +124,6 @@ const sub = computed(() =>
   flex: 0 0 auto;
   font-size: var(--app-text-sm);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
 .course-crumbs__title {

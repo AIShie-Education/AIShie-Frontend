@@ -255,6 +255,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
             <el-button
               text
               size="small"
+              class="app-icon-button"
               :disabled="!writable"
               :aria-label="t('scheme.actions.more', { name: nameOf(row.node) })"
             >

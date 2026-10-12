@@ -79,6 +79,12 @@ const ELEMENT_LOOK = {
     message:
       'Nothing to show is an AppEmpty (one line in a section, or its words at the page’s left where it fills the page), or AsyncState’s empty-text, never Element Plus’s grey box (docs/CONVENTIONS.md, "Empty places").',
   },
+  // What went wrong is said one way everywhere: at the left, a glyph of what it is on its title's line.
+  'el-result': {
+    allowedIn: ['src/components/AppResult.vue'],
+    message:
+      'What went wrong is an AppResult (its title after a glyph of what it is, at the left of where it is), or AsyncState’s, never an el-result with Element Plus’s large icon on a filled circle (docs/CONVENTIONS.md, "Empty places").',
+  },
   // A button is solid (the view's one primary) or words; nothing is outlined, a pill or a disc.
   'el-button': {
     allowedIn: [],

@@ -212,10 +212,16 @@ watch(
           <el-table-column v-if="!narrow" :label="t('common.labels.id')" min-width="120">
             <template #default="{ row }"><IdText :id="row.id" /></template>
           </el-table-column>
-          <el-table-column :label="narrow ? '' : t('common.labels.actions')" :width="phone ? 56 : narrow ? 64 : 96" align="center" fixed="right">
+          <el-table-column
+            :label="narrow ? '' : t('common.labels.actions')"
+            :width="phone ? 56 : narrow ? 64 : 96"
+            align="center"
+            fixed="right"
+            class-name="dept-actions"
+          >
             <template #default="{ row }">
               <el-dropdown v-if="actionsFor(row).length" trigger="click" @command="(a: Action) => onAction(row, a)">
-                <el-button text :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more">
+                <el-button text :aria-label="t('deptAdmin.tree.more', { name: row.name })" class="dept-more app-icon-button">
                   <el-icon><MoreFilled /></el-icon>
                 </el-button>
                 <template #dropdown>
@@ -311,5 +317,10 @@ watch(
 /* The tree's expand arrow sits beside the name; the name's own block wraps under it. */
 .dept-tree :deep(.el-table__expand-icon) {
   vertical-align: middle;
+}
+/* A row's ⋯, a square of a finger's 44 px on a touch screen, with 6 px of the cell beside it, in the narrow
+   columns (56 px on a phone, 64 narrow) that keep a row's courses in sight beside it. */
+.dept-tree :deep(.dept-actions .cell) {
+  padding-inline: 6px;
 }
 </style>

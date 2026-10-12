@@ -493,6 +493,13 @@ describe('ChatPane', () => {
       'Give me a few practice questions',
     ])
     expect(w.get('.chat-pane__suggestions').attributes('role')).toBe('group')
+    // Each ends in an operable row's ›, which alone says on a touch screen that it can be pressed; not read out.
+    for (const c of chips) {
+      const go = c.get('.chat-pane__suggestion-go')
+      expect(go.attributes('aria-hidden')).toBe('true')
+      expect(go.find('svg').exists()).toBe(true)
+      expect(c.element.lastElementChild).toBe(go.element)
+    }
     await chips[1]!.trigger('click')
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Check my reasoning')
     expect(writes).toHaveLength(0)

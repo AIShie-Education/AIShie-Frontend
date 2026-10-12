@@ -97,7 +97,11 @@ function onCommand(c: string) {
       <!-- Where the focus goes once students are moved into it (GroupSetView). -->
       <h3 :id="titleId" class="group-card__name" tabindex="-1">{{ group.name }}</h3>
       <el-dropdown v-if="movable" trigger="click" placement="bottom-end" @command="onCommand">
-        <el-button size="small" class="group-card__more" :aria-label="t('groups.card.more', { name: group.name })">
+        <el-button
+          size="small"
+          class="group-card__more app-icon-button"
+          :aria-label="t('groups.card.more', { name: group.name })"
+        >
           <el-icon aria-hidden="true"><MoreFilled /></el-icon>
         </el-button>
         <template #dropdown>
@@ -199,10 +203,6 @@ function onCommand(c: string) {
   font-size: var(--app-text-lg);
   font-weight: var(--app-weight-strong);
   overflow-wrap: anywhere;
-}
-.group-card__more {
-  padding-left: 7px;
-  padding-right: 7px;
 }
 .group-card__facts {
   display: flex;

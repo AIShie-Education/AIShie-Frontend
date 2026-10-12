@@ -202,10 +202,11 @@ function sso(m: SsoMethod) {
         <el-button
           v-for="(m, i) in ssoMethods"
           :key="m.start"
-          :type="i === 0 ? 'primary' : undefined"
+          type="primary"
           :text="i > 0"
           size="large"
           class="login__submit login__sso"
+          :class="{ 'login__sso--more': i > 0 }"
           @click="sso(m)"
         >
           {{ t('auth.sso', { provider: ssoLabel(m) }) }}
@@ -288,6 +289,13 @@ function sso(m: SsoMethod) {
 /* A long name keeps to the column's width. */
 .login__sso {
   max-width: 100%;
+}
+/* The other methods, the indigo's words, each the item's own way in: the room at their left taken back by as
+   much outside it, so that their words start at the column's left, under the solid button's edge and over the
+   password's link, and only their hovered ground reaches past it. */
+.login__sso-list .el-button.login__sso--more {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
 }
 .login__sso :deep(span) {
   min-width: 0;

@@ -1,17 +1,18 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import AppResult from '@/components/AppResult.vue'
 const { t } = useI18n()
 </script>
 
 <template>
   <div class="not-found">
-    <el-result icon="warning" :title="t('layout.notFound')" :sub-title="t('common.errors.notFound')">
+    <AppResult kind="missing" :title="t('layout.notFound')" :sub-title="t('common.errors.notFound')">
       <template #extra>
         <router-link :to="{ name: 'home' }">
           <el-button type="primary">{{ t('common.nav.home') }}</el-button>
         </router-link>
       </template>
-    </el-result>
+    </AppResult>
   </div>
 </template>
 
@@ -22,9 +23,7 @@ const { t } = useI18n()
   padding: var(--app-space-2xl) var(--app-space-lg);
   max-width: calc(var(--app-measure) + 2 * var(--app-space-lg));
 }
-.not-found :deep(.el-result) {
-  align-items: flex-start;
-  text-align: left;
+.not-found .el-result {
   padding: 0;
 }
 </style>

@@ -1,4 +1,4 @@
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
   call,
   coursePath,
@@ -13,6 +13,13 @@ import {
   type CoreReply,
   type DemoActor,
 } from './support'
+
+/** An action's status, said once on its page: under Status in its facts, not beside its title. */
+const statusFact = (page: Page) =>
+  page
+    .locator('.action-view__facts > div')
+    .filter({ has: page.locator('dt', { hasText: /^Status$/ }) })
+    .locator('dd')
 
 // A teacher sends an agent's proposed grade back for changes, with a note of
 // what to change, instead of rejecting it (AIShie-Core#68), from the keyboard
@@ -201,7 +208,7 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`actions/${proposalId}`))
     await expect(page.locator('.page-header')).toContainText('Enter a grade')
-    await expect(page.locator('.page-header')).toContainText('Changes requested')
+    await expect(statusFact(page)).toContainText('Changes requested')
     await expect(page.locator('.action-timeline')).toContainText('Changes requested by')
     await expect(page.locator('.action-timeline')).toContainText(d.actors.instructor.display_name)
     await expect(page.getByText(`What to change: ${NOTE}`)).toBeVisible()
@@ -242,7 +249,7 @@ test.describe.serial('sending a proposal back for changes, and its revision', ()
 
     await revises.getByRole('link', { name: 'An earlier proposal that was sent back' }).click()
     await expect(page).toHaveURL(new RegExp(`/actions/${proposalId}$`))
-    await expect(page.locator('.page-header')).toContainText('Changes requested')
+    await expect(statusFact(page)).toContainText('Changes requested')
     await expect(page.getByText(`What to change: ${NOTE}`)).toBeVisible()
     // The earlier one says nothing of what revised it.
     await expect(page.locator('.action-view__facts')).not.toContainText('Revises')
@@ -366,7 +373,7 @@ test.describe.serial('the owner of the agent that revises, who decides nothing e
 
     // Its page, which she reads as its agent's owner, says what she asked it to change.
     await page.goto(coursePath(`actions/${sam.revisionId}`))
-    await expect(page.locator('.page-header')).toContainText('Awaiting approval')
+    await expect(statusFact(page)).toContainText('Awaiting approval')
     // Read with action.get, as its agent's owner: not from her own actions.
     await expect(page.getByText('This is your own agent’s action.')).toBeVisible()
     const facts = page.locator('.action-view__facts')

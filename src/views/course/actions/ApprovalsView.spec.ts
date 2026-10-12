@@ -444,6 +444,45 @@ describe('ApprovalsView, the queue’s one solid button', () => {
     expect(solids()).toEqual([button(first!, 'Approve')])
   })
 
+  it('leads with the first proposal she can decide, past her own, whose buttons are off', async () => {
+    const own = { ...grade('p0'), actor_id: 'actor-mei', member_id: 'm-mei' }
+    answer([own, grade('p1'), grade('p2')])
+    await mountAs('instructor')
+    const [first, second, third] = cards()
+    expect(button(first!, 'Approve')!.disabled).toBe(true)
+    expect(solids()).toEqual([button(second!, 'Approve')])
+    expect(button(first!, 'Approve')!.classList).toContain('is-text')
+    expect(button(third!, 'Approve')!.classList).toContain('is-text')
+  })
+
+  it('leads past one her own decision on waits for approval, and past her own agent’s, not hers to decide', async () => {
+    // Her decision on the first, itself a proposal, waits in the queue after it; the second is her agent's.
+    const mine = {
+      ...proposal('d1', false, 'action.decide'),
+      actor_id: 'actor-mei',
+      member_id: 'm-mei',
+      target_type: 'action',
+      target_id: 'p1',
+      payload: { action_id: 'p1', decision: 'approve' },
+    }
+    const agents = { ...proposal('p2', false, 'grade.submit') }
+    answer([grade('p1'), agents, grade('p3'), mine])
+    await mountAs('instructor')
+    const [first, second, third] = cards()
+    expect(first!.querySelector('.action-card__waiting')).not.toBeNull()
+    expect(solids()).toEqual([button(third!, 'Approve')])
+    expect(button(first!, 'Approve')?.classList.contains('is-text') ?? true).toBe(true)
+    expect(button(second!, 'Approve')?.classList.contains('is-text') ?? true).toBe(true)
+  })
+
+  it('has none in an archived course, where nothing can be decided', async () => {
+    answer([grade('p1'), grade('p2')])
+    await mountAs('instructor')
+    useCourseStore().course = { ...useCourseStore().course!, status: 'archived' } as never
+    await flushPromises()
+    expect(solids()).toEqual([])
+  })
+
   it('stays with the first while the first’s own decision is open', async () => {
     answer([grade('p1'), grade('p2')])
     await mountAs('instructor')

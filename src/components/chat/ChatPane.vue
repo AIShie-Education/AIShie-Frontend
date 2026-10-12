@@ -62,6 +62,7 @@ import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AiBadge from '@/components/AiBadge.vue'
+import AppResult from '@/components/AppResult.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -955,7 +956,7 @@ const closedLine = computed(() => {
           <el-button
             text
             size="small"
-            class="chat-pane__more"
+            class="chat-pane__more app-icon-button"
             :aria-label="t('chat.menu.label')"
             :title="t('chat.menu.label')"
           >
@@ -1047,17 +1048,18 @@ const closedLine = computed(() => {
       </template>
       <template v-else-if="respondent">
         <div v-if="openProposed" class="chat-pane__intro">
-          <el-result
-            icon="info"
+          <AppResult
+            kind="waiting"
+            class="chat-pane__proposed"
             :title="t('chat.proposed.title')"
             :sub-title="t('chat.proposed.body', { name: respondent.display_name })"
           >
             <template #extra>
               <router-link :to="{ name: 'course-my-actions', params: { courseId } }">
-                <el-button>{{ t('chat.myActions') }}</el-button>
+                <el-button class="chat-pane__my-actions">{{ t('chat.myActions') }}</el-button>
               </router-link>
             </template>
-          </el-result>
+          </AppResult>
         </div>
         <div v-else class="chat-pane__intro chat-pane__start">
           <p class="chat-pane__start-title">{{ t('chat.new.intro', { name: respondent.display_name }) }}</p>
@@ -1089,7 +1091,8 @@ const closedLine = computed(() => {
           >
             <p class="chat-pane__suggestions-title">{{ t('chat.suggestions.title') }}</p>
             <button v-for="s in suggestions" :key="s" type="button" class="chat-pane__suggestion" @click="suggest(s)">
-              {{ s }}
+              <span class="chat-pane__suggestion-text">{{ s }}</span>
+              <el-icon class="chat-pane__suggestion-go" aria-hidden="true"><ArrowRight /></el-icon>
             </button>
           </div>
         </div>
@@ -1210,7 +1213,6 @@ const closedLine = computed(() => {
 .chat-pane__course {
   font-size: var(--app-text-xs);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.04em;
   color: var(--app-indigo);
 }
 .chat-pane__name {
@@ -1238,9 +1240,6 @@ const closedLine = computed(() => {
 .chat-pane__head-actions .el-button + .el-button,
 .chat-pane__head-actions .el-button + .el-dropdown {
   margin-left: 0;
-}
-.chat-pane__more {
-  padding: 5px 7px;
 }
 /* What it says of a conversation, muted: that an agent that answers others may repeat what is written. */
 .chat-pane__shared {
@@ -1324,6 +1323,15 @@ const closedLine = computed(() => {
 .chat-pane__intro p {
   margin: 0 0 8px;
 }
+/* A conversation waiting for approval: the intro's own room is the result's, and My actions, a text button that
+   starts its line, takes back its room at its left, so that its words start under the title's glyph. */
+.el-result.chat-pane__proposed {
+  padding: 0;
+}
+.el-button.chat-pane__my-actions {
+  padding-inline: var(--app-space-sm);
+  margin-inline-start: calc(-1 * var(--app-space-sm));
+}
 /* A new conversation, at the pane's left as the page's text is: who it is with, then a few ways to begin, which
    fill the box, as rows of words between rules. */
 .chat-pane__start {
@@ -1350,7 +1358,12 @@ const closedLine = computed(() => {
   font-weight: var(--app-weight-strong);
   color: var(--app-ink-2);
 }
+/* Each a row a finger or the pointer takes, ending in its › as an operable row does (the agents to ask, a row
+   that opens something): on a touch screen nothing else says it can be pressed. It puts its words in the box. */
 .chat-pane__suggestion {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-sm);
   padding: 10px 8px;
   border: none;
   border-top: var(--app-rule);
@@ -1368,6 +1381,14 @@ const closedLine = computed(() => {
 }
 .chat-pane__suggestion:last-child {
   border-bottom: var(--app-rule);
+}
+.chat-pane__suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+.chat-pane__suggestion-go {
+  flex-shrink: 0;
+  color: var(--el-color-primary);
 }
 .chat-pane__suggestion:hover {
   background: var(--el-fill-color-light);

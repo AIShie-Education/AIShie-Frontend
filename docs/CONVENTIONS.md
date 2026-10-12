@@ -696,8 +696,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no ground of its own, no shadow) is kept for one thing the reader operates as a whole: a proposal
   with its decision in the approvals queue, a course on the home page, a file, a group in a set and
   the place for the students in none, the chat's composer; never a stack of boxed rows, and never
-  a box in a box. The queue has one solid button: the first proposal's Approve (oldest first, it is
-  the next to decide), and, once a decision is opened on any proposal, that decision's confirm
+  a box in a box. The queue has one solid button: the Approve of the first proposal the reader can
+  decide (oldest first, it is the next to decide; one of their own or their own agent's, one whose
+  decision of theirs waits for approval, and any in an archived course, whose buttons are off or
+  not there, lead nobody to it: `DecidePanel`'s `decidable`), and, once a decision is opened on any proposal, that decision's confirm
   instead, the first's Approve turning to indigo words meanwhile (`DecidePanel`'s `lead`, which
   `ApprovalsView` moves to the decision opened last). Quoted words (an agent's message, a proposed
   answer, a total's comment) have a 2 px rule at their left; a block set apart in a dialog (what will
@@ -727,7 +729,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   overview, the tab to its page where the page is one under it, and only the last step marked as the
   page, `aria-current`), on one row in every language, the course's title cut short with an ellipsis
   where the header is narrow (its steps never wrap, as main.css's `text-wrap: pretty` would let a
-  Chinese list item do); then a line of context, the course's code, its name in the sans and its
+  Chinese list item do); then a line of context, the course's code (never letter-spaced, here or
+  anywhere a code is written), its name in the sans and its
   status, never a heading, on one line (a long name is cut short with an ellipsis; only on a phone's
   page does it wrap, to two lines at most), where only what departs from the usual is said: the
   course's state only where it is not active (a draft, archived; never 「進行中」), and the reader's
@@ -777,19 +780,22 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   24 px of room above and below, the words at the measure, and no picture: an illustration over an
   empty place is a template's, and the amber light is the wordmark's alone (design wave 3; it was an
   open book with the light over it, centred). A state that is not a fault (no agent service beside the
-  server, an administrator with no seat in a course) is one too; an `el-result` is left for what went
-  wrong, and AsyncState draws its own at the section's left too: its title after a glyph of what it is
-  in the refused colour, on the title's line as an alert's icon is (a lock for a refusal, a warning for
-  what is not there, a cross for a failure), never Element Plus's large icon on a filled circle over
-  it; after a failure, Retry, the indigo's words after Refresh's icon, that icon in the glyph's column,
-  never a second solid button. Without the glyph and its red, a failure read as nothing to show, and
+  server, an administrator with no seat in a course) is one too; what went wrong is an `AppResult`
+  (AsyncState's too), all of them alike, at the left of where it is: its title after a glyph of what
+  it is, on the title's line (its first, where it wraps) as an alert's icon is, a lock for a refusal,
+  a warning for what is not there or no longer valid, a cross for a failure, in the refused colour,
+  a clock for what waits on someone in the wait colour, a tick for what was done in green; never
+  Element Plus's large icon on a filled circle over it, which `styles/element.css` hides on every
+  `el-result`, and lint refuses an `el-result` written anywhere but `AppResult`; after a failure,
+  Retry, the indigo's words after Refresh's icon, that icon in the glyph's column, never a second
+  solid button. Without the glyph and its red, a failure read as nothing to show, and
   Retry, the ink's words alone, as a label (design wave 3 first drew them so).
   So is a text with nothing written in it: `<MarkdownView :source :empty>` says its `empty` as an
   `AppEmpty`, never in a paragraph of its own.
 - **Tags** are `<AppTag :tone :variant>`, or `<StatusTag vocab="submissionState" :value="s.state" />`
   for Core's vocabularies (see `StatusTag.vue` for the list; labels come from `enums.<vocab>.<value>`),
   drawn by what they say and never by an effect chosen on the page. Every one is a rectangle with the
-  app's 2 px corners, never a pill (design wave 3: the pill was the commonest mark of a generated app,
+  app's 2 px corners, its close button too, never a pill (design wave 3: the pill was the commonest mark of a generated app,
   336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
   the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
   - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
@@ -1003,12 +1009,17 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
-  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in the
-  line (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
+  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in a
+  control's edge (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
   and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
   title over a rule too; a notification is framed and square as a message is
-  (`styles/overlays.css`, after `element.css`).
+  (`styles/overlays.css`, after `element.css`). What floats over the page (a menu, a select's
+  options, a popover, a light tooltip, a date picker, the account's menu, a dialog, a message box,
+  a notification) is told from it by its edge alone, so that edge is a control's
+  (`--app-control-border`, 3:1 in either theme), never the line (1.4:1, 1.2:1 in the dark), as a
+  quotation's rule in rendered Markdown is. A date range open is ringed as a focused field is (Shapes,
+  above), and a field in error keeps its red edge focused, doubled in red.
 - **Buttons** go by rank, as `styles/element.css` draws them, and by nothing else, with the app's
   2 px corners and no outline on any (design wave 3: a solid button beside an outlined one is the
   template's pair, and the site has none). `type="primary"` (solid indigo) for the one main action of
@@ -1024,8 +1035,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   asks first; and solid red alone for the last step of that confirmation (`confirmButtonClass:
   'el-button--danger'`, or a dialog's button that does it at once). The ghost, an indigo or red
   outline, is gone: `plain` still draws as `text` and `circle` as a square, but lint refuses both,
-  and `round`, in a template (Building a view, above); an icon alone is a square text button of its
-  height. `success`, `warning` and `info` are outcomes' colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
+  and `round`, in a template (Building a view, above); an icon alone (a ⋯, a menu's opener) is a
+  square text button of its height, `app-icon-button` (`styles/element.css`: 36 px, a finger's 44,
+  small 28 and 40, with no padding of its own; `e2e/screens-style.spec.ts` measures each). A button
+  of words that starts a line (Retry under its glyph, an empty place's way in, single sign-on's
+  other methods, Create an account) takes back its room at its left by as much outside it (8 px
+  each), so that its words start where the text over them does and only its hovered ground reaches
+  past them. `success`, `warning` and `info` are outcomes' colours, for tags, never a button's. A disabled button has no hue, ground or edge, whatever its rank;
   a solid one keeps the ground's second shade under its words, so that the main action's place still
   reads. What cannot be taken back is not put beside what is done every day: it goes in the toolbar's
   ⋯ menu (`MoreFilled`), at its far end, as undoing final grades is beside posting them.
@@ -1282,7 +1298,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
     and never pushes the "AI" out of its row; a last word breaks no sooner than it would have. `<AgentName
     :name ellipsis />` cuts the name short on one line and keeps the "AI" whole. `<AgentBadge :kind :owner-name :mine />` beside
     an actor's or member's name says it and whose agent it is ("Your agent", "Yuki's agent") in ink on an
-    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`.
+    outline, never in the links' indigo; nothing for a person; `no-ai` after an `AgentName`. Whose it is
+    is said once: where a row names whom the agent acts for (the course's agents' "For Sato Hiroshi (you)"),
+    it has no `AgentBadge` beside its name.
     `<MemberName :id show-kind />` shows a member who is an agent with its avatar and "AI". Inside a
     control (a row that is a button), `AgentBadge`, `AskableText` and `AskableDot` take `hint-id`: they take no focus,
     and what their tooltips say goes in hidden elements of those ids, for the control's
@@ -1349,8 +1367,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the account's row at its bottom under a rule; following a link in it closes it, as back does.
 - The account is one menu button, as an editor's Accounts (`src/components/sidebar/AccountMenu.vue`): the
   initial of the caller's name, in a circle (a person's), at the bottom of the activity bar (on a phone,
-  a row at the bottom of the side menu). Its menu, and each submenu, is framed in the line with 2 px
-  corners and casts no shadow, as every menu is; focus from the keyboard is the focus ring inside an
+  a row at the bottom of the side menu). Its menu, and each submenu, is framed in a control's edge
+  with 2 px corners and casts no shadow, as every menu is; focus from the keyboard is the focus ring inside an
   item. Its menu says who is signed in (name, email or login ID, platform role) and holds the
   account's settings, the language and the theme, each a submenu with the choice in use checked, About AIshie
   (`AboutDialog`: the web app's version from `/version.json` and the server's from `/healthz`, the only place
@@ -1402,7 +1420,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   way focus goes back to the chat's button. Files dropped anywhere on the pane, its head row too, go
   to the conversation it shows, as below. On a phone (up to 899 px) it is a sheet over the whole
   screen (`--app-z-sheet`), square, a modal dialog with no edge to drag, closed with its one button,
-  Escape or back, keeping what it showed, and it gives way to a page a link in it leads to. `useChatStore()` (`@/stores/chat`) opens it
+  Escape or back, keeping what it showed, and it gives way to a page a link in it leads to; while it
+  is open the page column under it (header and page) is `inert` (`AppLayout`), so that Tab and a
+  screen reader stay in it as its `aria-modal` says, the overlays opened from it being on the body. `useChatStore()` (`@/stores/chat`) opens it
   on a conversation (`showConversation(courseId, id, { open: true })`) or on a course (`showCourse`); a
   link to a conversation is still `{ name: 'course-conversations', params: { courseId, conversationId } }`,
   the address the course's conversations page once had, which opens the pane on it and leaves the
@@ -1515,7 +1535,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the new conversation instead, until "Got it" or the first question. A new conversation has no
   title field: it is titled by the first line of its first message (`titleFrom`), and it offers a
   few ways to begin, which fill the box: at the pane's left as the page's text is, no mark over it,
-  the ways to begin as rows of words between rules. Its history and the agents to ask are rows
+  the ways to begin as rows of words between rules, each ending in an operable row's ›, which alone
+  says on a touch screen that it can be pressed. Its history and the agents to ask are rows
   between rules too, hovered in a tint, the conversation shown marked at its left in the navy as the
   side bar marks the page shown, and the history's groups (today, yesterday…) plain sub-headings in
   the second ink, not tracked. A row says only what departs from the usual or tells it from the
@@ -1524,7 +1545,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   the rows differ in it, so that a student's course agents say neither and an instructor's own
   agents not 「你的代理」; and where two or more of the course's agents are listed, that they answer
   others too is said once over the list (`chat.respondents.sharedHintAll`), not under each
-  (`AgentPicker`; one agent alone says what it is).
+  (`AgentPicker`; one agent alone says what it is), and a row's note in the size, leading and ink
+  of the note over the list, so that the sentence looks the same however many agents are listed.
   An answer in the making (`draft.ts`, the contract Core, the runtime and this app share) takes the
   working line's place: `ChatDraft` under the agent's name, its steps (`ChatDraftSteps`: each done
   step with a tick, 「已閱讀《HW1.pdf》」, the running one with the turning glyph, and the steps
