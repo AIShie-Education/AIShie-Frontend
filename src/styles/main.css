@@ -466,12 +466,17 @@ tr.app-row-unpublished > td:first-child {
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Ccircle cx='9' cy='10' r='1.5'/%3E%3Cpath d='m21 16-5-5-8 8'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
-/* A level of autonomy (StatusTag, LevelIcon): told by its mark and its
-   weight, lightest for the level that leaves an agent least to itself and
-   heaviest for the one that leaves it most, never by red and green; a
-   rectangle with the app's 2 px corners, as every tag is (element.css):
-   denied on the neutral ground, confirm_required on the indigo's tint,
-   pending_review a 1 px line in the ink, autonomous solid ink. */
+/* A level of autonomy (StatusTag, LevelIcon): told by its mark and by how
+   much of a frame holds it, never by red and green; a rectangle with the
+   app's 2 px corners, as every tag is (element.css), and never solid, for a
+   solid ground is a button's: a level is a label, read, never pressed.
+   What holds an agent's act back lies on a ground (denied on the neutral's,
+   confirm_required on the indigo's tint); pending_review, which lets it act
+   and looks after, is a 1 px line in the ink; autonomous, which leaves it to
+   itself, the faint line alone, as an attribute's outline is (AppTag), its
+   words and its bolt in the ink. Design wave 3 first drew autonomous in
+   solid ink, and on the course's agents page it was the most button-like
+   thing in a row of text buttons, though it cannot be pressed. */
 .el-tag.app-level-tag {
   --el-tag-border-color: transparent;
   font-weight: 500;
@@ -496,7 +501,8 @@ tr.app-row-unpublished > td:first-child {
   font-weight: var(--app-weight-strong);
 }
 .el-tag.app-level-tag.is-autonomous {
-  --el-tag-bg-color: var(--app-ink);
-  --el-tag-text-color: var(--app-ground);
+  --el-tag-bg-color: transparent;
+  --el-tag-border-color: var(--app-line-strong);
+  --el-tag-text-color: var(--app-ink);
   font-weight: var(--app-weight-strong);
 }

@@ -64,6 +64,28 @@ describe('StatusTag', () => {
     expect(confirm.text()).toBe('Needs approval')
   })
 
+  it('draws autonomous as a label beside its bolt, never as a solid tag, its words unchanged', () => {
+    for (const [locale, text] of [
+      ['en', 'Answers at once'],
+      ['zh-Hant', '即時回覆'],
+      ['zh-Hans', '即时回复'],
+    ] as const) {
+      setLocale(locale)
+      const t = tag('answerLevel', 'autonomous')
+      expect(t.classes()).toEqual(expect.arrayContaining(['app-level-tag', 'is-autonomous']))
+      // No effect of a solid tag (a count's) and no tone of an outcome: main.css draws its frame.
+      expect(t.classes()).not.toContain('el-tag--dark')
+      expect(t.classes()).not.toContain('app-tag--count')
+      expect(t.classes()).toContain('el-tag--info')
+      expect(t.find('svg.level-icon path').exists()).toBe(true)
+      expect(t.text()).toBe(text)
+    }
+    // The other levels keep marks of their own: an eye for pending_review, not the bolt.
+    const review = tag('answerLevel', 'pending_review')
+    expect(review.classes()).toContain('is-pending_review')
+    expect(review.find('svg.level-icon circle').exists()).toBe(true)
+  })
+
   it('shows a category as an identity: outlined, with its icon, in no colour of an outcome', () => {
     for (const [vocab, value] of [
       ['platformRole', 'root'],
