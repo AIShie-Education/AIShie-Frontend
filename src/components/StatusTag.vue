@@ -1,13 +1,13 @@
 <script setup lang="ts">
 // A tag for one of Core's fixed vocabularies (an AppTag): the label comes
 // from enums.<vocabulary>.<value>, its look from what the value is.
-// - A state is a pill whose colour says an outcome alone (docs/CONVENTIONS.md,
-//   "Colour"): done in green (executed, approved), refused, failed or missing
-//   in red, waiting on someone in amber (proposed, late, a grade not yet
-//   posted), anything else neutral.
+// - A state is a state tag, on a tint whose colour says an outcome alone
+//   (docs/CONVENTIONS.md, "Colour"): done in green (executed, approved),
+//   refused, failed or missing in red, waiting on someone in amber (proposed,
+//   late, a grade not yet posted), anything else neutral.
 // - The usual state of a thing (an active seat or course, work submitted, a
 //   grade posted, a conversation open or answered) is quiet: the third ink's
-//   plain text, no pill, so that what departs from it stands out.
+//   plain text, no tag, so that what departs from it stands out.
 // - A category (a role, a kind of actor, seat or document, a scope, a
 //   preset, a platform role) is an identity, not a state: outlined, with its
 //   icon, in no colour.
@@ -87,7 +87,7 @@ const TONES: Record<string, TagTone> = {
 const TONES_IN: Partial<Record<Vocabulary, Record<string, TagTone>>> = {
   gradeState: { draft: 'wait' },
 }
-/** The usual state of a thing, in plain text: only what departs from it is a pill. */
+/** The usual state of a thing, in plain text: only what departs from it is a state tag. */
 const QUIET: Partial<Record<Vocabulary, readonly string[]>> = {
   actorStatus: ['active'],
   courseStatus: ['active'],

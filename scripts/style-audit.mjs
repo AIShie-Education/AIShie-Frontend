@@ -36,6 +36,10 @@
 // audit finds goes to report.json there, by the same names: the offences by
 // kind, each element with its count, and the solid buttons. Never point it at
 // a Core people use: --setup writes to it.
+//
+// Run it with Node 24 (.nvmrc): it imports e2e/styleAudit.ts as it is, which
+// Node reads by stripping its types, from 22.18 and 23.6 on; the 20.19 that
+// package.json's engines allows for the app cannot.
 import { readFile, writeFile, mkdir } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'

@@ -4,8 +4,7 @@
 // every one is a rectangle with the app's 2 px corners, never a pill:
 // - `state` (the default), a state: its tone's tinted ground, no edge: done
 //   green, danger red, wait amber, neutral, or indigo for what is new or the
-//   reader's to decide. (`pill`, its name before design wave 3, draws the
-//   same, until the wave's cleanup.)
+//   reader's to decide.
 // - `outline`, an identity or an attribute (a kind, a role, how something
 //   runs, "this browser"): ink on a 1 px line and no ground, with its icon,
 //   so that it is never read as a state. It has no tone: an attribute is not
@@ -33,11 +32,9 @@ const emit = defineEmits<{ close: [event: MouseEvent] }>()
 
 const EL_TYPE = { neutral: 'info', done: 'success', wait: 'warning', danger: 'danger', indigo: 'primary' } as const
 const EFFECT = { state: 'light', outline: 'plain', count: 'dark' } as const
-/** What it is drawn as: `pill` is a state. */
-const variant = computed(() => (props.variant === 'pill' ? 'state' : props.variant))
 /** Element Plus's colours for it: an outline has none of a tone's, and a count is always the indigo. */
 const type = computed(() =>
-  variant.value === 'outline' ? 'info' : variant.value === 'count' ? 'primary' : EL_TYPE[props.tone],
+  props.variant === 'outline' ? 'info' : props.variant === 'count' ? 'primary' : EL_TYPE[props.tone],
 )
 </script>
 

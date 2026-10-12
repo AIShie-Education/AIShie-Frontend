@@ -614,7 +614,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `row-reverse`) and, while the note is missing, is `aria-disabled` and described by that line, not
   `disabled`, so that Tab still reaches it and it says why: type, Tab, Enter sends it. The proposal
   ends in `changes_requested`, a final state that is no failure: its tag is `warning`, amber, as it
-  waits on its proposer to propose again, not a rejection's `danger`. Its button is outlined, as
+  waits on its proposer to propose again, not a rejection's `danger`. Its button is a text button, as
   Reject's is, and pressed in while its form is open, whose confirm button is the one primary. Its
   note is read where a rejection's reason is (`result.decision.reason`, `storedDecision()`), and who
   asked and when from `decided_by_member_id` and `decided_at`. A revision names the proposal it
@@ -793,8 +793,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   336 of them on one set of screens), 20 px tall in the smallest step (`small`, the default), 24 px in
   the next (`default`); `styles/element.css` draws them, and Element Plus's `round` is never asked for:
   - a **state** (`variant="state"`, the default) lies on its tone's tint, with no edge: `done`,
-    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below).
-    `pill`, its name before wave 3, draws the same until the wave's cleanup takes it out;
+    `danger`, `wait`, `neutral`, or `indigo` for what is new or the reader's to decide (Colour, below);
   - an **identity or an attribute** (a role, a kind, a scope, a preset, how an agent runs, "you",
     "this browser", a sign-in method, an overridden total) is an outline (`variant="outline"`): ink on
     a faint 1 px line (`--app-line-strong`) and no ground, as `AgentBadge`'s owner is, never in a
@@ -868,7 +867,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
   its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
   scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
-  of event, in the neutral pill's colours (`--app-neutral-bg`, the ground's second shade in the light
+  of event, in the neutral state tag's colours (`--app-neutral-bg`, the ground's second shade in the light
   theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
   alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
@@ -888,18 +887,19 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   placeholder's ink is quieter still, for a field's placeholder. The three
   inks read at AA on every ground the app has (the third on all but Element Plus's two deepest
   fills, which carry no meta); the placeholder's on a field, a card, the page and the lightest
-  fill alone, not on a hovered or chosen row, a pill's ground or the ground's second shade. Text that
+  fill alone, not on a hovered or chosen row, a state tag's ground or the ground's second shade. Text that
   may be drawn on one of those, as a key is on a changed row, takes the third ink; any other rule
   that writes in the placeholder's is named in `PLACEHOLDER_INK`, with its grounds. Every colour in
   `styles/tokens.css` has its dark value, is painted with somewhere, and reads at AA on the grounds it
-  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every pill
+  is drawn on, in both themes: `styles/contrast.spec.ts` reads every ground and every state tag
   (`--app-<x>-bg` with its `--app-<x>-fg`) from the style sheets and measures each pairing, so a new
   colour is measured as a ground unless it is named there as something else (an ink, a line, a mark).
   It also writes out what the app shares with aishie.app's `:root` (navy, amber, paper, line, the
   field's edge, the inks, the state colours, the corner, the rule, the leading, the measure), by the
-  site's names, and fails when one side changes alone; a value the app keeps of its own is listed there
-  with why. The page column (its header and its page) is read on `--app-page`, the ivory, and the paper
-  (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
+  site's names, copied from the site by hand: it fails when the app's side changes alone, and a change
+  on aishie.app has to be copied in by hand before it is checked; a value the app keeps of its own is
+  listed there with why. The page column (its header and its page) is read on `--app-page`, the
+  ivory, and the paper (`--app-ground`) is the side bar's and the activity bar's: a page of sections without cards, on the
   paper, would add to the warm paper, the serif and the amber dot, which the app is not to add to. The
   brand is the navy; the amber (`--app-light`) is the logo's dot alone, never an avatar's, an empty
   place's or the chat's (the wait colour is a state's, not the amber).
@@ -920,13 +920,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   mask) and the image viewer's checkerboard. Element Plus's corners and shadows are the app's
   (`styles/element.css`, its dark theme's shadows undone too), and a field focused turns its edge navy,
   doubled by a 1 px outline, with no halo, as the site's form does. `src/styles/shapes.spec.ts` refuses
-  anything else, however a style writes it: `border-radius` or a longhand, or a custom property named
-  for a radius, over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on
-  the round marks it lists by file and rule, a shadow that is not a line, a read of a shadow's token
-  outside `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two
-  named; in `tokens.css` every corner is 4 px or less and every shadow none. While design wave 3 is
-  under way, `src/styles/shapes.pending.ts` lists what its parts still convert, a file or a file's one
-  rule, and fails on an entry that no longer offends, so that it only shrinks. `e2e/styleAudit.ts`
+  anything else, however a style writes it (`-webkit-` or `-moz-` prefixed or not; in a script,
+  camel-cased, quoted or not): `border-radius` or a longhand, or a custom property named for a radius,
+  over 4 px (a token followed to its value, a `calc()` worked out), a percentage but on the round marks
+  it lists by file and rule, a `box-shadow` or `text-shadow` that is not a line (its lengths read
+  through a `var()` or a `calc()`, and one it cannot read refused), a read of a shadow's token outside
+  `tokens.css` and `element.css`, `drop-shadow()`, `backdrop-filter`, a gradient but the two named; in
+  `tokens.css` every corner is 4 px or less, and no shadow is set. `e2e/styleAudit.ts`
   measures the same as the browser draws it (`shapeOffences`), with `soloPrimary`, the solid buttons of
   a page and of each dialog over it, and `e2e/shapes.spec.ts` holds Element Plus's overlays to it in
   both themes; `scripts/style-audit.mjs` photographs the main screens with what it finds, for a
@@ -1259,7 +1259,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `<PermEditor :changed :warn>` marks rows; `<DocumentTextField>` takes its line's actions in
   `#actions`; `MCP_ENDPOINT` (`@/api/http`) is where an agent connects.
 - **An agent always looks like one, and never like a person or a machine.** Its shape says so, not a
-  hue of its own (no orange for agents: it would be taken for a waiting pill or the brand's light):
+  hue of its own (no orange for agents: it would be taken for a waiting state tag or the brand's light):
   - One agent in particular is shown by `<AgentAvatar :name size>` (`@/components`): a square with the
     app's 2 px corners at every size (a person is always a circle) on `--app-indigo-tint`, its initials
     in `--app-indigo` (`agentInitials`, `@/utils/initials`: two letters, or one Chinese, Japanese or
@@ -1548,7 +1548,7 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   published again): it is "another version" (「另一個版本」), never an earlier one, and its link,
   to the document as it is now, says so beside it, not only in its tooltip ("(opens it as it is
   now)", 「（開啟的是目前的版本）」); `restricted` is said to be a course material the reader cannot
-  open, with no title and no link. An empty list is the neutral pill 「未引用課程教材」, which takes
+  open, with no title and no link. An empty list is the neutral state tag 「未引用課程教材」, which takes
   focus and says that the agent said so in a tooltip on hover, focus or a tap; no `sources` (or
   `null`) is an answer that did not say, and shows nothing. A proposed answer keeps its sources by
   id alone: the queue and the action's page count the course materials, each `document_id` once

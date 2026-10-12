@@ -84,18 +84,8 @@ const SCREENS: Screen[] = [
   { name: 'admin-runtime', who: 'root', path: '/admin/runtime' },
 ]
 
-/**
- * What another part of design wave 3 takes away, and this spec lets be until
- * it has: each is checked to offend still, on some screen, so that the list
- * only shrinks. Empty since the tokens' part squared rendered Markdown's
- * listing and the components' part redrew a segmented control's edge.
- */
-const PENDING: Record<string, string> = {}
-
 /** What a screen draws against the rules above, each named by where it is. */
 interface Audit {
-  /** Pending selectors (PENDING) that offended here. */
-  pending: string[]
   /** A section (.app-card) with a ground, a frame or rounded corners of its own. */
   boxedSections: string[]
   /** A box laid inside another box. */
@@ -112,9 +102,8 @@ interface Audit {
 }
 
 /** Reads a screen's computed styles (in the page). */
-function audit(pending: string[]): Audit {
+function audit(): Audit {
   const out: Audit = {
-    pending: [],
     boxedSections: [],
     boxInBox: [],
     rounded: [],
@@ -122,11 +111,6 @@ function audit(pending: string[]): Audit {
     solids: [],
     dangers: [],
     eyebrows: [],
-  }
-  const waits = (el: Element, what: string[]) => {
-    const p = pending.find((sel) => el.matches(sel))
-    if (p && !out.pending.includes(p)) out.pending.push(p)
-    return p ? [] : what
   }
   const scope = document.querySelector('.course-body') ?? document.querySelector('.app-main')
   if (!scope) return out
@@ -180,14 +164,14 @@ function audit(pending: string[]): Audit {
       parseFloat(s.borderBottomRightRadius) || 0,
     )
     const mark = Math.abs(r.width - r.height) <= 2
-    if (radius > 4 && !mark && !elements(el)) out.rounded.push(...waits(el, [`${name(el)} ${radius}px`]))
+    if (radius > 4 && !mark && !elements(el)) out.rounded.push(`${name(el)} ${radius}px`)
     // Shadows: only a stroke, a line drawn inside the edge or a ring of 2 px at most.
     if (s.boxShadow && s.boxShadow !== 'none') {
       for (const one of s.boxShadow.split(/,(?![^(]*\))/)) {
         const lengths = one.replace(/rgba?\([^)]*\)|#[0-9a-f]+|inset/gi, '').trim().split(/\s+/).map(parseFloat)
         const [x = 0, y = 0, blur = 0, spread = 0] = lengths
         const stroke = blur === 0 && (/inset/.test(one) || (x === 0 && y === 0 && spread <= 2))
-        if (!stroke) out.shadows.push(...waits(el, [`${name(el)} ${one.trim()}`]))
+        if (!stroke) out.shadows.push(`${name(el)} ${one.trim()}`)
       }
     }
     // Boxes: a frame on three sides or more, or a ground of its own.
@@ -300,7 +284,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
           await page.waitForLoadState('networkidle').catch(() => {})
           await expect(page.locator('.page-header h1, h1').first()).toBeAttached()
           await page.waitForTimeout(300)
-          found[screen.name] = await page.evaluate(audit, Object.keys(PENDING))
+          found[screen.name] = await page.evaluate(audit)
           await photograph(page, `screens-${screen.name}-${view.width}-${view.dark ? 'dark' : 'light'}`)
         }
         await context.close()
@@ -320,14 +304,6 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
           'more than one solid primary on a screen',
         )
         .toEqual({})
-      // On the laptop in the light theme, every screen is read: what is pending must still be seen somewhere.
-      if (VIEWS.indexOf(view) === 0) {
-        const seen = new Set(Object.values(found).flatMap((a) => a.pending))
-        expect(
-          Object.keys(PENDING).filter((sel) => !seen.has(sel)),
-          'pending, yet no screen draws it any more: take it off PENDING',
-        ).toEqual([])
-      }
     })
   }
 
@@ -350,7 +326,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
         </section>`
       document.querySelector('.course-body')!.append(made)
     })
-    const a = await page.evaluate(audit, Object.keys(PENDING))
+    const a = await page.evaluate(audit)
     expect(a.boxedSections.join()).toContain('made-card')
     expect(a.boxInBox.join()).toContain('made-inner')
     expect(a.rounded.join()).toContain('made-inner')
@@ -382,7 +358,7 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
 
     // Deciding out of turn: the second rejected, its form open. Its confirm is now the one solid button, and the
     // first's Approve is indigo words until the form is put away.
-    const solids = async () => (await page.evaluate(audit, Object.keys(PENDING))).solids
+    const solids = async () => (await page.evaluate(audit)).solids
     await cards.nth(1).getByRole('button', { name: 'Reject', exact: true }).click()
     const confirm = cards.nth(1).locator('.decide-panel__confirm').getByRole('button', { name: 'Reject', exact: true })
     await expect(confirm).toBeVisible()

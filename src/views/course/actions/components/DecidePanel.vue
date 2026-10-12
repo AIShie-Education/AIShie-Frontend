@@ -458,9 +458,9 @@ function tell(
   margin-left: 0;
 }
 /* The choice open below, while its form asks for a reason: its button stays
-   pressed in, a 2 px indigo edge on the indigo's tint, in bold, and the
-   other choice is an ordinary secondary button beside it; the form's own
-   button is the one primary. */
+   pressed in, on the indigo's tint, in bold, with a 1 px indigo ring inside
+   it (a text button has no edge to colour), and the other choices stay
+   words beside it; the form's own button is the one primary. */
 .decide-panel__buttons .el-button.is-chosen {
   --el-button-bg-color: var(--app-indigo-tint);
   --el-button-border-color: var(--app-indigo);

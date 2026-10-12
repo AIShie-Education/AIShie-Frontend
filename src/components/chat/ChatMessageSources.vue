@@ -7,9 +7,9 @@
 // steps of an answer in the making do (ChatDraftSteps).
 //
 // An answer that said it relied on no course material (an empty list) shows
-// a neutral pill instead, which says on hover, focus or a tap that the agent
-// said so. One that did not say (no sources: every answer from before Core
-// kept them, and an agent that does not say) shows nothing, which
+// a neutral state tag instead, which says on hover, focus or a tap that the
+// agent said so. One that did not say (no sources: every answer from before
+// Core kept them, and an agent that does not say) shows nothing, which
 // ChatMessage decides.
 //
 // A title with no spaces (one taken from a file's name,

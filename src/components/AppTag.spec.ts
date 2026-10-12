@@ -30,16 +30,8 @@ describe('AppTag', () => {
     }
   })
 
-  it('draws a state given by its older name, pill, as a state, until the cleanup', () => {
-    const t = tag({ variant: 'pill', tone: 'wait' }).find('.el-tag')
-    expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--state', 'is-wait', 'el-tag--warning']))
-    expect(t.classes()).not.toContain('app-tag--pill')
-  })
-
-  it('is never round: no variant asks Element Plus for its rounded tag, and none sets a corner of its own', () => {
-    for (const variant of ['state', 'pill', 'outline', 'count'] as const)
-      expect(tag({ variant }).find('.el-tag').classes()).not.toContain('is-round')
-    // Its corner is element.css's, the app's 2 px, for every tag alike.
+  it('sets no corner of its own: every tag’s is element.css’s, the app’s 2 px', () => {
+    // As the browser draws them, every tag's corners are measured in e2e/components-style.spec.ts.
     expect(style).not.toMatch(/radius/)
   })
 

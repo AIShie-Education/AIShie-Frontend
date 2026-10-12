@@ -36,7 +36,6 @@ describe('StatusTag', () => {
     ] as const) {
       const t = tag(vocab, value)
       expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--state', 'el-tag--light']))
-      expect(t.classes()).not.toContain('is-round')
     }
   })
 

@@ -261,19 +261,6 @@ summary:focus-visible,
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: var(--app-space-lg);
 }
-/* A list's rows, parted by rules rather than set in boxes: the list's first
-   row has a rule above it and every row one below; a row the reader opens
-   is tinted under the pointer, and keeps its › at its end. Used where a
-   section lists what it holds as rows of its own (not a table). */
-.app-rows {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  border-top: var(--app-rule);
-}
-.app-rows > * {
-  border-bottom: var(--app-rule);
-}
 /* A row of a list that is not published (a material, an assignment): a 3 px
    line in the amber of what waits, square-ended, at its left, beside its
    tag, so that the one among published rows is found at a glance

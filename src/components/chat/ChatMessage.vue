@@ -16,8 +16,8 @@
 // shows no text (Core no longer sends them either).
 //
 // Under an answer, the course materials it relied on, where it said
-// (ChatMessageSources): a quiet line naming them, or a neutral pill where it
-// relied on none. An answer that did not say shows nothing.
+// (ChatMessageSources): a quiet line naming them, or a neutral state tag
+// where it relied on none. An answer that did not say shows nothing.
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ConversationMessage } from '@/api/types'

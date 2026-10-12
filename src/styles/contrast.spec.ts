@@ -4,19 +4,20 @@ import { describe, expect, it } from 'vitest'
 // are written, in the light theme (:root) and the dark one (html.dark over
 // it): every pairing of text and the ground it is drawn on meets WCAG AA,
 // 4.5:1, and a control's edge and the focus ring 3:1; the three inks are
-// three steps, not two; each pill's colour is a hue of its own; and every
+// three steps, not two; each state tag's colour is a hue of its own; and every
 // colour is used and decided for the dark theme too. Element Plus's grounds
 // (styles/element.css) are read beside them: a row or an option it lays
 // under the app's text on hover is a ground that text must read on as well.
 //
-// The grounds and the pills are read from the style sheets, not listed here,
-// so that one added to them is measured the day it is: each `--app-<x>-bg`
-// is a pill, whose text is `--app-<x>-fg`; and every colour of the palette
-// is a ground, every fill of Element Plus's and the palest step of each of
-// its colours with them, except those NOT_GROUNDS names as something else
-// (an ink, a line, an edge, a mark). The placeholder's ink, the one ink that
-// does not read on every ground, is measured where the app writes in it:
-// each rule that does names its grounds in PLACEHOLDER_INK.
+// The grounds and the state tags are read from the style sheets, not listed
+// here, so that one added to them is measured the day it is: each
+// `--app-<x>-bg` is a state tag's ground, whose text is `--app-<x>-fg`; and
+// every colour of the palette is a ground, every fill of Element Plus's and
+// the palest step of each of its colours with them, except those
+// NOT_GROUNDS names as something else (an ink, a line, an edge, a mark). The
+// placeholder's ink, the one ink that does not read on every ground, is
+// measured where the app writes in it: each rule that does names its grounds
+// in PLACEHOLDER_INK.
 
 // The style sheets are read from disk with Node's fs, imported by a name the
 // app's types (the browser's) do not resolve: a style sheet imported into a
@@ -167,13 +168,13 @@ function chromaHue(hex: string): { chroma: number; hue: number } {
   return { chroma: Math.hypot(A, B), hue: ((Math.atan2(B, A) * 180) / Math.PI + 360) % 360 }
 }
 
-/** The pills, by the x of each `--app-<x>-bg` and `--app-<x>-fg` in tokens.css: its ground and its text. */
-const PILLS = [...new Set(Object.keys(ROOT).flatMap((k) => /^app-(.+)-[bf]g$/.exec(k)?.[1] ?? []))]
+/** The state tags, by the x of each `--app-<x>-bg` and `--app-<x>-fg` in tokens.css: its ground and its text. */
+const STATES = [...new Set(Object.keys(ROOT).flatMap((k) => /^app-(.+)-[bf]g$/.exec(k)?.[1] ?? []))]
 
 /**
  * The colours of the palette that are not a ground, and what each is instead: every other colour in
  * tokens.css, and every fill and palest step of Element Plus's in element.css, is a ground, measured
- * under every ink. A pill's text, `--app-<x>-fg`, is not one either.
+ * under every ink. A state tag's text, `--app-<x>-fg`, is not one either.
  */
 const NOT_GROUNDS: Record<string, string> = {
   'app-ink': 'text',
@@ -197,9 +198,9 @@ const NOT_GROUNDS: Record<string, string> = {
 }
 
 /**
- * Element Plus's deepest fills, and why neither the meta's ink nor a pill's text is written on them:
+ * Element Plus's deepest fills, and why neither the meta's ink nor a state tag's text is written on them:
  * the first two inks and the indigo are measured on them as on every ground; the third ink and a
- * pill's text are not.
+ * state tag's text are not.
  */
 const DEEP_FILLS: Record<string, string> = {
   'el-fill-color-dark':
@@ -220,9 +221,9 @@ function palette(theme: Theme): string[] {
   return names.filter((k) => !names.includes(/^var\(--([a-z0-9-]+)\)$/.exec(props[k])?.[1] ?? ''))
 }
 
-/** The grounds text is drawn on, in a theme: the page and its second shade, a card, what floats, a field, the fills, the tints and the pills' grounds. */
+/** The grounds text is drawn on, in a theme: the page and its second shade, a card, what floats, a field, the fills, the tints and the state tags' grounds. */
 function grounds(theme: Theme): string[] {
-  return palette(theme).filter((k) => !(k in NOT_GROUNDS) && !PILLS.some((p) => k === `app-${p}-fg`))
+  return palette(theme).filter((k) => !(k in NOT_GROUNDS) && !STATES.some((p) => k === `app-${p}-fg`))
 }
 
 /**
@@ -230,8 +231,8 @@ function grounds(theme: Theme): string[] {
  * what it writes on: its grounds, each measured below, or what it is, a separator (a dot, or a dash
  * whose words are a screen reader's) or an icon (a chevron), which says nothing a reader could miss.
  * That ink reads at AA on a field, a card, the page and the lightest fill, not on a hovered row, a
- * chosen one, a pill's ground or the ground's second shade: text drawn there takes the third ink, as a
- * permission's key does on a changed row (the waiting pill's ground) and on a hovered one. A rule that
+ * chosen one, a state tag's ground or the ground's second shade: text drawn there takes the third ink, as a
+ * permission's key does on a changed row (the waiting state tag's ground) and on a hovered one. A rule that
  * writes in it and is not named here fails, as does a name here that no rule has any more.
  */
 const PLACEHOLDER_INK: Record<string, string[] | 'a separator' | 'an icon'> = {
@@ -289,9 +290,10 @@ function pairs(theme: Theme): Pair[] {
   const out: Pair[] = []
   // The first two inks, and the indigo of a link or a chosen tab, on every ground.
   for (const ink of ['app-ink', 'app-ink-2', 'app-indigo']) for (const bg of all) out.push([ink, bg, 4.5])
-  // The third ink, and each pill's text, outlined (plain) on whatever it lies on: on every ground but
-  // the deepest fills, a hovered row, a changed one (the waiting pill's ground) and another pill's included.
-  for (const ink of ['app-ink-3', ...PILLS.map((p) => `app-${p}-fg`)])
+  // The third ink, and each state tag's text, outlined (plain) on whatever it lies on: on every ground but
+  // the deepest fills, a hovered row, a changed one (the waiting state tag's ground) and another state tag's
+  // included.
+  for (const ink of ['app-ink-3', ...STATES.map((p) => `app-${p}-fg`)])
     for (const bg of all) if (!(bg in DEEP_FILLS)) out.push([ink, bg, 4.5])
   // The placeholder's ink, where it is drawn.
   for (const bg of PLACEHOLDER_GROUNDS) out.push(['app-ink-placeholder', bg, 4.5])
@@ -310,7 +312,7 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
     expect(ratio, `${colour(theme, fg)} on ${colour(theme, bg)}: ${ratio.toFixed(2)}:1`).toBeGreaterThanOrEqual(min)
   })
 
-  it('reads every ground from the style sheets, a pill’s and a hovered row’s among them', () => {
+  it('reads every ground from the style sheets, a state tag’s and a hovered row’s among them', () => {
     const all = grounds(theme)
     expect(all).toEqual(
       expect.arrayContaining([
@@ -320,14 +322,14 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
         'app-overlay',
         'app-field',
         'app-indigo-tint',
-        ...PILLS.map((p) => `app-${p}-bg`),
+        ...STATES.map((p) => `app-${p}-bg`),
         'el-fill-color-lighter',
         'el-fill-color-light',
         'el-fill-color',
         'el-color-primary-light-9',
       ]),
     )
-    // An alias is measured as what it names, once: a field's fill is the field, a warning's ground the waiting pill's.
+    // An alias is measured as what it names, once: a field's fill is the field, a warning's ground the waiting state tag's.
     expect(all).not.toContain('el-fill-color-blank')
     expect(all).not.toContain('el-color-warning-light-9')
     expect(all.filter((k) => k.startsWith('app-ink') || k.endsWith('-fg'))).toEqual([])
@@ -344,12 +346,12 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
     expect(step('app-ink-3')).toBeGreaterThan(step('app-ink-placeholder'))
   })
 
-  it('gives each pill a hue of its own, 30° apart at least, so that none is taken for another; only the neutral one has none', () => {
-    const pills = PILLS.map((p) => [p, chromaHue(colour(theme, `app-${p}-fg`))] as const)
-    const hued = pills.filter(([, c]) => c.chroma > 15)
+  it('gives each state tag a hue of its own, 30° apart at least, so that none is taken for another; only the neutral one has none', () => {
+    const states = STATES.map((p) => [p, chromaHue(colour(theme, `app-${p}-fg`))] as const)
+    const hued = states.filter(([, c]) => c.chroma > 15)
     expect(hued.map(([p]) => p)).toEqual(expect.arrayContaining(['wait', 'done', 'danger']))
-    // A second pill with little or no hue would be taken for the neutral one.
-    expect(pills.filter(([, c]) => c.chroma <= 15).map(([p]) => p)).toEqual(['neutral'])
+    // A second state tag with little or no hue would be taken for the neutral one.
+    expect(states.filter(([, c]) => c.chroma <= 15).map(([p]) => p)).toEqual(['neutral'])
     for (const [i, [p, a]] of hued.entries())
       for (const [q, b] of hued.slice(i + 1)) {
         const apart = Math.min(Math.abs(a.hue - b.hue), 360 - Math.abs(a.hue - b.hue))
@@ -370,11 +372,13 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
 })
 
 /**
- * What the app shares with aishie.app, written out as the site's :root has it
+ * What the app shares with aishie.app, copied by hand from the site's :root
  * (AIShie-Website: public/index.html, and docs-src/template/base.css, which
  * its build holds equal to it), by the site's name for each of the app's
- * tokens. A change on either side fails here: make it on both, or write the
- * difference in DIFFERS with why.
+ * tokens. A change to the app's tokens fails here: make it on the site too,
+ * or write the difference in DIFFERS with why. A change on aishie.app fails
+ * nothing here, as this repository cannot read the site's: copy it in by
+ * hand, then make the app's tokens agree.
  */
 const SITE: { light: Record<string, string>; dark: Record<string, string>; root: Record<string, string> } = {
   light: {
@@ -443,9 +447,9 @@ const DIFFERS: Record<string, string> = {
     'the site’s #a9a7a0 is 1.41:1 from its second ink, under the 1.5:1 the app keeps between its second and third; the app’s #a19f98 is 1.55:1 (the site may take it)',
   'dark field-line':
     'a field in the app also lies on raised grounds the site has not got: on a dialog’s (--app-overlay, #212739) the site’s #6a7490 is 3.19:1, the app’s #737889 3.38:1',
-  'dark ok-fg': 'the done colour of the app’s dark theme, measured on its own grounds and the pills’ (above)',
+  'dark ok-fg': 'the done colour of the app’s dark theme, measured on its own grounds and the state tags’ (above)',
   'dark no-bg': 'the refused colour’s ground of the app’s dark theme, measured with its text (above)',
-  'dark no-fg': 'the refused colour of the app’s dark theme, measured on its own grounds and the pills’ (above)',
+  'dark no-fg': 'the refused colour of the app’s dark theme, measured on its own grounds and the state tags’ (above)',
 }
 
 describe('what the app shares with aishie.app', () => {
@@ -497,10 +501,10 @@ describe('the palette', () => {
     expect(colours.filter((k) => !new RegExp(`var\\(--${k}[,)\\s]`).test(all))).toEqual([])
   })
 
-  it('gives every pill its ground and its text, in both themes', () => {
-    expect(PILLS).toEqual(expect.arrayContaining(['wait', 'done', 'danger', 'neutral']))
-    const unpaired = PILLS.flatMap((p) => [`app-${p}-bg`, `app-${p}-fg`]).filter((k) => !isColour(ROOT[k]))
-    expect(unpaired, 'a pill’s ground without its text, or its text without its ground').toEqual([])
+  it('gives every state tag its ground and its text, in both themes', () => {
+    expect(STATES).toEqual(expect.arrayContaining(['wait', 'done', 'danger', 'neutral']))
+    const unpaired = STATES.flatMap((p) => [`app-${p}-bg`, `app-${p}-fg`]).filter((k) => !isColour(ROOT[k]))
+    expect(unpaired, 'a state tag’s ground without its text, or its text without its ground').toEqual([])
   })
 
   it('names, of what is not a ground, only colours the style sheets have', () => {

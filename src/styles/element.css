@@ -8,9 +8,9 @@
    (white in the light theme, the card in the dark one), and dark-2 mixes 20%
    of black (white in the dark theme); they are written out, as Element Plus
    needs, and the -rgb triplets repeat the colours they name. Success,
-   warning and danger are the pills' colours: the colour is the pill's text
-   (done, waiting, refused), light-9 its ground, and the steps between are
-   mixed the same way. Info is the neutral pill's, the third ink.
+   warning and danger are the state tags' colours: the colour is the tag's
+   text (done, waiting, refused), light-9 its ground, and the steps between
+   are mixed the same way. Info is the neutral state tag's, the third ink.
 
    Its shapes are the app's (styles/tokens.css, "Shapes"): every corner it
    draws is 2 px but a mark's that is round (an avatar, a radio, a dot), and
@@ -482,11 +482,11 @@ html.dark .el-card {
      hover, a step darker pressed: reject, request changes, cancel, refresh,
      everything else. It is as tall as the others (36 px; 44 large, 28
      small; a finger's on a touch screen), so that it is as easy to hit.
-   - primary as text or as a link (or, until the screens are swept, plain):
-     the indigo's words as a text button: a list item's own main action
-     (approve in a queue after its first, open), one that reads as a link.
-   - danger as text or a link (or plain, until the sweep): the danger's
-     words and icon, no outline, its ground on hover: archive, remove,
+   - primary as text or as a link: the indigo's words as a text button: a
+     list item's own main action (approve in a queue after its first,
+     open), one that reads as a link.
+   - danger as text or a link: the danger's words and icon, no outline,
+     its ground on hover: archive, remove,
      revoke. It asks before it does anything, in a confirmation, whose last
      step alone is solid red.
    - solid danger: only the last step of a confirmation, in a dialog or a

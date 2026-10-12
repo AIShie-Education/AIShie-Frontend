@@ -228,7 +228,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
                 <span class="peer-member__figure">{{ formatDecimal(m.grade.score) }}</span>
                 <AppTag
                   :tone="m.grade.state === 'posted' ? 'done' : 'wait'"
-                  :variant="m.grade.state === 'posted' ? 'quiet' : 'pill'"
+                  :variant="m.grade.state === 'posted' ? 'quiet' : 'state'"
                 >
                   {{ t(`peer.results.gradeState.${m.grade.state === 'posted' ? 'posted' : 'draft'}`) }}
                 </AppTag>
