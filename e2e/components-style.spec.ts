@@ -1,16 +1,18 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { coursePath, demo, signIn, signInAsRoot } from './support'
+import { coursePath, demo, signIn, signInAsRoot, wordsBelowAA } from './support'
 
 // What the shared components draw, as a browser draws it (design wave 3, docs/CONVENTIONS.md "Tags",
 // "Buttons", "Notes and alerts", "Empty places", "Filters"): on the pages that hold most of them, at a
 // laptop's size and a phone's, in both themes, every tag, chip, badge, button, agent's avatar, note and
 // empty place is a box with corners of 4 px at most (the app's are 2), never a pill; none casts a shadow,
-// only a stroke (an inset line, or a ring with no blur and no offset); no button but the one main action
-// and a confirmation's last step has a ground, and none has an edge (a text button's is none); an agent's
-// avatar carries no light of the brand's; a note and where data goes have no ground and no box, a rule at
-// their left; an empty place draws no picture (an action in its slot keeps its icon). Element Plus's own
-// round marks (a radio, a dot) are not these components, and are left to the audit of every element.
+// only a stroke (an inset line, or a ring with no blur and no offset); no tag but a count lies on a solid
+// ground, which is a button's (a level of autonomy is a label, and autonomous an outline in the faint line,
+// as an attribute's is); no button but the one main action and a confirmation's last step has a ground,
+// and none has an edge (a text button's is none); an agent's avatar carries no light of the brand's; a note
+// and where data goes have no ground and no box, a rule at their left; an empty place draws no picture (an
+// action in its slot keeps its icon). Element Plus's own round marks (a radio, a dot) are not these
+// components, and are left to the audit of every element.
 // A filter's chip has a control's edge, never a tag's outline; what is chosen, a chip or a segmented
 // control's part, has a bar at its foot, which says so without its hue; and what failed to load says so in
 // red, with Retry's icon in its column.
@@ -77,6 +79,40 @@ function offences(page: Page): Promise<string[]> {
       if (!el.classList.contains('is-link') && cs.borderTopStyle !== 'none')
         out.push(`${name(el)}: a text button with an edge's style, ${cs.borderTopStyle}`)
     }
+    // Tags: only a count is solid; any other lies on no ground, or on a tint a step from the ground under it, never
+    // on a button's (a level of autonomy among them: autonomous was solid ink, and read as a button).
+    const rgb = (c: string) => {
+      const p = (c.match(/[\d.]+/g) ?? []).map(Number)
+      const k = c.startsWith('color(') ? 255 : 1
+      return { r: p[0] * k, g: p[1] * k, b: p[2] * k, a: p.length > 3 ? p[3] : 1 }
+    }
+    const lum = ({ r, g, b }: { r: number; g: number; b: number }) =>
+      [r, g, b]
+        .map((v) => v / 255)
+        .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+        .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
+    const under = (el: Element) => {
+      for (let e = el.parentElement; e; e = e.parentElement) {
+        const bg = getComputedStyle(e).backgroundColor
+        if (!transparent(bg)) return rgb(bg)
+      }
+      return rgb(getComputedStyle(document.body).backgroundColor)
+    }
+    for (const el of document.querySelectorAll('.el-tag:not(.app-tag--count)')) {
+      if (!visible(el)) continue
+      const bg = getComputedStyle(el).backgroundColor
+      if (transparent(bg)) continue
+      const own = rgb(bg)
+      const base = under(el)
+      const laid = {
+        r: own.r * own.a + base.r * (1 - own.a),
+        g: own.g * own.a + base.g * (1 - own.a),
+        b: own.b * own.a + base.b * (1 - own.a),
+      }
+      const [hi, lo] = [lum(laid), lum(base)].sort((x, y) => y - x)
+      const ratio = (hi + 0.05) / (lo + 0.05)
+      if (ratio >= 1.5) out.push(`${name(el)}: a solid ground, ${bg}, ${ratio.toFixed(2)}:1 from the ground under it`)
+    }
     for (const el of document.querySelectorAll('.agent-avatar')) {
       if (visible(el) && el.querySelector('.agent-avatar__light')) out.push(`${name(el)}: the brand's light`)
     }
@@ -133,7 +169,14 @@ for (const theme of ['light', 'dark'] as const)
       try {
         await signIn(page, d.actors.instructor)
         const found: Record<string, string[]> = {}
-        for (const sub of ['materials', 'members', 'activity', 'approvals', `members/${d.actors.grader.member_id}`]) {
+        for (const sub of [
+          'materials',
+          'members',
+          'activity',
+          'approvals',
+          `members/${d.actors.grader.member_id}`,
+          'agents',
+        ]) {
           const o = await audit(page, coursePath(sub))
           if (o.length) found[sub] = o
         }
@@ -279,6 +322,130 @@ for (const theme of ['light', 'dark'] as const)
         else expect(p.bar).toBe(0)
     } finally {
       await context.close()
+    }
+  })
+
+/**
+ * Each level of autonomy's tag shown, as the browser draws it: its level, its ground's contrast with the ground under
+ * it (1 where it has none), its edge's colour and width, and its words' colour; and the faint line an attribute's
+ * outline is drawn in, and the ink.
+ */
+function levelLooks() {
+  const rgb = (c: string) => {
+    const p = (c.match(/[\d.]+/g) ?? []).map(Number)
+    const k = c.startsWith('color(') ? 255 : 1
+    return { r: p[0] * k, g: p[1] * k, b: p[2] * k, a: p.length > 3 ? p[3] : 1 }
+  }
+  const clear = (c: string) => c === 'transparent' || rgb(c).a === 0
+  const lum = ({ r, g, b }: { r: number; g: number; b: number }) =>
+    [r, g, b]
+      .map((v) => v / 255)
+      .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+      .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0)
+  const under = (el: Element) => {
+    for (let e = el.parentElement; e; e = e.parentElement) {
+      const bg = getComputedStyle(e).backgroundColor
+      if (!clear(bg)) return rgb(bg)
+    }
+    return rgb(getComputedStyle(document.body).backgroundColor)
+  }
+  /** A token's colour as the browser writes a computed one. */
+  const token = (name: string) => {
+    const probe = document.createElement('span')
+    probe.style.color = `var(${name})`
+    document.body.append(probe)
+    const c = getComputedStyle(probe).color
+    probe.remove()
+    return c
+  }
+  return {
+    line: token('--app-line-strong'),
+    ink: token('--app-ink'),
+    tags: [...document.querySelectorAll('.el-tag.app-level-tag')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => {
+        const cs = getComputedStyle(el)
+        const own = rgb(cs.backgroundColor)
+        const base = under(el)
+        const laid = {
+          r: own.r * own.a + base.r * (1 - own.a),
+          g: own.g * own.a + base.g * (1 - own.a),
+          b: own.b * own.a + base.b * (1 - own.a),
+        }
+        const [hi, lo] = [lum(laid), lum(base)].sort((x, y) => y - x)
+        return {
+          level: ['denied', 'confirm_required', 'pending_review', 'autonomous'].find((l) =>
+            el.classList.contains(`is-${l}`),
+          ),
+          text: (el.textContent ?? '').trim(),
+          ground: +((hi + 0.05) / (lo + 0.05)).toFixed(2),
+          edge: cs.borderTopColor,
+          edgeWidth: cs.borderTopWidth,
+          words: cs.color,
+        }
+      }),
+  }
+}
+
+for (const theme of ['light', 'dark'] as const)
+  test(`a level of autonomy is a label, never on a button's solid ground, and autonomous an outline in the faint line, ${theme}`, async ({
+    browser,
+  }) => {
+    type Looks = Awaited<ReturnType<typeof levelLooks>>
+    const check = (looks: Looks, where: string) => {
+      expect(looks.tags.length, where).toBeGreaterThan(0)
+      for (const tag of looks.tags) expect(tag.ground, `${where}: ${tag.text}`).toBeLessThan(1.5)
+      const free = looks.tags.filter((tag) => tag.level === 'autonomous')
+      expect(free.length, where).toBeGreaterThan(0)
+      for (const tag of free) {
+        expect(tag.ground, `${where}: ${tag.text}`).toBe(1)
+        expect({ edge: tag.edge, width: tag.edgeWidth, words: tag.words }, `${where}: ${tag.text}`).toEqual({
+          edge: looks.line,
+          width: '1px',
+          words: looks.ink,
+        })
+      }
+      // Each other level keeps a look of its own: none is drawn as autonomous is.
+      for (const tag of looks.tags.filter((t) => t.level !== 'autonomous'))
+        expect(tag.ground === 1 && tag.edge === looks.line, `${where}: ${tag.text}`).toBe(false)
+    }
+    /** A page of its own for each person, in the theme. */
+    const pageIn = async () => {
+      const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, locale: 'en-US' })
+      await context.addInitScript((t) => {
+        try {
+          localStorage.setItem('aishie.theme', t)
+        } catch {}
+      }, theme)
+      return context.newPage()
+    }
+
+    // The course's agents, where an agent the teacher does not manage says how it replies: Answers at once.
+    const page = await pageIn()
+    try {
+      await signIn(page, demo().actors.instructor)
+      await page.goto(coursePath('agents'))
+      await expect(page.locator('.agent-row__replies .app-level-tag.is-autonomous').first()).toHaveText(
+        'Answers at once',
+      )
+      await page.mouse.move(0, 0)
+      check(await page.evaluate(levelLooks), 'agents')
+      expect(await wordsBelowAA(page, '.app-level-tag')).toEqual([])
+    } finally {
+      await page.context().close()
+    }
+
+    // The presets compared, every permission's level of each preset, autonomous and denied side by side.
+    const admin = await pageIn()
+    try {
+      await signInAsRoot(admin)
+      await admin.goto('/admin/presets')
+      await expect(admin.locator('.app-level-tag.is-autonomous').first()).toBeVisible()
+      await admin.mouse.move(0, 0)
+      check(await admin.evaluate(levelLooks), 'presets')
+      expect(await wordsBelowAA(admin, '.app-level-tag')).toEqual([])
+    } finally {
+      await admin.context().close()
     }
   })
 

@@ -878,10 +878,15 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
   alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
-  level of autonomy is told by its mark and its weight, never by red and green (`LevelIcon`, the
-  `app-level-tag` classes StatusTag gives `level` and `answerLevel`): denied a lock, neutral;
-  confirm_required a raised hand on the indigo's tint; pending_review an eye, outlined in ink;
-  autonomous a bolt, solid ink, the heaviest, for the level that leaves an agent most to itself.
+  level of autonomy is told by its mark and its frame, never by red and green (`LevelIcon`, the
+  `app-level-tag` classes StatusTag gives `level` and `answerLevel`), and is never solid, for a
+  solid ground is a button's and a level is only read: denied a lock, neutral; confirm_required a
+  raised hand on the indigo's tint; pending_review an eye, outlined in ink; autonomous a bolt in the
+  ink on no ground, in the faint line an identity's outline has (Tags, above). Design wave 3 first
+  drew autonomous in solid ink, and on the course's agents page 「即時回覆」 was the most
+  button-like thing in a row of text buttons, though it cannot be pressed. `styles/levelTags.spec.ts`
+  holds each level to a ground no heavier than a tint, to a look of its own, and to AA for its
+  words, in both themes.
   The 「需批准」 beside an action the caller's seat must have approved is that level too:
   `<StatusTag vocab="level" value="confirm_required" />`, never an amber tag of its own.
 - **Ink** comes in three steps, aishie.app's three in the light theme: `--app-ink` (#1c1c1c, the site's

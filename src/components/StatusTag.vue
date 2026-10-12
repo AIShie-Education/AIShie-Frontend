@@ -11,11 +11,11 @@
 // - A category (a role, a kind of actor, seat or document, a scope, a
 //   preset, a platform role) is an identity, not a state: outlined, with its
 //   icon, in no colour.
-// - A level of autonomy is told by its mark and its weight, never by red and
-//   green: denied a lock, neutral; confirm_required a raised hand, on the
-//   indigo's tint; pending_review an eye, outlined in ink; autonomous a
-//   bolt, solid ink, the heaviest for the level that leaves an agent most to
-//   itself.
+// - A level of autonomy is told by its mark and its frame, never by red and
+//   green, and is never solid, for a solid ground is a button's: denied a
+//   lock, neutral; confirm_required a raised hand, on the indigo's tint;
+//   pending_review an eye, outlined in ink; autonomous a bolt in the ink, on
+//   no ground, in the faint line an attribute's outline has (main.css).
 import { computed, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Collection, Document, Filter, Key, Operation, Setting, User } from '@element-plus/icons-vue'
