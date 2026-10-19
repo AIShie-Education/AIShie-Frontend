@@ -62,23 +62,25 @@ function cpuTime(): number {
  * the text, 16 where it grows with the text's square. CPU time, not the
  * wall clock's: on a busy machine a short run may have a CPU to itself and a
  * longer one share it, which the wall clock would count as work. The two
- * are rendered one after the other, three times, and the middle one of the
- * three ratios is taken: a run that the machine's other work slowed, or a
- * short one it happened to leave alone, does not decide it.
+ * are rendered one after the other, five times, and each size's least time
+ * is taken. What else the machine does can only add to a run's CPU time (a
+ * collection of garbage, caches another process emptied), so the least of
+ * five is the nearest to the work itself: a slowdown decides it only if it
+ * strikes every large run. The middle of three ratios, taken before, failed
+ * once at 8.08 on CI's shared machines when two of its large runs were slow.
  */
 function growth(text: (n: number) => string, n: number): number {
-  const ratios: number[] = []
-  for (let round = 0; round < 3; round++) {
-    const [small, large] = [text(n), text(4 * n)].map((src) => {
+  const least = [Infinity, Infinity]
+  for (let round = 0; round < 5; round++) {
+    ;[text(n), text(4 * n)].forEach((src, i) => {
       const started = cpuTime()
       const html = renderMarkdown(src)
       const used = cpuTime() - started
       expect(html).not.toContain('katex')
-      return used
+      least[i] = Math.min(least[i]!, used)
     })
-    ratios.push(large! / small!)
   }
-  return ratios.sort((a, b) => a - b)[1]!
+  return least[1]! / least[0]!
 }
 
 describe('math', () => {
