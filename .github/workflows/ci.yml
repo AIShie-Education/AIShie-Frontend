@@ -78,7 +78,7 @@ jobs:
       - run: npm run build
       # The one build. The end-to-end tests run on these files, and a deploy
       # ships them: nothing is built again on the way.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: web-${{ github.sha }}
           path: dist/
@@ -241,7 +241,7 @@ jobs:
       # Kept for a failed run, and for a green one whose retry passed a test
       # that had failed: test-results/ then holds the failed attempt's trace
       # (trace: retain-on-failure), the only record of what a flaky test met.
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ failure() || (!cancelled() && hashFiles('test-results/**/trace.zip') != '') }}
         with:
           name: e2e-${{ github.sha }}-${{ github.run_attempt }}
