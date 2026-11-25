@@ -15,8 +15,11 @@ import {
 
 /** The notice in a language's words: the short line, the points, where it goes and what is kept. */
 function words(n: PrivacyNotice, locale: 'en' | 'zh-Hant' | 'zh-Hans' = 'en') {
-  const t = (s: { key: string; params: Record<string, string> }) =>
+  const translate = (s: { key: string; params: Record<string, string> }) =>
     i18n.global.t(`chat.privacy.${s.key}`, s.params, { locale })
+  const readers = new Intl.ListFormat(locale, { type: 'conjunction' }).format(n.readerSummary.map(translate))
+  const t = (s: { key: string; params: Record<string, string> }) =>
+    i18n.global.t(`chat.privacy.${s.key}`, { ...s.params, readers }, { locale })
   return {
     line: t(n.line),
     points: n.points.map(t),
@@ -34,6 +37,18 @@ const SCHOOL: AnswerModels = {
 const OWN: AnswerModels = { plan: 'own', model: { provider: 'anthropic', model: 'claude-sonnet' }, fallback: null }
 const LABELS: Record<string, string> = { deepseek: 'DeepSeek', openai: 'OpenAI', anthropic: 'Anthropic' }
 const label = (p: string) => LABELS[p] ?? p
+const READER_NAMES = [
+  'The two taking part',
+  'course staff',
+  'people and agents that decide actions',
+  'site and department administrators',
+]
+const READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format(READER_NAMES)
+const SHARED_READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format([
+  ...READER_NAMES.slice(0, 3),
+  'other members it answers',
+  READER_NAMES[3]!,
+])
 
 describe('privacyNotice: who can read it, for every agent', () => {
   it.each([
@@ -51,17 +66,18 @@ describe('privacyNotice: who can read it, for every agent', () => {
     ])
     const w = words(n)
     // Whoever decides actions in the course may be an agent, and department administrators export too.
-    expect(w.line).toMatch(
-      /^Course staff, agents that decide actions in the course, and site and department administrators can read this conversation/,
-    )
+    expect(w.line.startsWith(`${SHARED_READERS} can read this;`)).toBe(true)
     expect(w.points[0]).toBe(
-      'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
+      `${SHARED_READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
     )
     expect(w.readersNote).toMatch(/^An agent that decides actions in the course can read this conversation too\./)
     // Nothing is deleted, and a withdrawn message is kept: its text in exports too, its files listed there, never held.
     expect(w.kept).toContain('Conversations are never deleted.')
     expect(w.kept).toContain(
       'its text in the record of the action that wrote it and in exports for audit, and its files on the site, which exports list without their contents.',
+    )
+    expect(w.kept).toContain(
+      'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
     )
     expect(w.kept).not.toContain('text and files are kept')
   })
@@ -79,6 +95,10 @@ describe('privacyNotice: who can read it, for every agent', () => {
       'actionRecord',
       'auditExport',
     ])
+    const participantsOnly = privacyNotice({ name: 'Mine', hosting: 'runtime', visibleTo: ['participants'] })
+    const w = words(participantsOnly)
+    expect(w.line).toBe('The two taking part can read this; Mine sends it to its AI model’s provider.')
+    expect(w.points[0]).toBe('The two taking part can read this conversation.')
   })
 })
 
@@ -88,7 +108,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('model')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s helper sends it to DeepSeek to answer, or to OpenAI when the school’s model cannot.',
+      `${READERS} can read this; Ken’s helper sends it to DeepSeek, or to OpenAI when the school’s model cannot.`,
     )
     expect(w.points[1]).toBe(
       'Ken’s helper sends what you write here to DeepSeek, its AI model’s provider, to answer it, or to OpenAI when the school’s model cannot.',
@@ -105,21 +125,49 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     const n = privacyNotice({ name: 'Ken’s helper', hosting: 'runtime', models: same, providerName: label })
     expect(n.line.key).toBe('line.model')
     expect(words(n).line).toBe(
-      `Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s helper sends it to DeepSeek to answer.`,
+      `${READERS} can read this; Ken’s helper sends it to DeepSeek.`,
     )
     expect(words(n).route).toContain('your own model answers instead: deepseek-reasoner, from DeepSeek.')
   })
 
   it('names the provider of the caller’s own agent on their own key, with no fallback', () => {
     const w = words(privacyNotice({ name: 'Notes', hosting: 'runtime', models: OWN, providerName: label }))
-    expect(w.line).toContain('Notes sends it to Anthropic to answer.')
+    expect(w.line).toContain('Notes sends it to Anthropic.')
     expect(w.route).toContain('That model is claude-sonnet, from Anthropic, on your own API key.')
     expect(w.route).not.toContain('instead')
   })
 
   it('shows a provider’s id where the runtime gives no name for it', () => {
     const w = words(privacyNotice({ name: 'Notes', hosting: 'runtime', models: OWN }))
-    expect(w.line).toContain('Notes sends it to anthropic to answer.')
+    expect(w.line).toContain('Notes sends it to anthropic.')
+  })
+
+  it('names a school offer on its own model server by the offer label, never the internal provider id', () => {
+    const schoolServer: AnswerModels = {
+      plan: 'school',
+      model: { provider: 'openai_compatible', model: 'cs-instruct', offerLabel: 'CS GPU server' },
+      fallback: null,
+    }
+    const n = privacyNotice({ name: 'CS tutor', hosting: 'runtime', models: schoolServer })
+    const w = words(n)
+    expect(w.line).toBe(`${READERS} can read this; CS tutor sends it to the school’s own model server, CS GPU server.`)
+    expect(w.points[1]).toBe(
+      'CS tutor sends what you write here to the school’s own model server, CS GPU server, to answer it.',
+    )
+    expect(w.route).toContain('That model is cs-instruct, on the school’s own model server, CS GPU server.')
+    expect(`${w.line} ${w.points.join(' ')} ${w.route}`).not.toContain('openai_compatible')
+  })
+
+  it('uses generic provider wording for a school server whose offer has no label', () => {
+    const schoolServer: AnswerModels = {
+      plan: 'school',
+      model: { provider: 'openai_compatible', model: 'cs-instruct', offerLabel: ' ' },
+      fallback: null,
+    }
+    const w = words(privacyNotice({ name: 'CS tutor', hosting: 'runtime', models: schoolServer }))
+    expect(w.line).toBe(`${READERS} can read this; CS tutor sends it to its AI model’s provider.`)
+    expect(w.route).toContain('this page cannot name its AI model’s provider')
+    expect(`${w.line} ${w.points.join(' ')} ${w.route}`).not.toContain('openai_compatible')
   })
 
   it('names no provider for an agent hosted on AIshie that is not the caller’s', () => {
@@ -127,7 +175,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('runtime')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Lab tutor sends it to its AI model’s provider to answer.',
+      `${READERS} can read this; Lab tutor sends it to its AI model’s provider.`,
     )
     expect(w.route).toContain('AIshie’s agent service sends the messages of this conversation')
     expect(w.route).toContain('This page cannot show you which provider it is.')
@@ -141,7 +189,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('mcp')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Ken’s notes answers from its owner’s own tools.',
+      `${READERS} can read this; Ken’s notes answers from its owner’s own tools.`,
     )
     expect(w.route).toContain('it is used from its owner’s own tools')
     expect(w.route).not.toContain('agent service sends')
@@ -155,7 +203,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(n.kind).toBe('unknown')
     const w = words(n)
     expect(w.line).toBe(
-      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation, and it goes to Tutor’s AI model to be answered.',
+      `${READERS} can read this; Tutor’s AI model answers it.`,
     )
     expect(w.route).not.toContain('DeepSeek')
     expect(w.route).not.toContain('deepseek')
@@ -175,12 +223,11 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(w.line).toContain('DeepSeek')
     expect(w.line).toContain('OpenAI')
     expect(w.line).toContain(
-      locale === 'zh-Hant'
-        ? '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員'
-        : '课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员',
+      locale === 'zh-Hant' ? '負責審批操作的人及代理' : '负责审批操作的人和智能体',
     )
     expect(w.route).toContain('deepseek-chat')
     expect(w.kept).toContain(locale === 'zh-Hant' ? '匯出檔只列出檔案，不含其內容' : '导出文件只列出文件，不包含其内容')
+    expect(w.kept).toContain(locale === 'zh-Hant' ? '曾等待審批而未發佈的問題或回答' : '曾等待审批而未发布的问题或回答')
     expect(w.kept).toContain('180')
   })
 })
@@ -230,7 +277,7 @@ describe('answerModelsOf', () => {
   it('is the school’s offer, with the owner’s own model behind it', () => {
     expect(answerModelsOf(hosted({ model: { own, school } }))).toEqual({
       plan: 'school',
-      model: { provider: 'deepseek', model: 'deepseek-chat' },
+      model: { provider: 'deepseek', model: 'deepseek-chat', offerLabel: 'School AI' },
       fallback: { provider: 'anthropic', model: 'claude-sonnet' },
     })
     expect(

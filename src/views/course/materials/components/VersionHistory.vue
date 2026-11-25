@@ -65,8 +65,8 @@ function linkTo(v: DocumentVersion) {
       <li v-for="v in ordered" :key="v.id" class="version-item" :class="{ 'is-shown': v.id === shownId }">
         <div class="version-item__head">
           <span class="version-item__seq">{{ t('materials.document.versionShort', { seq: v.seq }) }}</span>
-          <AppTag v-if="v.published" tone="done">
-            {{ t('materials.document.published') }}
+          <AppTag v-if="!v.published" tone="wait">
+            {{ t('materials.document.notPublished') }}
           </AppTag>
           <AppTag v-if="v.id === latestId" variant="outline">
             {{ t('materials.document.latest') }}

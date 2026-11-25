@@ -13,6 +13,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: var(--app-font-sans);
+  font-size: var(--app-text-md);
   line-height: var(--app-lh-ui);
   background: var(--app-ground);
   color: var(--app-ink);
@@ -74,8 +75,11 @@ th {
 html:lang(zh) {
   text-autospace: normal;
 }
-html:lang(zh) :is(p, li, .page-header__subtitle, .app-form-hint, .el-alert__description) {
+html:lang(zh) :is(p, li, .app-form-hint, .el-alert__description) {
   text-wrap: pretty;
+}
+html:lang(zh) .page-header__subtitle {
+  text-wrap: balance;
 }
 html:lang(zh) :is(h1, h2, h3, .app-card__title) {
   text-wrap: balance;
@@ -106,6 +110,24 @@ summary:focus-visible,
 [tabindex='0']:not(input, textarea, select, .el-tabs__item):focus-visible {
   outline: 2px solid var(--app-focus);
   outline-offset: 2px;
+}
+
+/* Respect the reader's system preference everywhere, including Element Plus,
+   overlays and components loaded later. A near-zero duration still fires the
+   transition/animation events their show/hide logic may await, but leaves no
+   perceptible motion; delays and repeating decorative animation go too.
+   Script-requested smooth scrolling checks utils/motion.ts at call time. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* The pages before the app (signing in, an invitation, a join link, a password of one's own), set as

@@ -172,6 +172,9 @@
      heading, a figure. A heading takes --app-heading-weight, as does a
      figure that stands for a card. */
   --app-weight-strong: 600;
+  /* Latin letters drawn in Plex in every language ("AI" and an agent's
+     initials): Plex 600 is loaded in every language, unlike Noto Sans. */
+  --app-weight-latin: 600;
 
   /* Room: the steps a gap, a margin or a padding takes, 4 px apart up to 16
      and 8 apart after. */

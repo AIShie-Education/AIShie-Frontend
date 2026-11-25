@@ -732,7 +732,7 @@ async function handInNow() {
       lines.length > 1
         ? h(
             'div',
-            lines.map((l) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, l)),
+            lines.map((l) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, l)),
           )
         : lines[0]!
     await ElMessageBox.confirm(message, title, {

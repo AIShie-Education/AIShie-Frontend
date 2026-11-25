@@ -688,6 +688,7 @@ const backLink = computed(() => ({
 }
 .grade-view__facts dd {
   margin: 0;
+  font-size: var(--app-text-md);
   display: flex;
   align-items: center;
   gap: 8px;

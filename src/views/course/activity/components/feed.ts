@@ -246,8 +246,8 @@ export const CATEGORY_ICON: Record<Category, string> = {
   submissions: 'Files',
   assignments: 'EditPen',
   documents: 'Reading',
-  members: 'UserFilled',
-  actions: 'Stamp',
+  members: 'User',
+  actions: 'Check',
   course: 'School',
   other: 'Bell',
 }

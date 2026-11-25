@@ -32,6 +32,7 @@ import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { ceilingsOf } from '@/utils/ceilings'
 import { shortId } from '@/utils/format'
+import { scrollBehavior } from '@/utils/motion'
 import RefusalAlert from './components/RefusalAlert.vue'
 import RescopeDialog from './components/RescopeDialog.vue'
 import ResetPasswordDialog from './components/ResetPasswordDialog.vue'
@@ -261,7 +262,7 @@ const roleNote = computed(() => {
 const permsCard = ref<HTMLElement | null>(null)
 function editPermsFromRole() {
   startEdit()
-  permsCard.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  permsCard.value?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
 }
 
 // --- A student's password ----------------------------------------------------------

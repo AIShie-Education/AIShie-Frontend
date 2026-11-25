@@ -264,23 +264,39 @@ export default {
     gotIt: '知道了',
     agentReaders:
       '課程中負責審批操作的代理亦可閱讀這段對話。它把讀到的內容傳送到哪裡，視乎它的託管方式：經 AIshie 的代理執行環境傳送至它的 AI 模型，或傳送至其擁有者自己的工具。',
+    reader: {
+      participants: '對話雙方',
+      overseers: '課程教職員',
+      actionRecord: '負責審批操作的人及代理',
+      respondentAnswersOthers: '它回答的其他成員',
+      auditExport: '網站及部門管理員',
+      other: '{name}',
+    },
     line: {
-      model:
-        '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。{name}會把內容傳送至{provider}以作答。',
+      model: '{readers}可閱讀這段對話；{name}會把內容傳送至{provider}作答。',
       modelFallback:
-        '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。{name}會把內容傳送至{provider}以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
-      runtime:
-        '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。{name}會把內容傳送至其 AI 模型的供應商以作答。',
-      mcp: '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。{name}經由其擁有者自己的工具作答。',
-      unknown:
-        '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話；內容會傳送至{name}的 AI 模型以作答。',
+        '{readers}可閱讀這段對話；{name}會把內容傳送至{provider}作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      runtime: '{readers}可閱讀這段對話；{name}會把內容傳送至其 AI 模型的供應商作答。',
+      runtimeFallback:
+        '{readers}可閱讀這段對話；{name}會把內容傳送至其 AI 模型的供應商作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      schoolServer: '{readers}可閱讀這段對話；{name}會把內容傳送至學校自己的模型伺服器{provider}作答。',
+      schoolServerFallback:
+        '{readers}可閱讀這段對話；{name}會把內容傳送至學校自己的模型伺服器{provider}作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      mcp: '{readers}可閱讀這段對話；{name}經由其擁有者自己的工具作答。',
+      unknown: '{readers}可閱讀這段對話；內容會傳送至{name}的 AI 模型作答。',
     },
     points: {
-      readers: '課程教職員及課程中負責審批操作的代理可閱讀這段對話，網站及部門管理員亦可匯出作稽核。',
+      readers: '{readers}可閱讀這段對話。',
+      readersExport: '{readers}可閱讀這段對話；網站及部門管理員可匯出作稽核。',
       model: '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商{provider}以作答。',
       modelFallback:
         '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商{provider}以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      schoolServer: '{name}會把你在這裡寫的內容傳送至學校自己的模型伺服器{provider}以作答。',
+      schoolServerFallback:
+        '{name}會把你在這裡寫的內容傳送至學校自己的模型伺服器{provider}以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
       runtime: '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商以作答。',
+      runtimeFallback:
+        '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
       mcp: '{name}由其擁有者自己的工具使用，這些工具可能把你寫的內容傳送至它們使用的任何 AI 服務。',
       unknown: '你在這裡寫的內容會傳送至{name}的 AI 模型以作答。',
       kept: '這裡的內容不會被刪除：你撤回的訊息會被隱藏，但仍會保留。',
@@ -289,6 +305,8 @@ export default {
       hosted:
         '{name}由 AIshie 託管。為了作答，AIshie 的代理執行環境會把這段對話的訊息、訊息附帶的檔案，以及{name}在課程中讀取的內容傳送至它的 AI 模型。',
       school: '該模型是學校方案中{provider}的{model}。',
+      schoolServer: '該模型是學校自己的模型伺服器{provider}上的{model}。',
+      schoolUnknownProvider: '該模型是學校方案中的{model}；這個頁面無法顯示其 AI 模型的供應商名稱。',
       own: '該模型是{provider}的{model}，使用你自己的 API 金鑰。',
       fallback: '學校的模型無法作答時（今日額度已用完，或模型出錯），會改由你自己的模型作答：{provider}的{model}。',
       unknownModel:
@@ -301,6 +319,7 @@ export default {
       notDeleted: '對話永遠不會被刪除。已關閉的對話仍可閱讀。',
       withdrawn:
         '撤回的訊息會在這裡隱藏，但仍會保留：其文字保留在寫入它的操作紀錄及稽核用的匯出檔中；其檔案保留在網站上，匯出檔只列出檔案，不含其內容。',
+      unposted: '曾等待審批而未發佈的問題或回答，也會連同其文字保留在操作紀錄及稽核用的匯出檔中。',
       withdrawnModel: '訊息撤回後，AIshie 的代理執行環境不會再把它傳送至{name}的模型；之前已傳送的內容無法收回。',
       ocr: 'AIshie 的代理執行環境從附加的圖片或掃描 PDF 讀出的文字，會保留最多180天，即使訊息已撤回。',
     },

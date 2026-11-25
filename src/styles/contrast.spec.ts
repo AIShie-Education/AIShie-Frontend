@@ -33,6 +33,7 @@ const here = decodeURIComponent(import.meta.url.replace(/^file:\/\//, '').replac
 const src = here.replace(/\/styles$/, '')
 const tokensCss = fs.readFileSync(`${here}/tokens.css`, 'utf8')
 const elementCss = fs.readFileSync(`${here}/element.css`, 'utf8')
+const markdownCss = fs.readFileSync(`${here}/markdown-rich.css`, 'utf8')
 
 /** The files that paint with the palette (.vue, .ts, .css; Element Plus's mapping among them), tests and tokens.css left out, by their path from src. */
 const SOURCES: { path: string; text: string }[] = []
@@ -103,7 +104,7 @@ function declarations(body: string): Record<string, string> {
 function declared(selector: string): Record<string, string> {
   return Object.assign(
     {},
-    ...[tokensCss, elementCss].flatMap((css) =>
+    ...[tokensCss, elementCss, markdownCss].flatMap((css) =>
       rules(css)
         .filter(([s]) => s === selector)
         .map(([, body]) => declarations(body)),
@@ -344,6 +345,31 @@ describe.each(['light', 'dark'] as const)('the %s theme', (theme) => {
     expect(step('app-ink')).toBeGreaterThan(step('app-ink-2'))
     expect(step('app-ink-2')).toBeGreaterThan(step('app-ink-3'))
     expect(step('app-ink-3')).toBeGreaterThan(step('app-ink-placeholder'))
+  })
+
+  it('reads every highlighted-code colour at AA on the grounds code now has', () => {
+    // Design wave 3 made fenced code and its tools transparent. Measure the
+    // page/card, the file viewer's second ground and a hovered code control,
+    // not the pre-wave code backgrounds the old issue named.
+    const misses: string[] = []
+    for (const fg of ['text', 'keyword', 'title', 'constant', 'string', 'builtin', 'comment', 'tag'])
+      for (const bg of ['app-card', 'app-ground-2', 'el-fill-color-light']) {
+        const ratio = contrast(colour(theme, `hl-${fg}`), colour(theme, bg))
+        if (ratio < 4.5) misses.push(`--hl-${fg} on --${bg}: ${ratio.toFixed(2)}:1`)
+      }
+    for (const kind of ['add', 'del']) {
+      const ratio = contrast(colour(theme, `hl-${kind}-fg`), colour(theme, `hl-${kind}-bg`))
+      if (ratio < 4.5) misses.push(`--hl-${kind}-fg on --hl-${kind}-bg: ${ratio.toFixed(2)}:1`)
+    }
+    expect(misses).toEqual([])
+  })
+
+  it('keeps a fresh activity row’s current indigo glyph and left rule visible without reviving a faint disc', () => {
+    const item = SOURCES.find((f) => f.path === 'views/course/activity/components/EventItem.vue')
+    expect(item?.text).toMatch(/\.event-item\.is-fresh\s*{[^}]*--event-accent:\s*var\(--app-indigo\)/)
+    // 5336cf9 deliberately removed every icon disc and the fresh row's tint.
+    // The current marker is the indigo glyph and inset rule on the page itself.
+    expect(contrast(colour(theme, 'app-indigo'), colour(theme, 'app-card'))).toBeGreaterThanOrEqual(4.5)
   })
 
   it('gives each state tag a hue of its own, 30° apart at least, so that none is taken for another; only the neutral one has none', () => {

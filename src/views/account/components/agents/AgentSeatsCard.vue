@@ -14,6 +14,7 @@ import type { AgentFull, AgentRequest, AgentSeat } from '@/api/types'
 import { useWrite } from '@/composables/useWrite'
 import { seatPurpose } from '@/utils/agents'
 import AppTag from '@/components/AppTag.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import PermEditor from '@/components/PermEditor.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -102,7 +103,7 @@ async function takeBack(r: AgentRequest) {
     <h2 class="app-card__title">{{ t('agents.seats.title') }}</h2>
     <p class="app-form-hint seats-card__sub">{{ t('agents.seats.intro') }}</p>
 
-    <p v-if="!seats.length && !requests.length" class="app-muted seats-card__empty">{{ t('agents.seats.empty') }}</p>
+    <AppEmpty v-if="!seats.length && !requests.length" :text="t('agents.seats.empty')" />
 
     <ul v-if="seats.length" class="agent-seats">
       <li v-for="s in seats" :key="s.member_id" class="agent-seat">
@@ -219,10 +220,6 @@ async function takeBack(r: AgentRequest) {
 <style scoped>
 .seats-card__sub {
   margin: -6px 0 12px;
-}
-.seats-card__empty {
-  margin: 0;
-  padding: 4px 0;
 }
 .seats-card__subhead {
   margin: 20px 0 10px;

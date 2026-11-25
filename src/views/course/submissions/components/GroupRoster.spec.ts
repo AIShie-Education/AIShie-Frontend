@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
 import { i18n, setLocale } from '@/i18n'
+import { ApiError } from '@/api/http'
 import { useCourseStore } from '@/stores/course'
 import GroupRoster from './GroupRoster.vue'
 import type { RosterGroup } from './rosterByGroup'
@@ -342,6 +343,41 @@ describe('recording a group missing once someone has moved since another group h
       'Ken Wong is left out: they are part of another group’s work for this assignment.',
     )
     expect(writes.map((x) => x.args.group_id)).toEqual(['g-quince'])
+    w.unmount()
+  })
+
+  it('loads every page before offering it, and names a moved student first read after row 200', async () => {
+    const firstPage: RosterEntry[] = Array.from({ length: 200 }, (_, i) => ({
+      student_member_id: `m-filler-${i}`,
+      state: 'not_started',
+    }))
+    const w = await mountRoster({ groups: [groups[1]!, quince], rows: firstPage, hasMore: true })
+    // The prefix does not name Ken's work, but offering and confirming from it
+    // would still be wrong. The parent is asked for the next page instead.
+    expect(w.emitted('more')).toHaveLength(1)
+    expect(rowOf(w, 'Quince').find('button').exists()).toBe(false)
+    expect(confirm).not.toHaveBeenCalled()
+
+    await w.setProps({ rows: [...firstPage, ...kenInQuince], hasMore: false })
+    await flushPromises()
+    const action = rowOf(w, 'Quince').find('button')
+    expect(action.exists()).toBe(true)
+    await action.trigger('click')
+    await flushPromises()
+    const [message] = confirm.mock.calls[0] as [{ children: { children: string }[] }]
+    expect(message.children[0]!.children).toContain('for Eve Lam.')
+    expect(message.children[0]!.children).not.toContain('Ken Wong')
+    expect(message.children[1]!.children).toContain('Ken Wong is left out')
+    expect(writes.map((x) => x.args.group_id)).toEqual(['g-quince'])
+    w.unmount()
+  })
+
+  it('leaves a failed later page for Retry instead of requesting it in a loop', async () => {
+    const error = new ApiError({ status: 500, code: 'internal', message: 'failed page' })
+    const w = await mountRoster({ groups: [groups[1]!, quince], hasMore: true, error })
+    expect(w.emitted('more')).toBeUndefined()
+    expect(confirm).not.toHaveBeenCalled()
+    expect(writes).toEqual([])
     w.unmount()
   })
 

@@ -193,8 +193,12 @@ describe('ChatHistory', () => {
   it('lists every course’s in one call, newest first, and one course’s again on the way back', async () => {
     const { w, chat } = setup()
     await flushPromises()
-    chat.historyScope = 'all'
+    const scope = w.get('.chat-history__tools .filter-chips')
+    expect(scope.attributes()).toMatchObject({ role: 'radiogroup', 'aria-label': 'Which courses' })
+    expect(scope.findAll('.filter-chip').map((c) => c.text())).toEqual(['This course', 'All courses'])
+    await scope.findAll('.filter-chip')[1]!.trigger('click')
     await flushPromises()
+    expect(chat.historyScope).toBe('all')
     expect(reads.at(-1)).toEqual({ tool: 'me.conversations', args: { limit: HISTORY_PAGE } })
     expect(where(w)).toEqual([
       'CS101 · Lab helper',
@@ -206,8 +210,9 @@ describe('ChatHistory', () => {
     expect(w.findAll('.hist-row')[1]!.text()).toContain('Awaiting an answer')
     expect(w.findAll('.hist-row').map((r) => r.text().includes('Answered'))).toEqual([false, false, false, false])
 
-    chat.historyScope = 'course'
+    await scope.findAll('.filter-chip')[0]!.trigger('click')
     await flushPromises()
+    expect(chat.historyScope).toBe('course')
     expect(reads.at(-1)!.args).toEqual({ course_id: 'k1', limit: HISTORY_PAGE })
     expect(where(w)).toEqual(['CS101 · Lab helper', 'CS101 · Course tutor'])
   })

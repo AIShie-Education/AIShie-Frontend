@@ -682,6 +682,8 @@ test.describe.serial('a course’s groups', () => {
     await expect(dialog).toContainText('What it deals cannot be shown before it is made')
     await expect(dialog).toContainText('A group with work for an assignment of the set keeps its members')
     await expect(dialog).toContainText('The same seed deals the same students into the same groups.')
+    await expect(dialog).toContainText('Once it is made, this page lists the groups it made and those it left alone.')
+    await expect(dialog).not.toContainText('whom it placed')
     await expect(dialog).not.toContainText('what is shown below is what is dealt')
     await expect(dialog.locator('.split-dialog__group')).toHaveCount(0)
     await expect(dialog).not.toContainText('Places')

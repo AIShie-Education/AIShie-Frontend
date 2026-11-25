@@ -94,7 +94,18 @@ describe('AgentPicker', () => {
     const none = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     expect(none.findAll('button.resp-row')).toHaveLength(0)
-    expect(none.text()).toContain('No agent here answers your questions yet.')
+    expect(none.get('.app-empty--page').text()).toContain('No agent here answers your questions yet.')
+  })
+
+  it('keeps a course agent needing answer approval to two chips, with its purpose as words beside the level', async () => {
+    respondents = [{ ...tutor, owner_name: 'Ms Chan', answer_level: 'confirm_required' }]
+    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
+    await flushPromises()
+    const row = w.get('button.resp-row')
+    expect(row.findAll('.el-tag, .agent-badge__owner')).toHaveLength(2)
+    expect(row.get('.resp-row__facts .app-level-tag').text()).toContain('Each answer waits for approval')
+    expect(row.get('.resp-row__purpose').text()).toBe('Course agent')
+    expect(row.find('.resp-row__line .app-tag[title="Course agent"]').exists()).toBe(false)
   })
 
   it('says what each agent is to the caller, that it is one, and whether it can be asked now', async () => {

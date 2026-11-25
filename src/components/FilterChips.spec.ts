@@ -10,7 +10,7 @@ const global = { plugins: [i18n, ElementPlus] }
 
 beforeEach(() => setLocale('en'))
 
-function chips(initial = '') {
+function chips(initial = '', attach = false) {
   const value = ref(initial)
   const w = mount(
     defineComponent({
@@ -26,7 +26,7 @@ function chips(initial = '') {
           label: 'Which assignments',
         }),
     }),
-    { global },
+    { global, ...(attach ? { attachTo: document.body } : {}) },
   )
   return { w, value }
 }
@@ -39,25 +39,63 @@ describe('FilterChips', () => {
     expect(all.map((c) => c.text())).toEqual(['All 7', 'Published 7', 'Not published 0'])
     expect(all.map((c) => c.attributes('role'))).toEqual(['radio', 'radio', 'radio'])
     expect(all[0]!.attributes('aria-checked')).toBe('true')
+    expect(all.map((c) => c.attributes('tabindex'))).toEqual(['0', '-1', '-1'])
     expect(all[0]!.classes()).toContain('el-check-tag')
     // One with nothing in it is marked so (its count is quieter). Its corners, as drawn, are
     // e2e/components-style.spec.ts's to measure.
     expect(all[2]!.classes()).toContain('is-zero')
   })
 
-  it('chooses one at a time, by a click or from the keyboard, and the chosen one again goes back to all', async () => {
+  it('chooses one at a time, by a click or from the keyboard, and never clears the chosen radio', async () => {
     const { w, value } = chips()
     await w.findAll('.filter-chip')[1]!.trigger('click')
     expect(value.value).toBe('published')
     expect(w.findAll('.filter-chip')[1]!.attributes('aria-checked')).toBe('true')
     // Drawn as chosen by Element Plus's own class, which element.css gives the indigo's tint and its bar.
     expect(w.findAll('.filter-chip').map((c) => c.classes().includes('is-checked'))).toEqual([false, true, false])
+    expect(w.findAll('.filter-chip').map((c) => c.attributes('tabindex'))).toEqual(['-1', '0', '-1'])
     await w.findAll('.filter-chip')[1]!.trigger('click')
+    expect(value.value).toBe('published')
+    await w.findAll('.filter-chip')[1]!.trigger('keydown', { key: 'Enter' })
+    expect(value.value).toBe('published')
+    await w.findAll('.filter-chip')[1]!.trigger('keydown', { key: ' ' })
+    expect(value.value).toBe('published')
+    await w.findAll('.filter-chip')[0]!.trigger('click')
     expect(value.value).toBe('')
-    await w.findAll('.filter-chip')[2]!.trigger('keydown', { key: 'Enter' })
-    expect(value.value).toBe('unpublished')
-    await w.findAll('.filter-chip')[0]!.trigger('keydown', { key: ' ' })
-    expect(value.value).toBe('')
+  })
+
+  it('is one tab stop whose arrows choose and focus, with Home/End and wrapping at the ends', async () => {
+    const { w, value } = chips('', true)
+    try {
+      const all = w.findAll('.filter-chip')
+      ;(all[0]!.element as HTMLElement).focus()
+      await all[0]!.trigger('keydown', { key: 'ArrowRight' })
+      expect(value.value).toBe('published')
+      expect(all.map((c) => c.attributes('aria-checked'))).toEqual(['false', 'true', 'false'])
+      expect(all.map((c) => c.attributes('tabindex'))).toEqual(['-1', '0', '-1'])
+      expect(document.activeElement).toBe(all[1]!.element)
+
+      await all[1]!.trigger('keydown', { key: 'ArrowDown' })
+      expect(value.value).toBe('unpublished')
+      expect(document.activeElement).toBe(all[2]!.element)
+      await all[2]!.trigger('keydown', { key: 'ArrowRight' })
+      expect(value.value).toBe('')
+      expect(document.activeElement).toBe(all[0]!.element)
+      await all[0]!.trigger('keydown', { key: 'ArrowLeft' })
+      expect(value.value).toBe('unpublished')
+      expect(document.activeElement).toBe(all[2]!.element)
+      await all[2]!.trigger('keydown', { key: 'Home' })
+      expect(value.value).toBe('')
+      expect(document.activeElement).toBe(all[0]!.element)
+      await all[0]!.trigger('keydown', { key: 'End' })
+      expect(value.value).toBe('unpublished')
+      expect(document.activeElement).toBe(all[2]!.element)
+      await all[2]!.trigger('keydown', { key: 'ArrowUp' })
+      expect(value.value).toBe('published')
+      expect(document.activeElement).toBe(all[1]!.element)
+    } finally {
+      w.unmount()
+    }
   })
 })
 
@@ -82,7 +120,9 @@ describe('how a chip and a segmented control draw what is chosen (styles/element
     const chosenChip = cssRule(
       '.el-check-tag.el-check-tag--primary.is-checked,\n.el-check-tag.el-check-tag--primary.is-checked:hover',
     )
+    // Rest and hover share this rule: dark-theme text keeps its AA ground after a hover or a sticky tap.
     expect(chosenChip).toMatch(/background-color: var\(--app-indigo-tint\);/)
+    expect(chosenChip).toMatch(/color: var\(--app-indigo\);/)
     expect(chosenChip).toMatch(/inset 0 -2px 0 var\(--app-indigo\)/)
     const chosenPart = cssRule(
       '.el-radio-button.is-active .el-radio-button__original-radio:not(:disabled) + .el-radio-button__inner',

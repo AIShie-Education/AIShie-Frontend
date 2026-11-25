@@ -271,7 +271,7 @@ function lines(parts: (string | false | null | undefined)[]) {
   return h(
     'div',
     { class: 'doc-confirm' },
-    parts.filter((p): p is string => !!p).map((p) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, p)),
+    parts.filter((p): p is string => !!p).map((p) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, p)),
   )
 }
 
@@ -586,10 +586,7 @@ function noteSource(): PrintRequest {
                     <AppTag v-if="shown.purged" tone="danger">
                       {{ t('materials.document.tombstone.tag') }}
                     </AppTag>
-                    <AppTag v-if="shown.published" tone="done">
-                      {{ t('materials.document.published') }}
-                    </AppTag>
-                    <AppTag v-else-if="showVersions" tone="wait">
+                    <AppTag v-if="!shown.published && showVersions" tone="wait">
                       {{ t('materials.document.notPublished') }}
                     </AppTag>
                     <AppTag v-if="latest && latest.id === shown.id" variant="outline">

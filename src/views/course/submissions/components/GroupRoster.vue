@@ -78,6 +78,17 @@ const { namesOf, nameIn } = useWorkNames()
 /** By group, or the roster's own table by student: a view's mode, not a filter. */
 const mode = ref<'group' | 'student'>('group')
 
+// Core decides whom a group missing is for from every student's work. Load
+// every roster page before offering it: a moved student's row can be after
+// the first 200, and the loaded prefix must never decide the confirmation.
+watch(
+  () => [props.hasMore, props.loading] as const,
+  ([more, loading]) => {
+    if (more && !loading && !props.error) emit('more')
+  },
+  { immediate: true, flush: 'post' },
+)
+
 // A card per group where the roster is as narrow as on a phone, as RosterTable's.
 const summaryLine = useTemplateRef<HTMLElement>('summaryLine')
 const narrow = useContainerNarrow(summaryLine, 592)
@@ -140,7 +151,8 @@ function markContext(g: RosterGroup) {
     proposed: isProposed(g),
   }
 }
-const markable = (g: RosterGroup) => mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value, rows: props.rows })
+const markable = (g: RosterGroup) =>
+  !props.hasMore && mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value, rows: props.rows })
 /** A group that would be recorded missing from here but for members the seat does not reach. */
 const outOfReach = (g: RosterGroup) => unreached(g) > 0 && mayMarkGroupMissing(g, { ...markContext(g), reach: null })
 /** How many members the seat does not reach, and, where that is why, that the group is not recorded missing from here. */
@@ -154,6 +166,7 @@ function unreachedLine(g: RosterGroup): string {
  * whether that is all of them (then it is not offered).
  */
 function otherWorkLine(g: RosterGroup): string | null {
+  if (props.hasMore) return null
   const others = inOtherWork(g, props.rows)
   if (!others.length || !mayMarkGroupMissing(g, { ...markContext(g), reach: reach.value })) return null
   const all = !missingFor(g, props.rows).length
@@ -168,6 +181,9 @@ const { run, lastError } = useWrite('submission.record_missing')
 const busy = ref<string | null>(null)
 
 async function markMissing(g: RosterGroup) {
+  // A caller cannot confirm from a partial roster, even if a stale render
+  // exposed the action just before the next page started loading.
+  if (props.hasMore) return
   const assignmentId = props.assignmentId
   const title = course.assignmentTitle(assignmentId) ?? t('submissions.roster.confirm.thisAssignment')
   // For its members now, less those another group's work names: as Core records it.
@@ -187,7 +203,7 @@ async function markMissing(g: RosterGroup) {
   // One paragraph a sentence: joined with spaces, Chinese would get a stray one after each 。.
   const message = h(
     'div',
-    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, line)),
+    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, line)),
   )
   try {
     await ElMessageBox.confirm(message, t('groupWork.roster.confirmTitle', { group: g.name }), {

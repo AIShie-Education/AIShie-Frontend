@@ -162,6 +162,7 @@ export default {
     network: '無法連線到伺服器，請檢查網路後再試。',
     unauthenticated: '登入已過期，請重新登入。',
     forbidden: '你沒有權限檢視此內容。',
+    forbiddenDetail: '你目前的席位無法檢視這個頁面或區塊。',
     forbiddenAction: '你沒有權限執行此操作。',
     notFound: '找不到。它可能已被移除，或不在你可檢視的範圍內。',
     rateLimited: '請求過於頻繁，請稍候再試。',

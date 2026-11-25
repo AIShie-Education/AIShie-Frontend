@@ -45,7 +45,7 @@ const notFound = computed(() => !!props.error && props.error.isNotFound)
       kind="forbidden"
       class="async-state__result is-forbidden"
       :title="t('common.errors.forbidden')"
-      :sub-title="error.message"
+      :sub-title="t('common.errors.forbiddenDetail')"
     />
     <AppResult
       v-else-if="error && notFound"

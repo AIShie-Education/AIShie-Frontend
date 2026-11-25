@@ -444,9 +444,7 @@ function refresh() {
                   {{ t('assignments.detail.openDocument') }}
                 </router-link>
               </h2>
-              <p v-if="!assignment.instructions_document_id" class="app-muted assignment-view__none">
-                {{ t('assignments.detail.noInstructions') }}
-              </p>
+              <AppEmpty v-if="!assignment.instructions_document_id" :text="t('assignments.detail.noInstructions')" />
               <AsyncState
                 v-else
                 :loading="instructions.loading.value && !instructionsDoc"
@@ -470,10 +468,11 @@ function refresh() {
                     of="version"
                   />
                   <template v-else-if="instructionsDoc.version">
-                    <MarkdownView v-if="instructionsDoc.version.body_md" :source="instructionsDoc.version.body_md" />
-                    <p v-else-if="!instructionFiles.length" class="app-muted assignment-view__none">
-                      {{ t('assignments.detail.noText') }}
-                    </p>
+                    <MarkdownView
+                      v-if="instructionsDoc.version.body_md || !instructionFiles.length"
+                      :source="instructionsDoc.version.body_md"
+                      :empty="t('assignments.detail.noText')"
+                    />
                     <div v-if="instructionFiles.length" class="assignment-view__file">
                       <span class="app-muted">{{
                         t('assignments.detail.attachedFiles', instructionFiles.length)
@@ -489,7 +488,7 @@ function refresh() {
                       />
                     </div>
                   </template>
-                  <p v-else class="app-muted assignment-view__none">{{ t('assignments.detail.noVersion') }}</p>
+                  <AppEmpty v-else :text="t('assignments.detail.noVersion')" />
                 </template>
               </AsyncState>
             </section>
@@ -665,10 +664,6 @@ function refresh() {
   font-weight: 400;
   text-decoration: none;
   white-space: nowrap;
-}
-.assignment-view__none {
-  margin: 0;
-  font-size: var(--app-text-md);
 }
 .assignment-view__file {
   display: flex;
