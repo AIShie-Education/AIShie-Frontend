@@ -132,7 +132,7 @@ test.describe.serial('the directory and invitations', () => {
     await expect(page.locator('.actor__desc')).toContainText('Invited until')
     await expect(card.getByRole('button', { name: 'Create a new link' })).toBeVisible()
     await expect(card).toContainText(
-      /A link made earlier works until \d{4}-\d\d-\d\d \d\d:\d\d\. Making a new one replaces it\./,
+      /A link made earlier works until School: \d{4}-\d\d-\d\d \d\d:\d\d \(Hong Kong Standard Time\); your time: \d{4}-\d\d-\d\d \d\d:\d\d \([^)]+\)\. Making a new one replaces it\./,
     )
   })
 

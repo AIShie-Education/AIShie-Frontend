@@ -47,11 +47,11 @@ function load(script: string): void {
 const HAN = /\p{Script=Han}/u
 /**
  * Text that is not the page's own: what is marked as in a language of its
- * own (a language menu's own names, marked data-lang-option so their lang
- * does not suppress the face), and what a browser that runs scripts never
- * shows. Data marked lang="zh-Hant" still counts: its script needs Noto too.
+ * own (a language menu's own names, marked data-lang-option, and the static
+ * boot fallback marked data-font-ignore), and what a browser that runs scripts
+ * never shows. Data marked lang="zh-Hant" still counts: its script needs Noto too.
  */
-const NOT_THE_PAGES = '[data-lang-option], noscript, script, style'
+const NOT_THE_PAGES = '[data-lang-option], [data-font-ignore], noscript, script, style'
 
 /** Whether a text node is Chinese the page shows. */
 function isHan(text: Node): boolean {

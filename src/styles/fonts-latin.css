@@ -20,7 +20,7 @@
   font-display: swap;
   font-weight: 400;
   src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+  unicode-range: U+0000-00FF, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2013, U+2022, U+2212;
 }
 @font-face {
   font-family: 'AIshie Latin';
@@ -46,7 +46,7 @@
   font-display: swap;
   font-weight: 500;
   src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+  unicode-range: U+0000-00FF, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2013, U+2022, U+2212;
 }
 @font-face {
   font-family: 'AIshie Latin';
@@ -72,7 +72,7 @@
   font-display: swap;
   font-weight: 600;
   src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+  unicode-range: U+0000-00FF, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2013, U+2022, U+2212;
 }
 @font-face {
   font-family: 'AIshie Latin';
@@ -98,7 +98,7 @@
   font-display: swap;
   font-weight: 600;
   src: url('@fontsource/source-serif-4/files/source-serif-4-latin-600-normal.woff2') format('woff2');
-  unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+  unicode-range: U+0000-00FF, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2013, U+2022, U+2212;
 }
 @font-face {
   font-family: 'AIshie Latin Serif';

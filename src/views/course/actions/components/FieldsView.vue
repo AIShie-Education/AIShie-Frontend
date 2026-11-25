@@ -201,7 +201,7 @@ function label(k: string): string {
 }
 
 function isCutoff(k: string): boolean {
-  return k === 'due_at' || k === 'expires_at' || k.endsWith('_closes_at') || k.endsWith('_ends_at')
+  return k === 'due_at' || k === 'expires_at' || k === 'closes_at' || k.endsWith('_closes_at') || k.endsWith('_ends_at')
 }
 
 function kindOf(k: string, v: unknown): string {

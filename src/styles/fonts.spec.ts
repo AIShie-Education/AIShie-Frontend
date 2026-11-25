@@ -82,6 +82,9 @@ describe('a page in English', () => {
     add(
       '<ul><li lang="zh-Hant" data-lang-option>繁體中文</li><li lang="zh-Hans" data-lang-option><span>简体中文</span></li><li lang="en" data-lang-option>English</li></ul>',
     )
+    add('<button data-lang-option><span lang="zh">文</span></button>')
+    // The static boot fallback is not live page data either.
+    add('<div data-font-ignore><p lang="zh-Hant">無法開啟 AIshie</p></div>')
     // What a browser that runs scripts never shows (index.html's loading screen has some).
     add('<noscript>需要啟用 JavaScript</noscript>')
     await settle()

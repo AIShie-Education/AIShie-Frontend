@@ -32,10 +32,7 @@ async function hw1Due() {
     const get = (type: string) => parts.find((p) => p.type === type)?.value
     return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`
   }
-  const readerZone = new Intl.DateTimeFormat('en', { timeZone: 'Europe/London', timeZoneName: 'long' })
-    .formatToParts(new Date(at))
-    .find((p) => p.type === 'timeZoneName')!.value
-  return { inHongKong: iso(at + 8 * 3600_000), inLondon: inZone('Europe/London'), readerZone, utc: `${iso(at)} UTC` }
+  return { at, inHongKong: iso(at + 8 * 3600_000), inLondon: inZone('Europe/London'), utc: `${iso(at)} UTC` }
 }
 
 async function openHw1(page: Page) {
@@ -122,7 +119,14 @@ test.describe('a cut-off on the school’s clock, with the reader abroad', () =>
   test('school time comes first and reader time is beside it, and the picker says it uses school time', async ({
     page,
   }) => {
-    const { inHongKong, inLondon, readerZone } = await hw1Due()
+    const { at, inHongKong, inLondon } = await hw1Due()
+    const readerZone = await page.evaluate(
+      (ms) =>
+        new Intl.DateTimeFormat('en', { timeZone: 'Europe/London', timeZoneName: 'long' })
+          .formatToParts(new Date(ms))
+          .find((p) => p.type === 'timeZoneName')!.value,
+      at,
+    )
     const line = await openHw1(page)
     await expect(line).toContainText(
       `School: ${inHongKong} (Hong Kong Standard Time); your time: ${inLondon} (${readerZone})`,

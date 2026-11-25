@@ -171,7 +171,7 @@ describe('the Latin faces of a Chinese page (fonts-latin.css)', () => {
   it('cover Latin, Latin Extended and Vietnamese, and leave Han and its punctuation to Noto', () => {
     expect(ranges.length).toBe(12)
     // Basic Latin and its dot, accents past Latin-1, and Vietnamese names.
-    for (const c of ['A', '9', '%', '·', '×', 'é', '–', '•', '−', 'Ł', 'ễ', 'ă', 'ĩ'])
+    for (const c of ['A', '9', '%', '·', '×', 'é', '–', '•', '−', 'Ł', 'ễ', 'ă', 'ĩ', 'ʻ', 'ʼ', 'ˆ', '˚', '˜'])
       expect(ranges.some((range) => holds(range, c)), c).toBe(true)
     for (const range of ranges) {
       for (const c of ['中', '「', '」', '，', '。', '：', '（', '）', '、', '—', '“', '”', '’', '…', '・'])

@@ -211,6 +211,8 @@ export default {
     zoned: '{zone} {time}',
     schoolAndReader: '学校：{school}；你的时间：{reader}',
     description: '{zoned}；确切时间：{utc}。',
+    nonexistent: '{zone}不存在这个时间，请另选时间。',
+    ambiguous: '这个时间在{zone}出现两次，请另选时间。',
     // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
     cutoff: '{at}（{rel}）',
   },

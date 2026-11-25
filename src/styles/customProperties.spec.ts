@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { withoutComments } from '../testUtils/sourceText.spec'
 
 // Every one of the app's own custom properties that a style reads is set
 // somewhere. A var() of one nobody sets is no error to a browser: the
@@ -25,41 +26,6 @@ const sources = [
   ...raw(import.meta.glob<string>('/index.html', { query: '?raw', import: 'default', eager: true })),
 ]
 
-/** Without its comments, which may name a property no rule sets. */
-function uncommented(text: string): string {
-  const out: string[] = []
-  let quote = ''
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]!
-    const next = text[i + 1]
-    if (quote) {
-      out.push(c)
-      if (c === '\\' && next) out.push(text[++i]!)
-      else if (c === quote) quote = ''
-      continue
-    }
-    if (c === "'" || c === '"' || c === '`') {
-      quote = c
-      out.push(c)
-      continue
-    }
-    const html = text.startsWith('<!--', i)
-    const line = !html && c === '/' && next === '/'
-    const block = !html && !line && c === '/' && next === '*'
-    if (!html && !line && !block) {
-      out.push(c)
-      continue
-    }
-    const end = html ? '-->' : block ? '*/' : '\n'
-    const close = text.indexOf(end, i + (html ? 4 : 2))
-    const last = close < 0 ? text.length : line ? close : close + end.length
-    // Keep the lines, so an offence still points at its own line.
-    for (let j = i; j < last; j++) if (text[j] === '\n') out.push('\n')
-    i = last - 1
-  }
-  return out.join('')
-}
-
 /**
  * The app's custom properties (`--app-…`) the texts read with var() and do
  * not set: in a declaration (`--app-x: …`, a style object's `'--app-x': …`)
@@ -69,7 +35,7 @@ function uncommented(text: string): string {
 function unsetTokens(texts: readonly string[]): string[] {
   const set = new Set<string>()
   const read = new Set<string>()
-  for (const text of texts.map(uncommented)) {
+  for (const text of texts.map(withoutComments)) {
     for (const m of text.matchAll(/(?<![\w-])['"]?(--app-[\w-]+)['"]?\s*:/g)) set.add(m[1]!)
     for (const m of text.matchAll(/setProperty\(\s*['"`](--app-[\w-]+)/g)) set.add(m[1]!)
     for (const m of text.matchAll(/var\(\s*(--app-[\w-]+)/g)) {
@@ -106,6 +72,8 @@ describe('the app’s custom properties', () => {
     expect(unsetTokens(['const url = "https://example.edu/a//b"\n// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual([
       '--app-c',
     ])
+    expect(unsetTokens(['const slashOrStar = /[/*]/; const label = `var(--app-gone)`'])).toEqual(['--app-gone'])
+    expect(unsetTokens(['const label = `${ok ? `var(--app-gone)` : ""}`'])).toEqual(['--app-gone'])
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })

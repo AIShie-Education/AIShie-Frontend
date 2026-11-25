@@ -156,7 +156,7 @@ describe('FieldsView, what came of bringing in her own agent', () => {
 })
 
 describe('FieldsView, cut-offs among a tool’s fields', () => {
-  it('zones an expiry but leaves an ordinary timestamp unzoned', async () => {
+  it('zones an expiry and a peer form’s exact closes_at, but leaves an ordinary timestamp unzoned', async () => {
     vi.stubEnv('TZ', 'Asia/Hong_Kong')
     vi.stubGlobal('matchMedia', (media: string) => ({
       matches: false,
@@ -168,7 +168,11 @@ describe('FieldsView, cut-offs among a tool’s fields', () => {
     const w = mount(FieldsView, {
       props: {
         courseId: COURSE,
-        value: { expires_at: '2026-10-23T04:48:00Z', created_at: '2026-10-01T04:48:00Z' },
+        value: {
+          expires_at: '2026-10-23T04:48:00Z',
+          closes_at: '2026-10-20T04:48:00Z',
+          created_at: '2026-10-01T04:48:00Z',
+        },
       },
       global,
     })
@@ -176,8 +180,10 @@ describe('FieldsView, cut-offs among a tool’s fields', () => {
     const times = w.findAll('time')
     expect(times[0]!.text()).toContain('Hong Kong Standard Time')
     expect(times[0]!.attributes('tabindex')).toBe('0')
-    expect(times[1]!.text()).not.toContain('Hong Kong Standard Time')
-    expect(times[1]!.attributes('tabindex')).toBeUndefined()
+    expect(times[1]!.text()).toContain('Hong Kong Standard Time')
+    expect(times[1]!.attributes('tabindex')).toBe('0')
+    expect(times[2]!.text()).not.toContain('Hong Kong Standard Time')
+    expect(times[2]!.attributes('tabindex')).toBeUndefined()
     vi.unstubAllEnvs()
     vi.unstubAllGlobals()
     w.unmount()

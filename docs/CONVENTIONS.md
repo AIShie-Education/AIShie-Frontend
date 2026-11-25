@@ -412,10 +412,13 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   The exact UTC and full zoned time are in the tooltip and its accessible description; the cut-off
   is focusable and its tooltip opens on focus, so neither depends on hover. Shown `relative`, that
   description also supplies the zoned time. In a sentence, a cut-off is `zonedText` (`@/utils/parts`).
-  Due-date and seat-expiry pickers use the school's wall time when configured (`toPickerDate`,
-  `pickerDateToISO` in `@/utils/schoolTime`) and their hints name that clock; unset, they use the
-  reader's. A price's day is a UTC day and says so; its `TimeText` uses `reader-only`, never the
-  school-zone conversion.
+  Due-date and seat-expiry pickers keep `el-date-picker`'s `value-format` as wall strings on the
+  school's clock when configured (`toPickerWallTime`, `pickerInstant` in `@/utils/schoolTime`), never
+  a reader-local `Date` carrying school fields. An untouched existing instant is preserved across
+  reader/school DST gaps and folds; a changed nonexistent or ambiguous wall time is refused with an
+  explanation. `pickerDateDisabled` and past/future validation use the picker's own day and the real
+  instant. Hints name that clock; unset, they use the reader's. A price's day is a UTC day and says so;
+  its `TimeText` uses `reader-only`, never the school-zone conversion.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -1666,8 +1669,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (`@/utils/script`): AgentName, MemberName, owners' chips, chat authors and course/file titles set
   `lang` when their text has Han. The Chinese `xs` and `sm` size steps follow `:lang(zh)` on any
   element, not `html` alone. A page in English loads Noto TC the first time Chinese shows
-  (`styles/fonts.ts`), including Chinese inside a `lang` attribute; only a language menu's own names,
-  marked `data-lang-option`, do not trigger that load. Buttons and fields take the stacks as the rest
+  (`styles/fonts.ts`), including Chinese inside a `lang` attribute; only a language menu's own names
+  (`data-lang-option`) and the static boot fallback (`data-font-ignore`) do not trigger that load.
+  Buttons and fields take the stacks as the rest
   of the page does (`styles/main.css`), not the browser's own face for them. No stack names PMingLiU
   or SimSun, which have no bold, and Noto comes before any Chinese face of the system's
   (`src/styles/stacks.spec.ts`).

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { withoutComments } from '../testUtils/sourceText.spec'
 
 // No punctuation in templates (docs/CONVENTIONS.md, Text): what joins words
 // and numbers is the language's, so it is in the messages or Intl, never
@@ -47,38 +48,6 @@ const SKIP = [
 
 /** Every character but a line's end made a space, so that what is left keeps its lines. */
 const blank = (s: string) => s.replace(/[^\n]/g, ' ')
-
-/** The code of a source with its comments blanked out, lines kept where they were. */
-function withoutComments(text: string): string {
-  // One small lexer, rather than regular expressions that cannot tell a glob's
-  // `/*` from a comment or a quote in a comment from a string. Strings stay:
-  // the rules read what the code builds. Every comment becomes spaces, lines kept.
-  const out = text.split('')
-  let quote = ''
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]!
-    const next = text[i + 1]
-    if (quote) {
-      if (c === '\\') i++
-      else if (c === quote) quote = ''
-      continue
-    }
-    if (c === "'" || c === '"' || c === '`') {
-      quote = c
-      continue
-    }
-    const html = text.startsWith('<!--', i)
-    const line = !html && c === '/' && next === '/'
-    const block = !html && !line && c === '/' && next === '*'
-    if (!html && !line && !block) continue
-    const end = html ? '-->' : block ? '*/' : '\n'
-    const close = text.indexOf(end, i + (html ? 4 : 2))
-    const last = close < 0 ? text.length : line ? close : close + end.length
-    for (let j = i; j < last; j++) if (text[j] !== '\n') out[j] = ' '
-    i = last - 1
-  }
-  return out.join('')
-}
 
 /**
  * The code in a template, each piece where it was and the rest blanked: what
@@ -164,18 +133,32 @@ const NOT_WORDS = `^(?!.*(?:new Error\\(|\\.(?:includes|indexOf|startsWith|endsW
 
 type ScanRule = [string, RegExp | ((line: string) => boolean)]
 
-const PERCENT_IN_CODE = new RegExp(`(?:\\$\\{[^}]+\\}\\s*%|${ADDED}${Q}\\s*%)`)
-/** A percentage is CSS only beside a CSS property, never because a line mentions "desktop" or "daysLeft". */
+const PERCENT_IN_CODE = new RegExp(`(?:\\$\\{[^}]+\\}\\s*%|${ADDED}${Q}\\s*%)`, 'g')
+const CSS_PERCENT_PROPERTIES = new Set([
+  'width', 'height', 'min-width', 'max-width', 'min-height', 'max-height',
+  'translate', 'transform', 'inset', 'inset-inline', 'inset-block', 'left', 'right', 'top', 'bottom',
+  'flex-basis', 'scale', 'background-size', 'background-position', 'object-position', 'clip-path',
+  'border-radius', 'outline-offset', 'stroke-dashoffset', 'stroke-dasharray',
+])
+function cssPercentProperty(name: string): boolean {
+  if (name.startsWith('--')) return true
+  const kebab = name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)
+  return CSS_PERCENT_PROPERTIES.has(kebab)
+}
+function cssPercentBefore(before: string): boolean {
+  const object = /(?:^|[,{;])\s*(['"]?)(--[\w-]+|[A-Za-z][\w-]*)\1\s*:\s*['"`][^,{;]*$/.exec(before)
+  if (object && cssPercentProperty(object[2]!)) return true
+  const set = /\bsetProperty\(\s*(['"])([^'"]+)\1\s*,\s*['"`][^)]*$/.exec(before)
+  if (set && cssPercentProperty(set[2]!)) return true
+  const assigned = /\.style\.([A-Za-z][\w]*)\s*=\s*['"`][^;]*$/.exec(before)
+  return !!assigned && cssPercentProperty(assigned[1]!)
+}
+/** Every dynamic percentage must be CSS in its own immediate context, not merely near a CSS word. */
 function percentOffence(line: string): boolean {
-  const m = PERCENT_IN_CODE.exec(line)
-  if (!m) return false
-  const before = line.slice(0, m.index)
-  const property = String.raw`(?:width|height|translate|inset|left|top)`
-  const css = new RegExp(
-    `(?:^|[,{;])\\s*['"\`]?${property}['"\`]?\\s*:\\s*['"\`][^,{;]*$|\\bsetProperty\\(\\s*['"]${property}['"]\\s*,\\s*['"\`][^)]*$`,
-    'i',
-  )
-  return !css.test(before)
+  for (const m of line.matchAll(PERCENT_IN_CODE)) {
+    if (!cssPercentBefore(line.slice(0, m.index))) return true
+  }
+  return false
 }
 
 /** What code may not build into a string, in a module, a script or a template's code. */
@@ -370,6 +353,8 @@ describe('punctuation between values', () => {
     'const daysLeft = (n: number) => `${n}%`',
     'const desktop = `${n} %`',
     'const stop = `${n}%`',
+    'const style = { width: `${w}%` }; const label = `${n}%`',
+    'const style = { width: `${w}%`, label: `${n}%` }',
     "const s = n + '%'",
     "const s = n + ' %'",
     'const s = n + "%"',
@@ -398,6 +383,8 @@ describe('punctuation between values', () => {
     expect(offences('/src/i18n/index.ts', "const glob = './messages/*/*.ts'\nconst s = `${n} %`")).not.toEqual([])
     expect(offences('/src/x.ts', "const cmap = '/node_modules/pdfjs-dist/cmaps/*.bcmap'\nconst s = `${n}%`")).not.toEqual([])
     expect(offences('/src/x.ts', '// /assets/* is a route, not a block comment\nconst s = `${n}%`')).not.toEqual([])
+    expect(offences('/src/x.ts', "const slashOrStar = /[/*]/; const label = `${n}%`")).not.toEqual([])
+    expect(offences('/src/x.ts', 'const label = `${ok ? `${n}%` : "ok"}`')).not.toEqual([])
     expect(vue('', 'const url = "https://example.edu/a//b"\nconst s = `${n}%`')).not.toEqual([])
   })
 
@@ -418,6 +405,10 @@ describe('punctuation between values', () => {
     expect(vue('', "const key = o.source + ':' + o.id")).toEqual([])
     expect(vue('', 'const clock = `${h}:${pad(m)}`')).toEqual([])
     expect(vue('', 'const style = { width: `${share * 100}%` }')).toEqual([])
+    expect(vue('', 'const style = { maxWidth: `${n}%` }')).toEqual([])
+    expect(vue('', 'const style = { transform: `translateX(${n}%)` }')).toEqual([])
+    expect(vue('', 'el.style.setProperty("--share", `${n}%`)')).toEqual([])
+    expect(vue('', 'el.style.width = `${n}%`')).toEqual([])
     expect(vue('', 'const color = `rgb(${r}, ${g}, ${b})`')).toEqual([])
     expect(vue('', 'const fill = `var(${name})`')).toEqual([])
     expect(vue('', "const fill = 'rgba(' + c + ')'")).toEqual([])

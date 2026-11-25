@@ -143,7 +143,9 @@ function colourValue(value: string | undefined): string | undefined {
 const isColour = (value: string | undefined) => !!colourValue(value)
 /** A value that purports to be a colour; an unsupported form is included so colour() fails it loudly. */
 const claimsColour = (value: string | undefined) =>
-  !!value && (/^#|^(?:rgb|oklch|hsl|color)\(/i.test(value) || /^var\(--app-/.test(value))
+  !!value &&
+  (/^#|^(?:rgb|rgba|hsl|hsla|hwb|lab|lch|oklab|oklch|color|color-mix)\(/i.test(value) ||
+    /^var\(--(?:app|el)-/.test(value))
 
 /** A custom property's colour in a theme, var() followed; '#rrggbb'. */
 function colour(theme: Theme, name: string): string {
@@ -542,15 +544,37 @@ describe('the palette', () => {
       'app-line-strong': '#123456',
       'app-alias': 'var(--app-line-strong)',
       'app-unsupported': 'oklch(50% 0.1 20)',
+      'app-rgba': 'rgba(1, 2, 3, 0.5)',
+      'app-hsla': 'hsla(20, 50%, 50%, 0.5)',
+      'app-hwb': 'hwb(20 50% 20%)',
+      'app-lab': 'lab(50% 20 20)',
     }
     expect(paletteFrom(planted)).toEqual(
-      expect.arrayContaining(['app-short', 'app-rgb', 'app-alias', 'app-field', 'app-unsupported']),
+      expect.arrayContaining([
+        'app-short',
+        'app-rgb',
+        'app-alias',
+        'app-field',
+        'app-unsupported',
+        'app-rgba',
+        'app-hsla',
+        'app-hwb',
+        'app-lab',
+      ]),
     )
     expect(groundsFrom(planted)).toEqual(expect.arrayContaining(['app-short', 'app-rgb', 'app-alias']))
     expect(groundsFrom(planted)).not.toContain('app-field')
     expect(colourValue('#bbb')).toBe('#bbbbbb')
     expect(colourValue('rgb(1, 2, 3)')).toBe('#010203')
-    expect(colourValue('oklch(50% 0.1 20)')).toBeUndefined()
+    for (const value of [
+      'oklch(50% 0.1 20)',
+      'rgba(1, 2, 3, 0.5)',
+      'hsla(20, 50%, 50%, 0.5)',
+      'hwb(20 50% 20%)',
+      'lab(50% 20 20)',
+    ]) {
+      expect(colourValue(value), value).toBeUndefined()
+    }
   })
 
   it('decides every colour for the dark theme too, and the dark theme has none the light one lacks', () => {

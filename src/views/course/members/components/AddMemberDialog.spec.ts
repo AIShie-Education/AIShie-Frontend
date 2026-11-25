@@ -28,17 +28,18 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
   vi.unstubAllEnvs()
   setSchoolTimeZone(undefined)
   setLocale('en')
   document.body.innerHTML = ''
 })
 
-async function dialog() {
+async function mountDialog() {
   const pinia = createPinia()
   setActivePinia(pinia)
   useCourseStore().$patch({ permsSource: 'exact', seat: { expires_at: DUE } } as never)
-  mount(AddMemberDialog, {
+  const w = mount(AddMemberDialog, {
     props: { modelValue: true, courseId: 'c1', presets: [] },
     attachTo: document.body,
     global: {
@@ -47,6 +48,11 @@ async function dialog() {
     },
   })
   await flushPromises()
+  return w
+}
+
+async function dialog() {
+  await mountDialog()
   return document.body.querySelector('.add-member__stack .app-form-hint') as HTMLElement
 }
 
@@ -66,5 +72,31 @@ describe('AddMemberDialog, the seat-expiry clock', () => {
     expect(hint.querySelector('time')!.textContent).toBe(
       'School: 2026-10-08 23:59 (Hong Kong Standard Time); your time: 2026-10-08 16:59 (British Summer Time)',
     )
+  })
+
+  it('validates the real school-zone instant, not the reader-local Date value', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    setSchoolTimeZone('America/New_York')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-08T01:00:00Z'))
+    const w = await mountDialog()
+    const vm = w.vm as unknown as {
+      form: { expiresAt: string }
+      formRef: { validateField: (name: string) => Promise<boolean> }
+    }
+    vm.form.expiresAt = '2026-10-08T08:30'
+    await flushPromises()
+    await expect(vm.formRef.validateField('expiresAt')).resolves.toBe(true)
+  })
+
+  it('allows the school’s current day in disabledDate, not the reader’s current day', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    setSchoolTimeZone('America/New_York')
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-03-08T04:00:00Z'))
+    const w = await mountDialog()
+    const vm = w.vm as unknown as { disabledDate: (date: Date) => boolean }
+    expect(vm.disabledDate(new Date(2026, 2, 7, 12))).toBe(false)
+    expect(vm.disabledDate(new Date(2026, 2, 6, 12))).toBe(true)
   })
 })

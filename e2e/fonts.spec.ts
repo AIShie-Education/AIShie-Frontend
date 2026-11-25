@@ -17,7 +17,7 @@ test('Latin names and curly apostrophes use Plex alone on a Traditional Chinese 
   await cdp.send('CSS.enable')
   const { root } = await cdp.send('DOM.getDocument')
   const { nodeId } = await cdp.send('DOM.querySelector', { nodeId: root.nodeId, selector: '.el-table__body tr.el-table__row:first-child td:first-child' })
-  for (const text of ['Nguyễn Văn An', 'Łukasz Nowak', 'O’Brien']) {
+  for (const text of ['Nguyễn Văn An', 'Łukasz Nowak', 'O’Brien', 'Hawaiʻi']) {
     await name.evaluate((el, value) => {
       el.textContent = value
     }, text)

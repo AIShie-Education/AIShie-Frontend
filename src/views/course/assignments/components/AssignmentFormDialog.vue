@@ -10,7 +10,6 @@
 import { computed, inject, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { routerKey } from 'vue-router'
-import dayjs from 'dayjs'
 import { ElMessage, ElNotification, type FormInstance, type FormItemRule } from 'element-plus'
 import AppNote from '@/components/AppNote.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -21,7 +20,12 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
 import { formatList, isDecimal, timeZoneName } from '@/utils/format'
-import { pickerDateToISO, schoolTimeZone, toPickerDate } from '@/utils/schoolTime'
+import {
+  pickerInstant,
+  schoolTimeZone,
+  toPickerWallTime,
+  ZonedWallTimeError,
+} from '@/utils/schoolTime'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
@@ -48,7 +52,7 @@ const router = inject(routerKey, null)
 interface FormState {
   title: string
   points: string
-  due: Date | null
+  due: string | null
   componentId: string
   instructions: DocChoice
   rubric: DocChoice
@@ -66,9 +70,19 @@ const form = reactive<FormState>({
   group: false,
   groupSetId: '',
 })
+function dueISO(): string | null {
+  return form.due ? pickerInstant(form.due, props.assignment?.due_at ?? null) : null
+}
+function safeDueISO(): string | null {
+  try {
+    return dueISO()
+  } catch {
+    return null
+  }
+}
 // The clock the date picker is on: the school's when Core gives one, else the reader's.
 const dueZone = computed(() =>
-  (locale.value, timeZoneName(form.due ? pickerDateToISO(form.due) : new Date().toISOString(), schoolTimeZone.value)),
+  (locale.value, timeZoneName(safeDueISO() ?? new Date().toISOString(), schoolTimeZone.value)),
 )
 const dueHint = computed(() =>
   t(schoolTimeZone.value ? 'assignments.form.dueHintSchool' : 'assignments.form.dueHint', { zone: dueZone.value }),
@@ -220,7 +234,7 @@ function init() {
   const a = props.assignment
   form.title = a?.title ?? ''
   form.points = a ? String(a.points_possible) : ''
-  form.due = a?.due_at ? toPickerDate(a.due_at) : null
+  form.due = a?.due_at ? toPickerWallTime(a.due_at) : null
   form.componentId = a?.component_id ?? ''
   form.instructions = emptyDocChoice('instructions', a?.instructions_document_id)
   form.rubric = emptyDocChoice('rubric', a?.rubric_document_id)
@@ -293,6 +307,18 @@ watch(
   () => form.rubric,
   () => formRef.value?.clearValidate(['rubric']),
 )
+const dueError = computed(() => {
+  if (!form.due) return ''
+  try {
+    dueISO()
+    return ''
+  } catch (e) {
+    if (e instanceof ZonedWallTimeError && e.problem !== 'invalid') {
+      return t(`common.time.${e.problem}`, { zone: dueZone.value })
+    }
+    return t('common.errors.invalid')
+  }
+})
 const rules = computed<Record<string, FormItemRule[]>>(() => ({
   title: [{ required: true, whitespace: true, message: t('common.errors.required'), trigger: 'blur' }],
   points: [
@@ -304,6 +330,12 @@ const rules = computed<Record<string, FormItemRule[]>>(() => ({
         cb()
       },
       trigger: 'blur',
+    },
+  ],
+  due: [
+    {
+      validator: (_r, _v, cb) => (dueError.value ? cb(new Error(dueError.value)) : cb()),
+      trigger: ['change', 'blur', 'submit'],
     },
   ],
   instructions: [docRule('instructions')],
@@ -448,7 +480,7 @@ async function create(made: Made, instructionsId?: string, rubricId?: string) {
       course_id: props.courseId,
       title: form.title.trim(),
       points_possible: form.points.trim(),
-      due_at: form.due ? pickerDateToISO(form.due) : undefined,
+      due_at: dueISO() ?? undefined,
       component_id: form.componentId || undefined,
       instructions_document_id: instructionsId,
       rubric_document_id: rubricId,
@@ -484,13 +516,13 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
     if (askExisting.value && existing.value) args.existing_grades = existing.value
     changed = true
   }
-  const oldDue = a.due_at ? dayjs(a.due_at).valueOf() : null
-  const newDue = form.due ? Date.parse(pickerDateToISO(form.due)) : null
+  const oldDue = a.due_at ? new Date(a.due_at).toISOString() : null
+  const newDue = dueISO()
   if (newDue === null && oldDue !== null) {
     args.clear_due_at = true
     changed = true
   } else if (newDue !== null && newDue !== oldDue) {
-    args.due_at = pickerDateToISO(form.due!)
+    args.due_at = newDue
     changed = true
   }
   if (form.componentId !== (a.component_id ?? '')) {
@@ -558,7 +590,7 @@ async function submit() {
   const valid = await formRef.value.validate().catch(() => false)
   // What becomes of the grades is asked for before anything is sent.
   existingMissing.value = askExisting.value && !existing.value
-  if (!valid || existingMissing.value) return
+  if (!valid || existingMissing.value || dueError.value) return
   busy.value = true
   docNotice.value = null
   createdTitles.value = []
@@ -626,11 +658,12 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
           </div>
           <div v-else-if="editing" class="app-form-hint">{{ t('assignments.form.pointsHint') }}</div>
         </el-form-item>
-        <el-form-item :label="t('assignments.form.due')" prop="due" class="assignment-form__due">
+        <el-form-item :label="t('assignments.form.due')" prop="due" class="assignment-form__due" :error="dueError">
           <el-date-picker
             v-model="form.due"
             type="datetime"
             format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm"
             :default-time="defaultTime"
             :placeholder="t('assignments.form.duePlaceholder')"
             clearable
