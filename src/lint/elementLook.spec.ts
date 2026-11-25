@@ -12,6 +12,26 @@ async function problems(template: string, file = 'src/views/course/SomeView.vue'
   return result!.messages.filter((m) => m.ruleId === 'app/element-look').map((m) => m.message)
 }
 
+describe('outlined activity-family icons', () => {
+  it('refuses a filled glyph named by the feed, as well as one imported there', async () => {
+    for (const source of [
+      "import { UserFilled } from '@element-plus/icons-vue'\n",
+      "export const CATEGORY_ICON = { members: 'UserFilled', actions: 'Stamp' }\n",
+    ]) {
+      const [result] = await eslint.lintText(source, {
+        filePath: 'src/views/course/activity/components/feed.ts',
+      })
+      expect(result!.messages.map((m) => m.ruleId)).toContain(
+        source.startsWith('import') ? 'no-restricted-imports' : 'no-restricted-syntax',
+      )
+    }
+    const [allowed] = await eslint.lintText("export const CATEGORY_ICON = { members: 'User', actions: 'Check' }\n", {
+      filePath: 'src/views/course/activity/components/feed.ts',
+    })
+    expect(allowed!.messages).toEqual([])
+  })
+})
+
 describe('the element-look lint rule', () => {
   it('refuses an el-tag in a view or a component, whatever its effect, and points to AppTag', async () => {
     for (const tag of ['<el-tag effect="dark">3</el-tag>', '<el-tag type="info" effect="plain">x</el-tag>', '<el-tag>x</el-tag>'])

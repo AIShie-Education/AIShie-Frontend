@@ -17,6 +17,7 @@ import { useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import AppNote from '@/components/AppNote.vue'
+import MarkdownView from '@/components/MarkdownView.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import IdText from '@/components/IdText.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -221,8 +222,11 @@ function onSeated(_memberId: string, actorId: string) {
               </el-descriptions-item>
             </el-descriptions>
             <h3 class="course-admin__subhead">{{ t('admin.course.description') }}</h3>
-            <p v-if="course.description" class="course-admin__description">{{ course.description }}</p>
-            <p v-else class="app-muted course-admin__description">{{ t('admin.course.noDescription') }}</p>
+            <MarkdownView
+              class="course-admin__description"
+              :source="course.description"
+              :empty="t('admin.course.noDescription')"
+            />
           </section>
 
           <SeatInstructorCard :course-id="course.id" :disabled="archived" @seated="onSeated" />
@@ -283,7 +287,6 @@ function onSeated(_memberId: string, actorId: string) {
 }
 .course-admin__description {
   margin: 0;
-  font-size: var(--app-text-md);
   white-space: pre-wrap;
   word-break: break-word;
   line-height: var(--app-lh-text);

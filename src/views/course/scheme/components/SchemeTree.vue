@@ -4,6 +4,7 @@
 // order, and under each bucket the assignments that count toward it. On a
 // narrow screen each row folds into a name line and a line of labelled facts.
 import AppTag from '@/components/AppTag.vue'
+import InfoIcon from '@/components/InfoIcon.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDecimal } from '@/utils/format'
@@ -195,7 +196,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
             <template v-else>
               {{ formatDecimal(row.node.c.weight, 4) }}
               <el-tooltip v-if="row.node.weight === 0" :content="t('scheme.tree.zeroWeight')" placement="top">
-                <el-icon class="st-note"><InfoFilled /></el-icon>
+                <el-icon class="st-note"><InfoIcon /></el-icon>
               </el-tooltip>
             </template>
           </div>
@@ -298,7 +299,13 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
       </div>
 
       <!-- An assignment hung on a component -->
-      <div v-else class="st-row st-row--assignment" :style="{ '--depth': row.depth }" role="row">
+      <div
+        v-else
+        class="st-row st-row--assignment"
+        :class="{ 'app-row-unpublished': !row.item.a.published_at }"
+        :style="{ '--depth': row.depth }"
+        role="row"
+      >
         <div class="st-cell st-name" role="cell">
           <span class="st-toggle st-toggle--none" />
           <el-icon class="st-icon st-icon--assignment"><Document /></el-icon>
@@ -326,7 +333,7 @@ const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max
               :content="t('scheme.tree.zeroPoints')"
               placement="top"
             >
-              <el-icon class="st-note"><InfoFilled /></el-icon>
+              <el-icon class="st-note"><InfoIcon /></el-icon>
             </el-tooltip>
           </span>
         </div>

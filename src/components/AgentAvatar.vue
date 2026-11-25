@@ -50,7 +50,7 @@ const initials = computed(() => agentInitials(props.name))
   /* Drawn to the square, not to the type scale, and so the same in every language: 43% of its side (12 px of
      28, 15 of 36), half of the small one's (10 of 20), which 43% would take under 9. */
   font-size: calc(var(--agent-avatar-size) * 0.43);
-  font-weight: var(--app-weight-strong);
+  font-weight: var(--app-weight-latin);
   line-height: 1;
   letter-spacing: 0;
   vertical-align: middle;

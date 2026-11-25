@@ -203,7 +203,7 @@ async function markMissing(g: RosterGroup) {
   // One paragraph a sentence: joined with spaces, Chinese would get a stray one after each 。.
   const message = h(
     'div',
-    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, line)),
+    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, line)),
   )
   try {
     await ElMessageBox.confirm(message, t('groupWork.roster.confirmTitle', { group: g.name }), {

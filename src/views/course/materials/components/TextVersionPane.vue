@@ -301,7 +301,7 @@ function lines(parts: (string | false | null | undefined)[]) {
   return h(
     'div',
     { class: 'text-confirm' },
-    parts.filter((p): p is string => !!p).map((p) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, p)),
+    parts.filter((p): p is string => !!p).map((p) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, p)),
   )
 }
 

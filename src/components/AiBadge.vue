@@ -31,7 +31,7 @@ const { t } = useI18n()
   color: var(--app-indigo);
   font-family: 'IBM Plex Sans', var(--app-font-sans);
   font-size: var(--app-text-mark);
-  font-weight: var(--app-weight-strong);
+  font-weight: var(--app-weight-latin);
   line-height: 1;
   letter-spacing: 0.02em;
   white-space: nowrap;

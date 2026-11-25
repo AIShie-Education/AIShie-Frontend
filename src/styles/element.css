@@ -845,6 +845,11 @@ html.dark .el-card {
 .el-message-box {
   --el-messagebox-padding-primary: 20px;
 }
+/* A confirmation needs no Element Plus warning icon: its words say what
+   happens, and a destructive last step carries the solid red button. */
+.el-message-box__status {
+  display: none;
+}
 .el-divider {
   --el-border-color: var(--app-line);
 }

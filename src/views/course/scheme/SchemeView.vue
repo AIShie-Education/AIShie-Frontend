@@ -14,6 +14,7 @@ import { read } from '@/api/http'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
 import AppNote from '@/components/AppNote.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import AppTag from '@/components/AppTag.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -244,7 +245,7 @@ function collapseAll() {
               {{ t('scheme.glance.title') }}
             </span>
           </h2>
-          <p v-if="glanceEmpty" class="app-muted scheme-view__glance-empty">{{ t(`scheme.glance.${glanceEmpty}`) }}</p>
+          <AppEmpty v-if="glanceEmpty" :text="t(`scheme.glance.${glanceEmpty}`)" />
           <template v-else>
             <div
               class="glance-bar"
@@ -286,27 +287,24 @@ function collapseAll() {
           </h2>
 
           <div class="scheme-view__notes">
-            <p v-if="factsState === 'loading'" class="scheme-view__note">
+            <p v-if="factsState === 'loading'" class="scheme-view__status">
               <el-icon class="is-loading"><Loading /></el-icon>
               <span>{{ t('scheme.tree.checking') }}</span>
             </p>
-            <p v-else-if="factsState === 'failed'" class="scheme-view__note">
+            <p v-else-if="factsState === 'failed'" class="scheme-view__status">
               <el-icon><Warning /></el-icon>
               <span>{{ t('scheme.tree.factsFailed') }}</span>
             </p>
-            <p v-else-if="factsState === 'done' && facts && !facts.complete" class="scheme-view__note">
-              <el-icon><InfoFilled /></el-icon>
-              <span>{{ t('scheme.tree.partial') }}</span>
-            </p>
-            <p v-if="course.assignmentsState === 'loaded' && !seen.counted" class="scheme-view__note">
-              <el-icon><InfoFilled /></el-icon>
-              <span>{{ t('scheme.tree.assignmentsPartial') }}</span>
-            </p>
-            <p v-else-if="course.assignmentsState === 'forbidden'" class="scheme-view__note">
-              <el-icon><InfoFilled /></el-icon>
-              <span>{{ t('scheme.tree.assignmentsHidden') }}</span>
-            </p>
-            <p v-else-if="course.assignmentsState === 'error'" class="scheme-view__note">
+            <AppNote v-else-if="factsState === 'done' && facts && !facts.complete" plain class="scheme-view__note">
+              {{ t('scheme.tree.partial') }}
+            </AppNote>
+            <AppNote v-if="course.assignmentsState === 'loaded' && !seen.counted" plain class="scheme-view__note">
+              {{ t('scheme.tree.assignmentsPartial') }}
+            </AppNote>
+            <AppNote v-else-if="course.assignmentsState === 'forbidden'" plain class="scheme-view__note">
+              {{ t('scheme.tree.assignmentsHidden') }}
+            </AppNote>
+            <p v-else-if="course.assignmentsState === 'error'" class="scheme-view__status">
               <el-icon><Warning /></el-icon>
               <span>
                 {{ t('scheme.tree.assignmentsFailed') }}
@@ -339,7 +337,7 @@ function collapseAll() {
           </h2>
           <p class="app-muted scheme-view__uncounted-help">{{ t('scheme.uncounted.help') }}</p>
           <ul class="uncounted">
-            <li v-for="a in scheme.uncounted" :key="a.id">
+            <li v-for="a in scheme.uncounted" :key="a.id" :class="{ 'app-row-unpublished': !a.published_at }">
               <el-icon class="uncounted__icon"><Document /></el-icon>
               <router-link
                 :to="{ name: 'course-assignment', params: { courseId, assignmentId: a.id } }"
@@ -427,6 +425,9 @@ function collapseAll() {
   margin: -4px 0 8px;
 }
 .scheme-view__note {
+  margin: 0 0 var(--app-space-sm);
+}
+.scheme-view__status {
   display: flex;
   align-items: flex-start;
   gap: 6px;
@@ -435,17 +436,13 @@ function collapseAll() {
   line-height: 18px;
   color: var(--el-text-color-secondary);
 }
-.scheme-view__note > .el-icon {
+.scheme-view__status > .el-icon {
   flex-shrink: 0;
   margin-top: 3px;
 }
 .scheme-view__retry {
   font-size: var(--app-text-xs);
   vertical-align: baseline;
-}
-.scheme-view__glance-empty {
-  margin: 0;
-  font-size: var(--app-text-sm);
 }
 /* The weights as one bar of segments, square-ended: a figure, not a pill. */
 .glance-bar {

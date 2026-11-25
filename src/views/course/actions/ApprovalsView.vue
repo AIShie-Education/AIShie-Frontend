@@ -23,6 +23,7 @@ import { useCourseStore } from '@/stores/course'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import InfoIcon from '@/components/InfoIcon.vue'
 import LevelIcon from '@/components/LevelIcon.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -255,7 +256,7 @@ function toggleRules() {
         aria-controls="approvals-rules"
         @click="toggleRules"
       >
-        <el-icon><InfoFilled /></el-icon>
+        <el-icon><InfoIcon /></el-icon>
         <span>{{ t('actions.approvals.rules') }}</span>
         <el-icon class="el-icon--right approvals__rules-chevron" :class="{ 'is-open': rulesOpen }" aria-hidden="true">
           <ArrowDown />
@@ -495,12 +496,15 @@ function toggleRules() {
   padding-right: 136px;
 }
 @media (max-width: 600px) {
+  /* On a phone Refresh takes its own row above the tabs, never width from
+     the tab nav: both English tab names stay whole without scroll arrows. */
   .approvals__toolbar {
-    top: 16px;
-    right: 0;
+    position: static;
+    display: flex;
+    margin-bottom: var(--app-space-sm);
   }
   .approvals__tabs :deep(.el-tabs__header) {
-    padding-right: 52px;
+    padding-right: 0;
   }
 }
 </style>

@@ -43,7 +43,7 @@ function sizeOk(value: string): boolean {
   return !!em && Number(em[1]) >= 1 && Number(em[1]) <= 2
 }
 /** The two weights of the scale, and those every typeface has. */
-const WEIGHT_OK = /^(?:var\(--app-weight-strong\)|var\(--app-heading-weight\)|400|500|normal|inherit)$/
+const WEIGHT_OK = /^(?:var\(--app-weight-(?:strong|latin)\)|var\(--app-heading-weight\)|400|500|normal|inherit)$/
 
 interface Declaration {
   file: string
@@ -281,7 +281,11 @@ describe('the type scale', () => {
       '1.7',
       '1.25',
     ])
-    expect([root['--app-weight-strong'], root['--app-heading-weight']]).toEqual(['600', '600'])
+    expect([root['--app-weight-strong'], root['--app-heading-weight'], root['--app-weight-latin']]).toEqual([
+      '600',
+      '600',
+      '600',
+    ])
     expect(['xs', 'sm', 'md', 'lg', 'xl', '2xl'].map((s) => root[`--app-space-${s}`])).toEqual([
       '4px',
       '8px',
@@ -305,6 +309,8 @@ describe('the type scale', () => {
     // Noto Sans is loaded in 400, 500 and 700 (styles/fonts-zh-*.ts): 600 would fall to 700.
     expect(zh['--app-weight-strong']).toBe('500')
     expect(zh['--app-heading-weight']).toBe('700')
+    // Plex's Latin marks keep its loaded 600 in Chinese too.
+    expect(zh['--app-weight-latin']).toBeUndefined()
     // The steps from md up, the prose's and the marks' are the same in every language.
     for (const s of ['md', 'lg', 'xl', '2xl', '3xl', '4xl', 'prose', 'prose-h1', 'mark'])
       expect(zh[`--app-text-${s}`]).toBeUndefined()
@@ -329,6 +335,16 @@ describe('the type scale', () => {
     const strong = rules(sources['/src/styles/main.css']!).find((r) => r.selectors.includes('strong'))
     expect(strong?.selectors).toEqual(['b', 'strong', 'th'])
     expect(strong?.body.trim()).toBe('font-weight: var(--app-weight-strong);')
+  })
+
+  it('defaults inherited interface text to 14 px and keeps Latin marks at Plex 600 in every language', () => {
+    expect(sources['/src/styles/main.css']).toMatch(/html,\s*body\s*{[^}]*font-size:\s*var\(--app-text-md\)/)
+    const latin = declarations('font-weight').filter((d) => d.value === 'var(--app-weight-latin)')
+    expect(latin.map((d) => `${d.file}: ${d.selector}`)).toEqual([
+      '/src/components/AgentAvatar.vue: .agent-avatar',
+      '/src/components/AiBadge.vue: .ai-badge',
+    ])
+    expect(WEIGHT_OK.test('var(--app-weight-latin)')).toBe(true)
   })
 
   it('sets a size or a weight of text in a custom property only to the scale’s, and the scale in tokens.css alone', () => {

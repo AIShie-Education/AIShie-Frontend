@@ -21,6 +21,7 @@ import { isRuntimeError, runtimeAdmin } from '@/api/runtime'
 import type { RuntimeSettingsPatch, TranscriptionSettings } from '@/api/runtime-types'
 import { useAsync } from '@/composables/useAsync'
 import AppTag from '@/components/AppTag.vue'
+import AppNote from '@/components/AppNote.vue'
 import { toneOf } from '@/components/tags'
 import DailyReset from '@/components/DailyReset.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -234,10 +235,9 @@ async function withdraw() {
       :error="settings.data.value ? null : settings.error.value"
       @retry="settings.reload"
     >
-      <p v-if="notOffered" class="transcription-card__not-offered" role="status">
-        <el-icon aria-hidden="true"><InfoFilled /></el-icon>
-        <span>{{ t('runtimeAdmin.state.notOffered') }}</span>
-      </p>
+      <AppNote v-if="notOffered" plain class="transcription-card__not-offered">
+        {{ t('runtimeAdmin.state.notOffered') }}
+      </AppNote>
       <template v-else-if="tr">
         <el-alert
           v-if="!tr.available"

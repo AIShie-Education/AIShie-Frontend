@@ -165,6 +165,7 @@ async function save() {
 }
 .password-card__text p {
   margin: 0 0 4px;
+  font-size: var(--app-text-md);
   line-height: var(--app-lh-ui);
 }
 .password-card__since {

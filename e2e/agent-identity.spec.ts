@@ -37,11 +37,14 @@ const w = {
   seatAction: '',
   botId: '',
   botSeat: '',
+  personSeat: '',
 }
 // A course agent with a long name, which the chat's header must cut short without losing its "AI".
 const LONG = `Introduction to Programming weekly revision and practice tutor ${STAMP}`
 // One with a long name and no spaces, which must still wrap in its row, its "AI" with it.
 const HYPHEN = `cs101-introduction-to-programming-weekly-revision-tutor-${STAMP}`
+// A person's long name wraps whole beside its icon, as an agent's does.
+const LONG_PERSON = 'Maximilian Alexander Featherstonehaugh-Montgomery'
 // A student's own agent, which drafts his HW1.
 const HELPER = `Ben’s revision helper ${STAMP}`
 // The conversation he opens with the course agent of the long name.
@@ -64,6 +67,11 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     const I = d.actors.instructor.token
     ada = await registerPerson(`Ada ${STAMP}`, { email: `ada+${STAMP}@identity.test` })
     done(await call(I, 'POST', `/v1/courses/${c}/members`, { actor_id: ada.actor_id, preset: 'student' }), 'member.add')
+    const longPerson = await registerPerson(LONG_PERSON, { email: `maximilian+${STAMP}@identity.test` })
+    w.personSeat = done(
+      await call(I, 'POST', `/v1/courses/${c}/members`, { actor_id: longPerson.actor_id, preset: 'ta' }),
+      'member.add (long person name)',
+    ).member_id
     w.submission = done(
       await call(ada.token, 'POST', `/v1/courses/${c}/submissions`, {
         assignment_id: d.course.assignments.hw1,
@@ -207,6 +215,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     if (w.helperId && ben) await call(ben.token, 'POST', `/v1/me/agents/${w.helperId}/suspend`, {})
     const I = demo().actors.instructor.token
     if (w.botSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.botSeat}/remove`, {})
+    if (w.personSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.personSeat}/remove`, {})
     if (w.botId) await call(root().token, 'POST', `/v1/actors/${w.botId}/suspend`, {})
   })
 
@@ -579,6 +588,30 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       )
       expect(tags.map((t) => t.tag)).toContain('Teaching assistant')
       expect(tags.filter((t) => t.past > 0.5 || t.scrolls)).toEqual([])
+    })
+
+  for (const size of [
+    { width: 1280, height: 800 },
+    { width: 390, height: 844 },
+  ])
+    test(`a person's long name wraps whole beside its icon at ${size.width} px`, async ({ page }) => {
+      await page.setViewportSize(size)
+      await signIn(page, demo().actors.instructor)
+      await page.goto(coursePath('members'))
+      const who = page.locator('.members__table .el-table__row').filter({ hasText: LONG_PERSON }).locator('.members__who')
+      await expect(who).toBeVisible()
+      await expect(who).toContainText(LONG_PERSON)
+      const hidden = await who.evaluate((el) =>
+        [el, ...el.querySelectorAll('.members__name-text, .members__name-end')]
+          .filter((e) => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis')
+          .map((e) => e.className),
+      )
+      expect(hidden).toEqual([])
+      const [nameBox, iconBox] = await Promise.all([
+        who.boundingBox(),
+        who.locator('xpath=..').locator('.members__kind-icon').boundingBox(),
+      ])
+      expect(Math.abs(nameBox!.y - iconBox!.y)).toBeLessThanOrEqual(1.5)
     })
 
   test('in Chinese, the “AI” stays “AI”, and a personal agent is called one', async ({ page }) => {

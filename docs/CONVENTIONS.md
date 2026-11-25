@@ -647,7 +647,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - What only an administrator of the course does from inside it (purging what was uploaded by
   mistake) is offered by `useAdministersCourse()` (`@/composables/useAdministersCourse`): a platform
   administrator, or one of the course's department or one above it.
-- Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure.
+- Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure,
+  with the explanation in the page's language rather than Core's raw English message.
 - Permission names and which tool needs which are in Core's `docs/schema.md` §2.2. A few borrow:
   the grading scheme is written with `assignment_write` and read with `grade_read`; reading the
   course, assignments, the event feed and your own actions needs `document_read`; correcting
@@ -765,8 +766,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
   do not say so (`Stamp`, `List`, `Grid`, `Menu`), are refused in navigation's files
   (`src/layouts`, `src/components/sidebar`) by `npm run lint` (`eslint.config.js`), however they are
-  named: imported, as a string, or as a tag in a template. Another solid glyph found among them goes
-  on that list.
+  named: imported, as a string, or as a tag in a template. The activity feed's family chips are one
+  outlined family too, and the same rule covers `activity/components/feed.ts`'s string-named icons.
+  Another solid glyph found among them goes on that list.
 - A page inside a course whose route does not say which tab it belongs to calls
   `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
   (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
@@ -822,6 +824,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
   A row holds two chips at most. Whether an agent can be asked is a dot before its name
   (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
+  In the chat's agent picker, where an answer level must also be shown, the seat's purpose is words
+  beside that level rather than a third chip.
   `npm run lint` refuses an `el-tag` anywhere but in `AppTag`, however a template names it (`<el-tag>`,
   `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
   (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
@@ -831,7 +835,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   second ink at a paragraph's leading, stopping at the measure, under a title in the ink where it has
   one; `closable` where it says what was just done, its close button a square of 28 px (44 on a touch
   screen). `plain` was a note without the tint it had until design wave 3; every note is one now, and
-  `plain` is kept for the places that ask for it. An `el-alert` is a
+  `plain` is kept for the places that ask for it. No paragraph explanation draws its own solid
+  `InfoFilled`; a control which opens an explanation uses the outlined `InfoIcon` instead. An `el-alert` is a
   warning or an error, or an outcome reported in green, and says which in its template, where lint
   reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
   'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
@@ -964,7 +969,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
   no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
   rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
-  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
+  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Latin marks
+  drawn in Plex in every language (the "AI" badge and an agent's initials) take
+  `--app-weight-latin`, always 600 because that Plex face is loaded. Leading is
   `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (a label, a cell, a button, an empty
   place's line); `--app-lh-text` for a paragraph (a note, where data goes) and `--app-lh-prose` for
   rendered Markdown and a chat's answers, both 1.7 in every language, the site's (its spec found
@@ -1015,7 +1022,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
-  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in a
+  irreversible actions with `ElMessageBox.confirm`. A confirmation shows none of Element Plus's
+  amber status icons: its words say what happens, and the last step of a destructive one carries the
+  solid red button. A dialog and a message box are framed in a
   control's edge (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
   and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
