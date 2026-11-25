@@ -13,7 +13,8 @@
 // assignment of the set. To a seat not shown all of that (one that does not
 // read the member list, or reaches only some assignments: previewsSplit) a
 // deal worked out here would be another deal, so none is shown: it says
-// why, and the set's page says what was dealt once it is made.
+// why; once made, the set's page lists the groups it made and left alone,
+// not a list of placed students the reader may not be shown.
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { ToolOut, WriteOutcome } from '@/api/http'
