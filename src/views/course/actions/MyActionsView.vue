@@ -9,13 +9,11 @@
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { View } from '@element-plus/icons-vue'
 import { read, type ApiError } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
 import AppNote from '@/components/AppNote.vue'
-import AppTag from '@/components/AppTag.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import FilterChips from '@/components/FilterChips.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -113,19 +111,39 @@ const statusCounts = computed(() => {
   for (const a of items.value) m.set(a.status, (m.get(a.status) ?? 0) + 1)
   return STATUS_ORDER.filter((s) => m.has(s)).map((s) => ({ value: s, n: m.get(s)! }))
 })
-const statusChips = computed(() =>
-  statusCounts.value.map((s) => ({ value: s.value, label: t(`enums.actionStatus.${s.value}`), count: s.n })),
+const reviewCount = computed(
+  () => items.value.filter((a) => a.review_state === 'pending' || a.review_state === 'escalated').length,
 )
+// A count of what waits for review is a choice in this same filter, never an
+// inert tag beside it. Its value cannot collide with Core's action statuses.
+const AWAITING_REVIEW = 'awaiting-review'
+const statusChips = computed(() => [
+  ...statusCounts.value.map((s) => ({ value: s.value, label: t(`enums.actionStatus.${s.value}`), count: s.n })),
+  ...(reviewCount.value
+    ? [{ value: AWAITING_REVIEW, label: t('actions.mine.awaitingReview'), count: reviewCount.value }]
+    : []),
+])
+// Refresh or including chat messages can remove the chosen choice. Never keep
+// an invisible radio selected and filter the whole list to nothing. Wait for
+// the reload: items is briefly empty at its start, and a choice that returns
+// must stay chosen.
+watch([items, loading], () => {
+  if (loading.value) return
+  if (status.value && !statusChips.value.some((chip) => chip.value === status.value)) status.value = ''
+})
 const types = computed(() => {
   const set = new Set(items.value.map((a) => a.action_type))
   return [...set].map((v) => ({ value: v, label: typeLabel(v) })).sort((a, b) => a.label.localeCompare(b.label))
 })
-const reviewCount = computed(
-  () => items.value.filter((a) => a.review_state === 'pending' || a.review_state === 'escalated').length,
-)
 
 const filtered = computed(() => {
-  const rows = items.value.filter((a) => (!status.value || a.status === status.value) && (!type.value || a.action_type === type.value))
+  const rows = items.value.filter((a) => {
+    const inStatus =
+      status.value === AWAITING_REVIEW
+        ? a.review_state === 'pending' || a.review_state === 'escalated'
+        : !status.value || a.status === status.value
+    return inStatus && (!type.value || a.action_type === type.value)
+  })
   return order.value === 'newest' ? [...rows].reverse() : rows
 })
 const shown = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
@@ -178,9 +196,6 @@ function open(row: ActionRow) {
           :all-count="items.length"
           :label="t('actions.mine.filterStatus')"
         />
-        <AppTag v-if="reviewCount" tone="indigo" :icon="View">
-          {{ t('actions.mine.awaitingReview', { n: reviewCount }) }}
-        </AppTag>
       </div>
 
       <div v-if="!error" class="app-toolbar my-actions__toolbar">

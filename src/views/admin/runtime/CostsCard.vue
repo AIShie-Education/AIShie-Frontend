@@ -24,6 +24,7 @@ import { formatList, formatMoney, formatNumber } from '@/utils/format'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { COST_SPAN_DAYS, costRange, utcToday } from './runtimeAdmin'
 import { joinParts } from '@/utils/parts'
+import { scrollBehavior } from '@/utils/motion'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
@@ -91,7 +92,7 @@ const totalCalls = computed(() => (total.value ? callsOf(total.value) : undefine
 const unpricedTotal = computed(() => (total.value?.lines ?? []).reduce((a, l) => a + (l.unpriced_calls ?? 0), 0))
 
 function toPrices() {
-  document.getElementById('runtime-prices')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById('runtime-prices')?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
 }
 </script>
 

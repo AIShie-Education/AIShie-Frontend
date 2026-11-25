@@ -309,6 +309,67 @@ test.describe('at phone width', () => {
     expect(outer!.x + outer!.width - (inner!.x + inner!.width)).toBeLessThanOrEqual(20)
   })
 
+  test('segmented controls, the pager and select options are finger-sized on a touch screen', async ({ page }) => {
+    const d = demo()
+    // The select on the sign-in page: its small trigger was already 40 px, but
+    // Element Plus's three dropdown options were only 25 px tall.
+    await page.goto('/login')
+    await page.locator('.app-auth-page__lang .el-select__wrapper').click()
+    const options = page.locator('.el-select-dropdown:visible .el-select-dropdown__item')
+    await expect(options).toHaveCount(3)
+    for (const option of await options.all()) {
+      const text = (await option.textContent()) ?? 'language option'
+      // The dropdown's zoom-in transition scales its bounding box too: wait
+      // for the final box, while keeping the 44 px requirement unchanged.
+      await expect
+        .poll(() => option.evaluate((el) => el.getBoundingClientRect().height), { message: `${text} height` })
+        .toBeGreaterThanOrEqual(44)
+    }
+
+    await signIn(page, d.actors.instructor)
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true)
+    // Twenty-one actions make the real pager appear (one page holds twenty).
+    const actions = Array.from({ length: 21 }, (_, i) => ({
+      id: `00000000-0000-7000-8000-${String(i + 1).padStart(12, '0')}`,
+      actor_id: d.actors.instructor.actor_id,
+      member_id: d.actors.instructor.member_id,
+      action_type: 'grade.submit',
+      target_type: 'submission',
+      target_id: d.course.submissions.yuki_hw1,
+      payload: { submission_id: d.course.submissions.yuki_hw1, score: '9' },
+      authz_result: 'confirm_required',
+      status: 'executed',
+      review_state: 'none',
+      created_at: new Date(Date.UTC(2026, 8, 1, 0, i)).toISOString(),
+    }))
+    await page.route(/\/v1\/courses\/[^/]+\/actions\/mine(\?|$)/, (route) =>
+      route.fulfill({ status: 200, json: { status: 'executed', result: { actions } } }),
+    )
+    await page.goto(coursePath('my-actions'))
+    await expect(page.locator('.my-actions__pager')).toBeVisible()
+    const boxes = (selector: string) =>
+      page.locator(selector).evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect()
+          return { text: (el.textContent ?? '').trim(), width: Math.round(r.width), height: Math.round(r.height) }
+        }),
+      )
+    for (const part of await boxes('.my-actions__toolbar .el-radio-button__inner'))
+      expect(part.height, part.text).toBeGreaterThanOrEqual(44)
+    const pager = await boxes('.my-actions__pager .btn-prev, .my-actions__pager .btn-next, .my-actions__pager .el-pager li')
+    expect(pager.length).toBeGreaterThanOrEqual(4)
+    for (const part of pager) {
+      expect(part.width, `pager ${part.text} width`).toBeGreaterThanOrEqual(40)
+      expect(part.height, `pager ${part.text} height`).toBeGreaterThanOrEqual(40)
+    }
+
+    await page.goto(coursePath('agents'))
+    const policy = page.locator('.student-policy__control .el-radio-button__inner')
+    await expect(policy).toHaveCount(3)
+    for (const part of await boxes('.student-policy__control .el-radio-button__inner'))
+      expect(part.height, part.text).toBeGreaterThanOrEqual(44)
+  })
+
   test('on a phone narrower than the grades’ own tabs, their row scrolls on its own, and the page does not', async ({
     page,
   }) => {

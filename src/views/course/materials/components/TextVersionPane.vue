@@ -30,6 +30,7 @@ import { notifyError } from '@/composables/useErrors'
 import { usePolling } from '@/composables/usePolling'
 import { announce, useWrite } from '@/composables/useWrite'
 import { pageHeadings } from '@/utils/markdown'
+import { scrollBehavior } from '@/utils/motion'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
@@ -206,7 +207,7 @@ const source = computed(() => (status.value === 'done' ? (current.value?.source 
 
 function goTo(id: string | number | boolean | undefined) {
   if (typeof id !== 'string') return
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  document.getElementById(id)?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
 }
 
 // --- Editing ------------------------------------------------------------------------

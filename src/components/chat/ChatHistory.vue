@@ -16,6 +16,7 @@ import { useI18n } from 'vue-i18n'
 import type { MyConversation } from '@/api/types'
 import AiBadge from '@/components/AiBadge.vue'
 import AsyncState from '@/components/AsyncState.vue'
+import FilterChips from '@/components/FilterChips.vue'
 import LoadMore from '@/components/LoadMore.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -36,6 +37,14 @@ const session = useSessionStore()
 const key = computed(() => historyKey(chat.historyScope, chat.courseId))
 const list = computed(() => (key.value ? chat.histories[key.value] : undefined))
 const items = computed<MyConversation[]>(() => list.value?.items ?? [])
+// The scope filters which conversations are listed, so it is a radio-chip
+// filter like every other list filter, not a segmented view mode. FilterChips's
+// first choice is the default (empty) value; here it is named This course.
+const scope = computed<'' | 'all'>({
+  get: () => (chat.historyScope === 'all' ? 'all' : ''),
+  set: (value) => (chat.historyScope = value === 'all' ? 'all' : 'course'),
+})
+const scopeOptions = computed(() => [{ value: 'all' as const, label: t('chat.history.allCourses') }])
 
 // Read when it is first shown, and read again, quietly, each time it is shown after.
 watch(
@@ -90,10 +99,12 @@ function more() {
           ><el-icon aria-hidden="true"><Search /></el-icon
         ></template>
       </el-input>
-      <el-radio-group v-model="chat.historyScope" size="small" :aria-label="t('chat.history.scope')">
-        <el-radio-button value="course">{{ t('chat.history.thisCourse') }}</el-radio-button>
-        <el-radio-button value="all">{{ t('chat.history.allCourses') }}</el-radio-button>
-      </el-radio-group>
+      <FilterChips
+        v-model="scope"
+        :options="scopeOptions"
+        :all-label="t('chat.history.thisCourse')"
+        :label="t('chat.history.scope')"
+      />
     </div>
 
     <AsyncState
