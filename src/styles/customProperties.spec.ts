@@ -74,6 +74,11 @@ describe('the app’s custom properties', () => {
     ])
     expect(unsetTokens(['const slashOrStar = /[/*]/; const label = `var(--app-gone)`'])).toEqual(['--app-gone'])
     expect(unsetTokens(['const label = `${ok ? `var(--app-gone)` : ""}`'])).toEqual(['--app-gone'])
+    for (const url of ['https://example.com', 'http://example.com', '//example.com']) {
+      expect(
+        unsetTokens(['<template><p>' + url + '</p><span>{{ `var(--app-gone)` }}</span></template>']),
+      ).toEqual(['--app-gone'])
+    }
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })

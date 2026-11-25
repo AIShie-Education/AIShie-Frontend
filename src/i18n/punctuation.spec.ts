@@ -388,6 +388,14 @@ describe('punctuation between values', () => {
     expect(vue('', 'const url = "https://example.edu/a//b"\nconst s = `${n}%`')).not.toEqual([])
   })
 
+  it.each(['https://example.com', 'http://example.com', '//example.com'])(
+    'does not let a Vue template URL %s hide a following punctuation offence',
+    (url) => {
+      const source = `<template><p>${url}</p><span>{{ n }}%</span></template>`
+      expect(offences('/src/X.vue', source)).not.toEqual([])
+    },
+  )
+
   it('lets a dot of its own be, and what is not words', () => {
     expect(vue('<span>{{ code }}<span class="app-sep">·</span>{{ section }}</span>')).toEqual([])
     expect(vue('<span>{{ code }}<span class="app-sep">&middot;</span>{{ section }}</span>')).toEqual([])

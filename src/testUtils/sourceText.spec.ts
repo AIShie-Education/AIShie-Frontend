@@ -41,6 +41,48 @@ export function withoutComments(text: string): string {
     return text.length
   }
 
+  function htmlTag(from: number): number {
+    let quote = ''
+    for (let i = from + 1; i < text.length; i++) {
+      const c = text[i]!
+      if (quote) {
+        if (c === '\\') i++
+        else if (c === quote) quote = ''
+      } else if (c === "'" || c === '"') quote = c
+      else if (c === '>') return i + 1
+    }
+    return text.length
+  }
+
+  /** Vue template text is HTML, not JS: only HTML comments and moustache expressions are stripped. */
+  function html(from: number): number {
+    let depth = 0
+    for (let i = from; i < text.length; i++) {
+      if (text.startsWith('<!--', i)) {
+        const close = text.indexOf('-->', i + 4)
+        const end = close < 0 ? text.length : close + 3
+        blank(i, end)
+        i = end - 1
+        continue
+      }
+      if (text[i] === '<') {
+        const rest = text.slice(i, i + 11)
+        if (/^<template(?:\s|>)/i.test(rest)) depth++
+        else if (/^<\/template\s*>/i.test(rest)) depth--
+        const end = htmlTag(i)
+        if (depth === 0) return end
+        i = end - 1
+        continue
+      }
+      if (text[i] === '{' && text[i + 1] === '{') {
+        const end = code(i + 2, true)
+        if (end >= text.length) return text.length
+        i = end + 1 // code stops at the first }; skip the second one too
+      }
+    }
+    return text.length
+  }
+
   function code(from: number, inTemplate = false): number {
     let previous = 'start'
     let braces = 0
@@ -48,6 +90,10 @@ export function withoutComments(text: string): string {
       const c = text[i]!
       const next = text[i + 1]
       if (/\s/.test(c)) continue
+      if (!inTemplate && c === '<' && /^<template(?:\s|>)/i.test(text.slice(i, i + 10))) {
+        i = html(i) - 1
+        continue
+      }
       if (text.startsWith('<!--', i)) {
         const close = text.indexOf('-->', i + 4)
         const end = close < 0 ? text.length : close + 3
@@ -114,6 +160,16 @@ describe('the source comment lexer used by the guards', () => {
     expect(out).toContain('`${n}%`')
     expect(out).toContain('${m}%')
   })
+
+  it.each(['https://example.com', 'http://example.com', '//example.com'])(
+    'does not read a Vue template URL %s as a JavaScript line comment',
+    (url) => {
+      const source = `<template><p>${url}</p><span>{{ n }}%</span></template>`
+      const out = withoutComments(source)
+      expect(out).toContain(url)
+      expect(out).toContain('<span>{{ n }}%</span>')
+    },
+  )
 
   it('strips block and line comments while keeping their lines', () => {
     const out = withoutComments('const a = 1 /* gone */ // too\nconst b = 2')
