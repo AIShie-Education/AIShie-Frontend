@@ -1143,11 +1143,11 @@ test.describe('course toolbars, tabs and forbidden pages on a phone', () => {
     expect(await page.locator('.approvals__tabs .el-tabs__nav-prev:visible, .approvals__tabs .el-tabs__nav-next:visible').count()).toBe(0)
 
     for (const locale of ['zh-Hant', 'zh-Hans']) {
-      await page.evaluate((value) => localStorage.setItem('aishie.locale', value), locale)
+      await page.addInitScript((value) => localStorage.setItem('aishie.locale', value), locale)
       await page.reload()
       const subtitle = page.locator('.page-header__subtitle')
       await expect(subtitle).toBeVisible()
-      expect(await subtitle.evaluate((el) => getComputedStyle(el).textWrap)).toBe('balance')
+      expect(await subtitle.evaluate((el) => getComputedStyle(el).getPropertyValue('text-wrap-style'))).toBe('balance')
       const lines = await subtitle.evaluate((el) => {
         const range = document.createRange()
         range.selectNodeContents(el)
@@ -1173,7 +1173,7 @@ test.describe('course toolbars, tabs and forbidden pages on a phone', () => {
 
   test('a student opening Members by address gets no Core English refusal in zh-Hant', async ({ page }) => {
     await signIn(page, demo().actors.yuki)
-    await page.evaluate(() => localStorage.setItem('aishie.locale', 'zh-Hant'))
+    await page.addInitScript(() => localStorage.setItem('aishie.locale', 'zh-Hant'))
     await page.goto(coursePath('members'))
     const result = page.locator('.app-result--forbidden')
     await expect(result).toBeVisible()

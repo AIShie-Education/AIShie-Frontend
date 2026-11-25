@@ -291,7 +291,8 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <AgentName :name="row.display_name" class="members__agent-name" />
                 </span>
                 <template v-else>
-                  <el-icon class="members__kind-icon"><User /></el-icon>
+                  <span class="members__person">
+                    <el-icon class="members__kind-icon"><User /></el-icon>
                   <!-- The last word and 「（你）」 stay together; the rest wraps beside the person's icon. -->
                   <span class="members__who">{{ splitNameEnd(row.display_name).head }}<span
                       class="members__name-end"
@@ -302,6 +303,7 @@ function rowClass({ row }: { row: MemberSummary }) {
                       }}</span></span
                     ></span
                   >
+                  </span>
                 </template>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
@@ -454,8 +456,17 @@ function rowClass({ row }: { row: MemberSummary }) {
 .members__name-text {
   font-weight: 500;
 }
+.members__person {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+}
 .members__kind-icon {
   flex-shrink: 0;
+  align-items: center;
+  height: 1lh;
   color: var(--el-text-color-secondary);
 }
 .members__login-id {

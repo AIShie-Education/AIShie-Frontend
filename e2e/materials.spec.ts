@@ -57,7 +57,9 @@ test.describe.serial('course material', () => {
     await box.getByRole('button', { name: 'Publish' }).click()
     await expectToasted(page, 'Version 1 published')
     await expect(page.getByRole('button', { name: 'Publish this version' })).toHaveCount(0)
-    await expect(page.locator('.doc-content__meta')).toContainText('Published')
+    // Published is the version's usual state: no green pill. A version that is not published says so instead.
+    await expect(page.locator('.doc-content__meta .app-tag--done')).toHaveCount(0)
+    await expect(page.locator('.doc-content__meta')).not.toContainText('Published')
 
     // In the list, published is the usual state, which says nothing: the row loses Not published and its amber line.
     await openCourseTab(page, 'Materials')
