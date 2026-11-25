@@ -6,7 +6,7 @@
 // read; none holds the page up. Core's course.get also gives the instructors'
 // display names to anyone who may read the course, never requiring member_read.
 import { reactive, watch, type Ref } from 'vue'
-import { read } from '@/api/http'
+import { ApiError, read } from '@/api/http'
 import type { ListItem } from '@/api/types'
 import { QUEUE_PAGE } from '@/views/course/overview/waiting'
 
@@ -84,9 +84,7 @@ export async function readCourseFacts(m: Membership, terms: Promise<Map<string, 
   const out: CourseFacts = { courseRead: course.status === 'fulfilled' }
   if (course.status === 'fulfilled') {
     // An older Core omits this optional field; that is unknown, not no instructor.
-    const listed = (course.value as typeof course.value & {
-      instructors?: { display_name?: string | null }[] | null
-    }).instructors
+    const listed = course.value.instructors
     if (Array.isArray(listed)) {
       out.instructors = [
         ...new Set((listed ?? []).map((person) => person.display_name?.trim()).filter((name): name is string => !!name)),
@@ -105,9 +103,13 @@ export async function readCourseFacts(m: Membership, terms: Promise<Map<string, 
   if (queue.status === 'fulfilled') {
     // Counted as the course's overview counts them (AttentionCard, QUEUE_PAGE): every proposal the
     // queue shows the caller. The overview asks only a seat that decides or owns an agent here; this
-    // asks every live seat, as whether one owns an agent is not known here, and a refusal says nothing.
+    // asks every live seat, as whether one owns an agent is not known here.
     const n = (queue.value.actions ?? []).length
     out.waiting = { n, more: !!queue.value.next, agentsOnly: !allowed(m, 'action_decide') }
+  } else if (queue.reason instanceof ApiError && queue.reason.isForbidden) {
+    // Core refuses the queue of someone who neither decides nor owns an agent
+    // here: that is a real zero, not unknown data or a partial read failure.
+    out.waiting = { n: 0, more: false, agentsOnly: true }
   }
   return out
 }

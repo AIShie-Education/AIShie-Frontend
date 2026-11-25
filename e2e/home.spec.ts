@@ -13,7 +13,7 @@ test('Home names both instructors and summarizes the week without member_read', 
     due_at: new Date(Date.now() + 2 * 86_400_000).toISOString(),
   })
   expect(made.body.status, JSON.stringify(made.body)).toBe('executed')
-  const assignment = made.body.result.assignment_id as string
+  const assignment = made.body.result.id as string
   const published = await call(
     instructor.token,
     'POST',

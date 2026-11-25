@@ -99,6 +99,8 @@ describe('a course’s facts on its card', () => {
     expect(await readCourseFacts(seat({ document_read: 'denied' }), terms, NOW)).toEqual({
       courseRead: true,
       instructorsUnavailable: true,
+      // A caller with no queue here has no proposals waiting: a known zero.
+      waiting: { n: 0, more: false, agentsOnly: true },
     })
     expect(read.mock.calls.map(([tool]) => tool)).toEqual(['course.get', 'action.list_proposed'])
     read.mockClear()

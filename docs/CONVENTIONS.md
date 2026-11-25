@@ -735,6 +735,14 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   a second solid primary. Its title is the page's one `<h1>`: nothing
   else the app draws on a page is one (headings inside rendered material, a document's or an
   assignment's Markdown, are the author's, and are left as they wrote them).
+- **Home** names each course's current instructors from `course.get`, never by asking for
+  `member_read` or reading `member.list`: multiple names are a locale-aware list, a successful empty
+  array says no instructor is listed, and a failed or older response is unavailable, never empty.
+  Above the grid, `This week` is useful data, not a decorative heading: a Monday–Sunday range on the
+  school's clock (`me.get.time_zone`, or the reader's when unset), published work still due before
+  next Monday, the lower bound of proposals waiting, and the next cut-off with its course. It appears
+  once every active course has answered; refused, failed or truncated inputs are marked partial and
+  never presented as a complete zero (`courseFacts.ts`, `week.ts`, `week.spec.ts`).
 - **A course's pages** (`CourseLayout`): the top bar is the way back up, not the page's name again
   (`CourseCrumbs`: "CS101·A Introduction to Programming › Materials", the course leading to its
   overview, the tab to its page where the page is one under it, and only the last step marked as the
