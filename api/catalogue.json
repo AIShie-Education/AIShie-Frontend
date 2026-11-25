@@ -7250,7 +7250,7 @@
       "path": "/v1/courses"
     },
     {
-      "description": "The course itself: code, section, title, description, status. Any member who can read its material may read this.",
+      "description": "The course itself: code, section, title, description, status, and its current instructors' display names (instructors), the public course fact of who teaches it, without the member list or their account details. Any member who can read its material may read this, without member_read.",
       "input_schema": {
         "additionalProperties": false,
         "properties": {
@@ -7291,6 +7291,25 @@
             "format": "uuid",
             "type": "string"
           },
+          "instructors": {
+            "description": "the current instructors' display names, in name order; empty when the course has none. Only this public course fact: no email, login id, actor id or other member details",
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "display_name"
+              ],
+              "type": "object"
+            },
+            "type": [
+              "null",
+              "array"
+            ]
+          },
           "section": {
             "type": "string"
           },
@@ -7314,7 +7333,8 @@
           "section",
           "title",
           "status",
-          "created_at"
+          "created_at",
+          "instructors"
         ],
         "type": "object"
       },

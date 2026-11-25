@@ -131,8 +131,9 @@ export type Appointment = ListItem<'department.list_admins', 'admins'>
 /** The person a whole email belongs to, as actor.lookup_by_email says of them. */
 export type ActorLookup = ToolOut<'actor.lookup_by_email'>
 
-// A course
-export type Course = ToolOut<'course.get'>
+// A course in the lists. Core deliberately returns instructors only from
+// course.get, not course.list; this shared list shape must not require them.
+export type Course = ListItem<'course.list', 'courses'>
 export type Member = ToolOut<'member.get'>
 export type MemberSummary = ListItem<'member.list', 'members'>
 export type Component = ListItem<'component.tree', 'components'>

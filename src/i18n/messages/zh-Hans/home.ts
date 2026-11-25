@@ -3,6 +3,16 @@ export default {
   subtitle: '你本学期的课程',
   // The next published assignment due in a course, on its card: its title, and when (relative).
   nextDue: '下一个截止：{title}，{when}',
+  noInstructor: '未列出讲师',
+  instructorsUnavailable: '讲师资料无法显示',
+  week: {
+    title: '本周',
+    due: '本周没有作业截止 | 本周有{n}项作业截止 | 本周有{n}项作业截止',
+    waiting: '目前没有用你的决定处理的事项 | 有{n}项提案等你决定 | 有{n}项提案等你决定',
+    waitingAtLeast: '至少有{n}项提案等你决定',
+    next: '下一个截止：{title} · {course}，{when}',
+    partial: '部分课程资料无法显示。',
+  },
   noCourses: '你尚未加入任何课程。',
   noCoursesAdmin: '你尚未加入任何课程。作为管理员，你可以创建课程并指派讲师。',
   goAdmin: '前往管理页面',

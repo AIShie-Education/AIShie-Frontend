@@ -3,6 +3,16 @@ export default {
   subtitle: 'Your courses this term',
   // The next published assignment due in a course, on its card: its title, and when (relative).
   nextDue: 'Next due: {title}, {when}',
+  noInstructor: 'No instructor listed',
+  instructorsUnavailable: 'Instructor details unavailable',
+  week: {
+    title: 'This week',
+    due: 'Nothing due this week | One assignment due this week | {n} assignments due this week',
+    waiting: 'Nothing awaiting a decision | One proposal awaiting a decision | {n} proposals awaiting decisions',
+    waitingAtLeast: 'At least one proposal awaits a decision | At least {n} proposals await decisions',
+    next: 'Next: {title} · {course}, {when}',
+    partial: 'Some course details are unavailable.',
+  },
   noCourses: 'You are not seated in any course yet.',
   noCoursesAdmin: 'You are not seated in any course. As an administrator you can create courses and seat instructors.',
   goAdmin: 'Go to administration',

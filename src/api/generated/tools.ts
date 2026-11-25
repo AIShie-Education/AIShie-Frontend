@@ -3055,7 +3055,7 @@ export interface CourseCreateOut {
   root_component_id: string
 }
 
-/** course.get (read): The course itself: code, section, title, description, status. Any member who can read its material may read this. */
+/** course.get (read): The course itself: code, section, title, description, status, and its current instructors' display names (instructors), the public course fact of who teaches it, without the member list or their account details. Any member who can read its material may read this, without member_read. */
 export interface CourseGetIn {
   /**
    * the course this call is about
@@ -3068,6 +3068,14 @@ export interface CourseGetOut {
   dept_id: string
   description?: null | string
   id: string
+  /**
+   * the current instructors' display names, in name order; empty when the course has none. Only this public course fact: no email, login id, actor id or other member details
+   */
+  instructors:
+    | null
+    | {
+        display_name: string
+      }[]
   section: string
   /**
    * draft, active or archived; an archived course refuses every write

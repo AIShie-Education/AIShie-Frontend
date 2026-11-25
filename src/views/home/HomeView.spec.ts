@@ -6,6 +6,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { i18n, setLocale } from '@/i18n'
 import { useSessionStore } from '@/stores/session'
+import { ApiError } from '@/api/http'
 
 // The home page: a card for each course the caller has a seat in, with its
 // term, the next assignment due and what waits for them there; a filter only
@@ -42,7 +43,11 @@ function answer() {
   read.mockImplementation(async (tool: string, args: { course_id?: string }) => {
     switch (tool) {
       case 'course.get':
-        return { id: args.course_id, term_id: 't1' }
+        return {
+          id: args.course_id,
+          term_id: 't1',
+          instructors: [{ display_name: 'Ada Lovelace' }, { display_name: 'Grace Hopper' }],
+        }
       case 'term.list':
         return { terms: [{ id: 't1', name: '2026/27 Term 1' }] }
       case 'assignment.list':
@@ -129,6 +134,34 @@ describe('HomeView', () => {
     expect(second!.find('.course-card__waiting').exists()).toBe(false)
     // The queue is read as the overview reads it.
     expect(read).toHaveBeenCalledWith('action.list_proposed', { course_id: 'c1', limit: 200 })
+  })
+
+  it('adds a useful week summary and names multiple instructors without member_read', async () => {
+    const w = await home(2)
+    const week = w.find('.home-week')
+    expect(week.text()).toContain('This week')
+    expect(week.text()).toContain('2 assignments due this week')
+    expect(week.text()).toContain('2 proposals awaiting decisions')
+    expect(week.text()).toContain('Next: Lab 3 · CS101 · A, in 2 days')
+    expect(week.find('.home-week__partial').exists()).toBe(false)
+    expect(w.find('.course-card__instructors').text()).toBe('Ada Lovelace and Grace Hopper')
+    expect(read.mock.calls.map(([tool]) => tool)).not.toContain('member.list')
+  })
+
+  it('distinguishes no instructor from a failed course read and marks the week partial', async () => {
+    const base = read.getMockImplementation()!
+    read.mockImplementation(async (tool: string, args: { course_id?: string }) => {
+      if (tool !== 'course.get') return base(tool, args)
+      if (args.course_id === 'c2') throw new ApiError({ status: 500, code: 'internal', message: 'failed' })
+      return { id: 'c1', term_id: 't1', instructors: [] }
+    })
+    const w = await home(2)
+    const cards = w.findAll('.course-card')
+    expect(cards[0]!.text()).toContain('No instructor listed')
+    expect(cards[1]!.text()).toContain('Instructor details unavailable')
+    expect(w.find('.home-week__partial').text()).toBe('Some course details are unavailable.')
+    // One known empty course still does not make the other course's unknown work a zero.
+    expect(w.find('.home-week').text()).toContain('Some course details are unavailable')
   })
 
   it('says the reader’s role on each card only where their roles differ among their courses', async () => {
