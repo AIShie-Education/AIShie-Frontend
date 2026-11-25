@@ -113,9 +113,20 @@ export function formatCount(n: number | null | undefined): string {
   return formatNumber(n, 0)
 }
 
-export function formatDateTime(v: string | null | undefined): string {
+export function formatDateTime(v: string | null | undefined, timeZone?: string): string {
   if (!v) return '—'
-  return dayjs(v).format('YYYY-MM-DD HH:mm')
+  if (!timeZone) return dayjs(v).format('YYYY-MM-DD HH:mm')
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(v))
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')} ${get('hour')}:${get('minute')}`
 }
 
 export function formatDate(v: string | null | undefined): string {
@@ -124,9 +135,17 @@ export function formatDate(v: string | null | undefined): string {
 }
 
 /** The time of day v is on the reader's clock: "08:00". */
-export function formatTime(v: string | null | undefined): string {
+export function formatTime(v: string | null | undefined, timeZone?: string): string {
   if (!v) return '—'
-  return dayjs(v).format('HH:mm')
+  if (!timeZone) return dayjs(v).format('HH:mm')
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date(v))
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  return `${get('hour')}:${get('minute')}`
 }
 
 /** v exactly, in UTC, whatever the reader's time zone: "2026-10-02 00:00 UTC". */
@@ -142,9 +161,9 @@ export function formatUtc(v: string | null | undefined): string {
  * ("Hong Kong Standard Time", 「香港標準時間」, "Pacific Daylight Time"),
  * or, where the browser cannot name it, its offset then ("UTC+08:00").
  */
-export function timeZoneName(v: string): string {
+export function timeZoneName(v: string, timeZone?: string): string {
   try {
-    const name = new Intl.DateTimeFormat(numberLocale, { timeZoneName: 'long' })
+    const name = new Intl.DateTimeFormat(numberLocale, { timeZone, timeZoneName: 'long' })
       .formatToParts(new Date(v))
       .find((p) => p.type === 'timeZoneName')?.value
     if (name) return name

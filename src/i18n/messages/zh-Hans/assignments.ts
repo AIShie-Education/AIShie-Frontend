@@ -47,6 +47,7 @@ export default {
     due: '截止时间',
     duePlaceholder: '不设截止时间',
     dueHint: '时间按你的时区（{zone}）计算。截止时间之后提交的作业会被标记为迟交。',
+    dueHintSchool: '时间按学校的时区（{zone}）计算。截止时间之后提交的作业会被标记为迟交。',
     component: '计入',
     componentNone: '不计分 — 练习作业',
     componentHint: '此作业计入评分结构中的哪一部分。练习作业不计入成绩，请留空。',

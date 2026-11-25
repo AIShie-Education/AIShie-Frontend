@@ -68,7 +68,6 @@ export default {
     unknown: 'Unknown',
     yes: 'Yes',
     no: 'No',
-    optional: 'optional',
     // After a field's label, its own word, with the space the language puts before it: "Email (optional)".
     optionalTag: ' (optional)',
     loading: 'Loading…',
@@ -215,6 +214,8 @@ export default {
     // A time on the reader's clock with its time zone named: a cut-off (a due date, an expiry), or when
     // the agent runtime's daily counts start again.
     zoned: '{time} ({zone})',
+    schoolAndReader: 'School: {school}; your time: {reader}',
+    description: '{zoned}. Exact instant: {utc}.',
     // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
     cutoff: '{at}, {rel}',
   },

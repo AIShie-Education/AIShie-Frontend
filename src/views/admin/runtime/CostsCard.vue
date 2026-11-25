@@ -103,6 +103,7 @@ function toPrices() {
       <RefreshButton :loading="loading" class="costs-card__refresh" @click="load()" />
     </h2>
     <p class="costs-card__intro">{{ t('runtimeAdmin.costs.intro') }}</p>
+    <p class="app-form-hint costs-card__utc">{{ t('runtimeAdmin.costs.utcDays') }}</p>
 
     <div class="costs-card__controls">
       <el-date-picker

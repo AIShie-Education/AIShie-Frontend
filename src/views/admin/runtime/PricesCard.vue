@@ -127,6 +127,7 @@ const PRICE_KEYS = ['input', 'cache_read', 'cache_write', 'output'] as const
       </span>
     </h2>
     <p class="prices-card__intro">{{ t('runtimeAdmin.prices.intro') }}</p>
+    <p class="app-form-hint prices-card__utc">{{ t('runtimeAdmin.prices.utcDays') }}</p>
     <p v-if="table.version" class="app-form-hint prices-card__version">
       {{ t('runtimeAdmin.prices.version', { version: table.version }) }}
     </p>

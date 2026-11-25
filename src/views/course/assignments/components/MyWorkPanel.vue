@@ -53,7 +53,7 @@ import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { formatDecimal, fromNow } from '@/utils/format'
 import { copyText } from '@/utils/clipboard'
-import { zonedText } from '@/utils/parts'
+import { joinSentences, zonedText } from '@/utils/parts'
 import AppNote from '@/components/AppNote.vue'
 import AsyncState from '@/components/AsyncState.vue'
 import DocumentFiles from '@/components/DocumentFiles.vue'
@@ -679,7 +679,7 @@ function handInLines(members: Submission['members']): string[] {
     const lines = [t('assignments.work.handInConfirm')]
     if (pastDue.value) lines.push(t('assignments.work.handInLate'))
     if (needsApproval.value) lines.push(t('assignments.work.handInApproval'))
-    return [lines.join(' ')]
+    return [joinSentences(lines)]
   }
   const lines = [t('groupWork.work.handInFor', { names: namesOf(members) })]
   const other = otherWork.value

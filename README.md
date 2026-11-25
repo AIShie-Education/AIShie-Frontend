@@ -228,9 +228,12 @@ Vue 3 · TypeScript · Vite · Vue Router · Pinia · Element Plus · vue-i18n (
   account menu's *Language* submenu changes it, as does the language select on the pages before one
   is in (sign-in, an invitation's `/welcome`, an invite link's `/join/<token>`, changing a password);
   this browser remembers the choice, which is not kept with the account. Dates, numbers, the names of
-  time zones, Element Plus's own words and the typefaces (IBM Plex Sans and Source Serif 4 for
-  English; Noto Sans and Noto Serif, TC or SC, for Chinese) follow the language. A refusal the app
-  has words for (by its reason) is said in the page's language; any other error shows Core's own
+  time zones and Element Plus's own words follow the language. Typefaces follow the script: Latin
+  letters, figures and their punctuation use IBM Plex Sans and Source Serif 4 on every page; Chinese
+  uses Noto Sans and Noto Serif, TC on an English or Traditional Chinese page and SC on a Simplified
+  one. When the installation names a school time zone, due dates and seat expiries are shown and
+  picked on that clock, with the reader's different clock beside them; without it, they use the
+  reader's. A refusal the app has words for (by its reason) is said in the page's language; any other error shows Core's own
   message, which is in English, mostly after a few words of the page's language saying what kind
   of error it is.
 

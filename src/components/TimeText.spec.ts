@@ -5,6 +5,7 @@ import ElementPlus from 'element-plus'
 import { defineComponent, h, nextTick } from 'vue'
 import { i18n, setLocale } from '@/i18n'
 import { useUiStore } from '@/stores/ui'
+import { setSchoolTimeZone } from '@/utils/schoolTime'
 import TimeText from './TimeText.vue'
 
 // The tooltip, laid out in place: what it says (its content, or its content slot) apart from what it is on.
@@ -33,6 +34,7 @@ beforeEach(() => {
     removeEventListener() {},
   }))
   setActivePinia(createPinia())
+  setSchoolTimeZone(undefined)
   setLocale('en')
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-03T04:00:00Z'))
@@ -42,6 +44,7 @@ afterEach(() => {
   vi.useRealTimers()
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()
+  setSchoolTimeZone(undefined)
   setLocale('en')
 })
 enableAutoUnmount(afterEach)
@@ -78,8 +81,8 @@ describe('TimeText', () => {
   })
 
   it.each([
-    ['zh-Hant', '香港標準時間 2026-10-08 23:59', '5 天內'],
-    ['zh-Hans', '香港标准时间 2026-10-08 23:59', '5 天内'],
+    ['zh-Hant', '香港標準時間 2026-10-08 23:59', '5天內'],
+    ['zh-Hans', '香港标准时间 2026-10-08 23:59', '5天内'],
   ] as const)('writes a cut-off as %s does, and follows the language when it changes', async (lang, text, rel) => {
     const w = mount(TimeText, { props: { value: DUE, cutoff: true }, global })
     useUiStore().locale = lang
@@ -87,6 +90,35 @@ describe('TimeText', () => {
     await nextTick()
     expect(shown(w)).toBe(text)
     expect(tip(w)).toEqual([rel, '2026-10-08 15:59 UTC'])
+  })
+
+  it('is focusable and gives the zoned time and exact UTC as its accessible description', () => {
+    const w = mount(TimeText, { props: { value: DUE, cutoff: true, relative: true }, global })
+    const time = w.find('time')
+    expect(time.attributes('tabindex')).toBe('0')
+    const description = time.attributes('aria-description')!
+    expect(description).toContain('2026-10-08 23:59 (Hong Kong Standard Time)')
+    expect(description).toContain('2026-10-08 15:59 UTC')
+  })
+
+  it('uses the school’s clock and puts the reader’s different clock beside it', () => {
+    vi.stubEnv('TZ', 'Europe/London')
+    setSchoolTimeZone('Asia/Hong_Kong')
+    const w = mount(TimeText, { props: { value: DUE, cutoff: true }, global })
+    expect(shown(w)).toBe(
+      'School: 2026-10-08 23:59 (Hong Kong Standard Time); your time: 2026-10-08 16:59 (British Summer Time)',
+    )
+    expect(w.findAll('.time-text__zone').map((z) => z.text())).toEqual([
+      'Hong Kong Standard Time',
+      'British Summer Time',
+    ])
+    expect(tip(w)[1]).toBe('2026-10-08 15:59 UTC')
+  })
+
+  it('shows only one clock when the school’s and reader’s zones agree', () => {
+    setSchoolTimeZone('Asia/Hong_Kong')
+    const w = mount(TimeText, { props: { value: DUE, cutoff: true }, global })
+    expect(shown(w)).toBe('2026-10-08 23:59 (Hong Kong Standard Time)')
   })
 
   it('is a dash for no time', () => {

@@ -47,6 +47,7 @@ export default {
     due: '截止時間',
     duePlaceholder: '不設截止時間',
     dueHint: '時間以你的時區（{zone}）計算。截止時間之後繳交的作業會被標示為遲交。',
+    dueHintSchool: '時間以學校的時區（{zone}）計算。截止時間之後繳交的作業會被標示為遲交。',
     component: '計入',
     componentNone: '不計分 — 練習作業',
     componentHint: '此作業計入評分結構中的哪一部分。練習作業不計入成績，請留空。',

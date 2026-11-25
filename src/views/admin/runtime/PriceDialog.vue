@@ -252,7 +252,7 @@ import AppNote from '@/components/AppNote.vue'
           scope="global"
           class="app-form-hint price-form__from-hint"
         >
-          <template #start><TimeText :value="dayStart" cutoff /></template>
+          <template #start><TimeText :value="dayStart" cutoff reader-only /></template>
         </i18n-t>
       </el-form-item>
 

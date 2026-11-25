@@ -5,7 +5,7 @@ export default {
   paused: 'Paused while this page is in the background',
   archived: 'This course is archived: nothing new will happen in it.',
   checkFailed: 'Could not check for new activity; trying again shortly',
-  lastChecked: 'Checked',
+  lastCheckedAt: 'Checked {at}',
   filterLabel: 'Show activity about',
   filter: {
     all: 'All',

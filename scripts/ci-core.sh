@@ -189,6 +189,8 @@ start() {
     JOBS_INTERVAL=5s
     "BLOB_FS_ROOT=$DIR/blobs"
     SSO_ALLOW_PRIVATE_ISSUERS=true
+    # Exercise the school-zone contract in integration; unit tests cover unset.
+    "SCHOOL_TIME_ZONE=${E2E_SCHOOL_TIME_ZONE:-Asia/Hong_Kong}"
   )
   if [ "$mode" = binary ]; then
     # What it runs, as its command line reads once nohup has made way

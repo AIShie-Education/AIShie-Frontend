@@ -34,6 +34,7 @@ import {
 } from '@/api/http'
 import { forgetRuntimeAssertion } from '@/api/runtime'
 import type { Me, Membership } from '@/api/types'
+import { setSchoolTimeZone } from '@/utils/schoolTime'
 import { useCourseStore } from './course'
 
 export type SessionStatus = 'unknown' | 'signedIn' | 'signedOut' | 'mustChangePassword'
@@ -80,6 +81,7 @@ export const useSessionStore = defineStore('session', () => {
   async function load(): Promise<void> {
     try {
       me.value = await read('me.get', {})
+      setSchoolTimeZone(me.value.time_zone)
       status.value = 'signedIn'
       await loadMemberships()
     } catch (e) {
@@ -251,6 +253,7 @@ export const useSessionStore = defineStore('session', () => {
   function forgetCaller() {
     if (me.value) heldCaller = true
     me.value = null
+    setSchoolTimeZone(undefined)
     memberships.value = []
     generation++
     membershipsAt = 0

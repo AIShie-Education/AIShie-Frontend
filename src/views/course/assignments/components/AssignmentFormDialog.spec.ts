@@ -7,6 +7,7 @@ import { ApiError } from '@/api/http'
 import type { DocumentSummary } from '@/api/types'
 import AssignmentFormDialog from './AssignmentFormDialog.vue'
 import type { DocChoice } from './types'
+import { setSchoolTimeZone } from '@/utils/schoolTime'
 
 // What Core answers each write with, and every write asked for.
 let writes: { tool: string; args: Record<string, unknown> }[] = []
@@ -64,6 +65,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllEnvs()
+  setSchoolTimeZone(undefined)
   document.body.innerHTML = ''
 })
 
@@ -341,6 +344,37 @@ describe('AssignmentFormDialog, group work', () => {
     ).toContain('Someone has started on this assignment (a draft, a hand-in or a record of missing work)')
     expect(groupField(wrapper).text()).toContain('Someone has started on it, so whether it is group work')
     expect(vm.form.groupSetId).toBe('set-p')
+    wrapper.unmount()
+  })
+})
+
+describe('AssignmentFormDialog, the school’s clock', () => {
+  it('shows and keeps an existing due instant by its school wall time, and names that zone', async () => {
+    vi.stubEnv('TZ', 'Europe/London')
+    setSchoolTimeZone('Asia/Hong_Kong')
+    answers['assignment.update'] = executed({ ok: true })
+    const wrapper = await mountDialog({
+      id: 'asg-zoned',
+      course_id: COURSE,
+      title: 'Zoned essay',
+      points_possible: 10,
+      due_at: '2026-10-08T15:59:00Z',
+      published_at: null,
+      created_at: '2026-09-01T00:00:00Z',
+    })
+    expect(wrapper.find('.assignment-form__due .app-form-hint').text()).toBe(
+      'On the school’s clock, in Hong Kong Standard Time. Work handed in after the due date is marked late.',
+    )
+    const vm = wrapper.vm as unknown as { form: { title: string; due: Date } }
+    expect([vm.form.due.getHours(), vm.form.due.getMinutes()]).toEqual([23, 59])
+    vm.form.title = 'Zoned essay, revised'
+    await flushPromises()
+    await wrapper.findAll('button').find((b) => b.text() === 'Save')!.trigger('click')
+    await flushPromises()
+    const update = writes.find((w) => w.tool === 'assignment.update')!
+    expect(update.args.title).toBe('Zoned essay, revised')
+    // Merely opening the school-zone picker does not change the instant.
+    expect(update.args.due_at).toBeUndefined()
     wrapper.unmount()
   })
 })

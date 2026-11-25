@@ -10,6 +10,7 @@
 // list; an assignment deleted since its link was given says so. Group work
 // says so, with its group set, and to a student their group (groupWork.ts).
 import { computed, ref } from 'vue'
+import { joinSentences } from '@/utils/parts'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import dayjs from 'dayjs'
@@ -140,7 +141,7 @@ async function publish() {
   if (pastDue.value) lines.push(t('assignments.detail.publishPastDue'))
   if (course.needsApproval('assignment_write')) lines.push(t('assignments.detail.publishApproval'))
   try {
-    await ElMessageBox.confirm(lines.join(' '), t('assignments.detail.publishTitle'), {
+    await ElMessageBox.confirm(joinSentences(lines), t('assignments.detail.publishTitle'), {
       type: 'warning',
       confirmButtonText: t('common.actions.publish'),
       cancelButtonText: t('common.actions.cancel'),
@@ -198,7 +199,7 @@ async function unpublish() {
   if (!checkedAll.value) lines.push(t('assignments.detail.unpublishUnchecked'))
   if (course.needsApproval('assignment_write')) lines.push(t('assignments.detail.unpublishApproval'))
   try {
-    await ElMessageBox.confirm(lines.join(' '), t('assignments.detail.unpublishTitle'), {
+    await ElMessageBox.confirm(joinSentences(lines), t('assignments.detail.unpublishTitle'), {
       type: 'warning',
       confirmButtonText: t('assignments.detail.unpublish'),
       cancelButtonText: t('common.actions.cancel'),

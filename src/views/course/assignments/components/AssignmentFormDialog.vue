@@ -21,6 +21,7 @@ import { announce, useWrite } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
 import { FILE_REFUSAL_SCOPE, uploadedPayload } from '@/utils/documentFiles'
 import { formatList, isDecimal, timeZoneName } from '@/utils/format'
+import { pickerDateToISO, schoolTimeZone, toPickerDate } from '@/utils/schoolTime'
 import ExistingGradesChoice from '@/views/course/grades/components/ExistingGradesChoice.vue'
 import { enteredScores, type ExistingGrades } from '@/views/course/grades/components/pointsChange'
 import DocChoiceField from './DocChoiceField.vue'
@@ -65,8 +66,13 @@ const form = reactive<FormState>({
   group: false,
   groupSetId: '',
 })
-// The clock the date picker is on, the reader's, named: the zone as it is on the day chosen (summer time or not).
-const dueZone = computed(() => (locale.value, timeZoneName((form.due ?? new Date()).toISOString())))
+// The clock the date picker is on: the school's when Core gives one, else the reader's.
+const dueZone = computed(() =>
+  (locale.value, timeZoneName(form.due ? pickerDateToISO(form.due) : new Date().toISOString(), schoolTimeZone.value)),
+)
+const dueHint = computed(() =>
+  t(schoolTimeZone.value ? 'assignments.form.dueHintSchool' : 'assignments.form.dueHint', { zone: dueZone.value }),
+)
 const formRef = ref<FormInstance>()
 /** Something the person should know about a document before saving again. */
 const docNotice = ref<string | null>(null)
@@ -214,7 +220,7 @@ function init() {
   const a = props.assignment
   form.title = a?.title ?? ''
   form.points = a ? String(a.points_possible) : ''
-  form.due = a?.due_at ? new Date(a.due_at) : null
+  form.due = a?.due_at ? toPickerDate(a.due_at) : null
   form.componentId = a?.component_id ?? ''
   form.instructions = emptyDocChoice('instructions', a?.instructions_document_id)
   form.rubric = emptyDocChoice('rubric', a?.rubric_document_id)
@@ -442,7 +448,7 @@ async function create(made: Made, instructionsId?: string, rubricId?: string) {
       course_id: props.courseId,
       title: form.title.trim(),
       points_possible: form.points.trim(),
-      due_at: form.due ? dayjs(form.due).toISOString() : undefined,
+      due_at: form.due ? pickerDateToISO(form.due) : undefined,
       component_id: form.componentId || undefined,
       instructions_document_id: instructionsId,
       rubric_document_id: rubricId,
@@ -479,12 +485,12 @@ async function update(a: Assignment, made: Made, instructionsId?: string, rubric
     changed = true
   }
   const oldDue = a.due_at ? dayjs(a.due_at).valueOf() : null
-  const newDue = form.due ? dayjs(form.due).valueOf() : null
+  const newDue = form.due ? Date.parse(pickerDateToISO(form.due)) : null
   if (newDue === null && oldDue !== null) {
     args.clear_due_at = true
     changed = true
   } else if (newDue !== null && newDue !== oldDue) {
-    args.due_at = dayjs(form.due).toISOString()
+    args.due_at = pickerDateToISO(form.due!)
     changed = true
   }
   if (form.componentId !== (a.component_id ?? '')) {
@@ -629,7 +635,7 @@ const defaultTime = new Date(2000, 0, 1, 23, 59, 0)
             :placeholder="t('assignments.form.duePlaceholder')"
             clearable
           />
-          <div class="app-form-hint">{{ t('assignments.form.dueHint', { zone: dueZone }) }}</div>
+          <div class="app-form-hint">{{ dueHint }}</div>
         </el-form-item>
       </div>
 

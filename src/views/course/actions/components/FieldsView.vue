@@ -200,6 +200,10 @@ function label(k: string): string {
   return fieldLabel(k)
 }
 
+function isCutoff(k: string): boolean {
+  return k === 'due_at' || k === 'expires_at' || k.endsWith('_closes_at') || k.endsWith('_ends_at')
+}
+
 function kindOf(k: string, v: unknown): string {
   // A set, a group, who goes where: by name (an action about groups, or the work a refusal of one names).
   if (groupFieldKind(k, v, ofType.value)) return 'group'
@@ -364,7 +368,7 @@ function json(v: unknown) {
         <MaybeLink v-else-if="kindOf(k, obj[k]) === 'member'" :to="course.can('member_read') ? routeFor(courseId, 'member_id', obj[k] as string) : null">
           <MemberName :id="obj[k] as string" :agent="seatedAgent(k)" />
         </MaybeLink>
-        <TimeText v-else-if="kindOf(k, obj[k]) === 'time'" :value="obj[k] as string" />
+        <TimeText v-else-if="kindOf(k, obj[k]) === 'time'" :value="obj[k] as string" :cutoff="isCutoff(k)" />
         <span v-else-if="kindOf(k, obj[k]) === 'assignment'" class="fields-view__inline">
           <MaybeLink :to="routeFor(courseId, 'assignment', obj[k] as string)">
             {{ course.assignmentTitle(obj[k] as string) ?? '' }}
