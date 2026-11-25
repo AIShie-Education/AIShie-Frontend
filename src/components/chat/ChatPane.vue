@@ -111,7 +111,7 @@ import ChatStatusLine from './ChatStatusLine.vue'
 import ChatDraft from './ChatDraft.vue'
 import AskableText from './AskableText.vue'
 import ChatPrivacyNotice from './ChatPrivacyNotice.vue'
-import { notePrivacySeen, privacyNotice, privacySeen, type AnswerHosting } from './privacy'
+import { notePrivacySeen, privacyNotice, privacySeen, type AnswerHosting, type Said } from './privacy'
 import { useAnswerModels } from './useAnswerModels'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 import { joinParts } from '@/utils/parts'
@@ -315,6 +315,13 @@ const privacy = computed(() =>
     providerName: answer.providerName,
   }),
 )
+/** The same Core readers in the short line and the first-time points, formatted in the page's language. */
+const privacyReaderSummary = computed(() =>
+  formatList(privacy.value.readerSummary.map((s) => t(`chat.privacy.${s.key}`, s.params))),
+)
+function privacyText(s: Said): string {
+  return t(`chat.privacy.${s.key}`, { ...s.params, readers: privacyReaderSummary.value })
+}
 /** The whole notice, from "More" and the ⋯ menu. */
 const privacyOpen = ref(false)
 const session = useSessionStore()
@@ -987,7 +994,7 @@ const closedLine = computed(() => {
       align-center
       class="chat-pane__readers"
     >
-      <ChatPrivacyNotice :notice="privacy" />
+      <ChatPrivacyNotice :notice="privacy" :show-readers-heading="other?.kind === 'agent'" />
     </el-dialog>
 
     <div ref="scroller" class="chat-pane__messages" @scroll.passive="onScroll">
@@ -1073,7 +1080,7 @@ const closedLine = computed(() => {
           >
             <DataFlowNotice heading="h3" title-id="chat-pane-privacy-first" :title="t('chat.privacy.firstTitle')">
               <ul>
-                <li v-for="p in privacy.points" :key="p.key">{{ t(`chat.privacy.${p.key}`, p.params) }}</li>
+                <li v-for="p in privacy.points" :key="p.key">{{ privacyText(p) }}</li>
               </ul>
               <div class="chat-pane__privacy-first-actions">
                 <el-button link type="primary" size="small" @click="privacyOpen = true">
@@ -1146,8 +1153,8 @@ const closedLine = computed(() => {
         />
         <div v-if="showsPrivacyLine" class="chat-pane__privacy">
           <DataFlowNotice compact>
-            <span class="chat-pane__privacy-text">{{
-              t(`chat.privacy.${privacy.line.key}`, privacy.line.params)
+            <span class="chat-pane__privacy-text" :title="privacyText(privacy.line)">{{
+              t(`chat.privacy.${privacy.line.key}`, { ...privacy.line.params, readers: privacyReaderSummary })
             }}</span>
             <el-button
               link
@@ -1259,11 +1266,26 @@ const closedLine = computed(() => {
   color: var(--el-text-color-secondary);
   overflow-wrap: anywhere;
 }
+.chat-pane__privacy :deep(.data-flow__body) {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.chat-pane__privacy-text {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .chat-pane__privacy-more.el-button {
+  flex-shrink: 0;
   height: auto;
   margin-left: 4px;
   padding: 0;
   font-size: var(--app-text-xs);
+  line-height: inherit;
   vertical-align: baseline;
 }
 /*

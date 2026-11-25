@@ -1528,12 +1528,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
   composer, never an alert box. Under the composer, for the one asking, one muted line, after the
   shield where data goes is said (`DataFlowNotice compact`, "Notes and alerts"), says who
-  else reads the conversation and where the agent sends it, with "More" for the whole notice
-  (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
-  it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
+  else reads the conversation and where the agent sends it, clamped to one line with "More" always
+  visible for the whole notice (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read
+  this" opens too. The line's and the first-time point's reader names come from the same Core
+  `visible_to` list as the notice, however narrow it is; a person's old conversation does not repeat
+  the dialog's reader heading. Where it goes follows how the agent is hosted, a provider named only
   for the caller's own agent, whose model the runtime tells its owner (`useAnswerModels`), and its
-  fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
-  kept (its files listed in an export, never held there). A new conversation opens at its foot,
+  fallback's provider too where it is another. On the school's plan an operator-hosted provider id
+  (`openai_compatible`, `vllm`, `ollama`, `lmstudio`) is never shown as a company: the school offer's
+  real label names its own model server, or the words stay generic where there is no label. Nothing
+  is deleted: a withdrawn message is kept (its files listed in an export, never held there), and a
+  question or answer that waited for approval but was not posted is kept with its text in the action
+  record and audit exports. A new conversation opens at its foot,
   the first time on the points, scrolled until More and Got it show. The first time a person
   starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points, in a
   `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on
