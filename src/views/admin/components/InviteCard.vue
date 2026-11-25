@@ -83,12 +83,12 @@ function closed() {
       <ul v-if="state && (state.invite !== 'none' || actor.has_password)" class="invite__facts">
         <li v-if="state.invite === 'pending'">
           <i18n-t keypath="admin.invite.pending" tag="span" scope="global">
-            <template #date><TimeText :value="state.inviteExpiresAt" /></template>
+            <template #date><TimeText :value="state.inviteExpiresAt" cutoff /></template>
           </i18n-t>
         </li>
         <li v-else-if="state.invite === 'expired'">
           <i18n-t keypath="admin.invite.expired" tag="span" scope="global">
-            <template #date><TimeText :value="state.inviteExpiresAt" /></template>
+            <template #date><TimeText :value="state.inviteExpiresAt" cutoff /></template>
           </i18n-t>
         </li>
         <li v-if="actor.has_password">{{ t('admin.invite.hasPassword') }}</li>

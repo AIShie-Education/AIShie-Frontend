@@ -8,6 +8,7 @@ import InfoIcon from '@/components/InfoIcon.vue'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { formatDecimal } from '@/utils/format'
+import { joinSentences } from '@/utils/parts'
 import {
   childBlock,
   nodeName,
@@ -82,7 +83,7 @@ function gradedText(n: SchemeNode): string | null {
   const parts: string[] = []
   if (!n.isRoot && gradedBeneath(n, props.facts)) parts.push(t('scheme.tree.graded.placement'))
   if (gradedOn(n, props.facts)) parts.push(t('scheme.tree.graded.points'))
-  return parts.length ? parts.join(' ') : null
+  return parts.length ? joinSentences(parts) : null
 }
 
 function addBlockText(n: SchemeNode): string | null {
@@ -103,7 +104,7 @@ function onCommand(n: SchemeNode, cmd: string | number | object) {
   else if (cmd === 'move') emit('move', n)
 }
 
-const barWidth = (v: number | null) => (v === null ? '0%' : `${Math.min(Math.max(v, 0), 1) * 100}%`)
+const barWidth = (v: number | null) => (v === null ? '0%' : `calc(${Math.min(Math.max(v, 0), 1)} * 100%)`)
 </script>
 
 <template>

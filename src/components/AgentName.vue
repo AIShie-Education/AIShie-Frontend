@@ -9,6 +9,7 @@
 // this (AgentBadge with no-ai, HostingTag).
 import { computed } from 'vue'
 import { splitNameEnd } from '@/utils/initials'
+import { scriptLanguage } from '@/utils/script'
 import AiBadge from './AiBadge.vue'
 
 const props = defineProps<{ name: string | null | undefined; ellipsis?: boolean }>()
@@ -16,11 +17,11 @@ const parts = computed(() => splitNameEnd(props.name))
 </script>
 
 <template>
-  <span v-if="ellipsis" class="agent-name is-ellipsis"
+  <span v-if="ellipsis" class="agent-name is-ellipsis" :lang="scriptLanguage(name)"
     ><span class="agent-name__text" :title="name ?? undefined">{{ name }}</span
     ><AiBadge class="agent-name__ai"
   /></span>
-  <span v-else class="agent-name"
+  <span v-else class="agent-name" :lang="scriptLanguage(name)"
     >{{ parts.head }}<span class="agent-name__end">{{ parts.end }}<AiBadge class="agent-name__ai" /></span
   ></span>
 </template>

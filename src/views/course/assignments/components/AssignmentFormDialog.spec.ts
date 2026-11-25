@@ -7,6 +7,7 @@ import { ApiError } from '@/api/http'
 import type { DocumentSummary } from '@/api/types'
 import AssignmentFormDialog from './AssignmentFormDialog.vue'
 import type { DocChoice } from './types'
+import { setSchoolTimeZone } from '@/utils/schoolTime'
 
 // What Core answers each write with, and every write asked for.
 let writes: { tool: string; args: Record<string, unknown> }[] = []
@@ -64,6 +65,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.unstubAllEnvs()
+  setSchoolTimeZone(undefined)
   document.body.innerHTML = ''
 })
 
@@ -341,6 +344,87 @@ describe('AssignmentFormDialog, group work', () => {
     ).toContain('Someone has started on this assignment (a draft, a hand-in or a record of missing work)')
     expect(groupField(wrapper).text()).toContain('Someone has started on it, so whether it is group work')
     expect(vm.form.groupSetId).toBe('set-p')
+    wrapper.unmount()
+  })
+})
+
+describe('AssignmentFormDialog, the school’s clock', () => {
+  it('shows and keeps an existing due instant by its school wall time, and names that zone', async () => {
+    vi.stubEnv('TZ', 'Europe/London')
+    setSchoolTimeZone('Asia/Hong_Kong')
+    answers['assignment.update'] = executed({ ok: true })
+    const wrapper = await mountDialog({
+      id: 'asg-zoned',
+      course_id: COURSE,
+      title: 'Zoned essay',
+      points_possible: 10,
+      due_at: '2026-10-08T15:59:00Z',
+      published_at: null,
+      created_at: '2026-09-01T00:00:00Z',
+    })
+    expect(wrapper.find('.assignment-form__due .app-form-hint').text()).toBe(
+      'On the school’s clock, in Hong Kong Standard Time. Work handed in after the due date is marked late.',
+    )
+    const vm = wrapper.vm as unknown as { form: { title: string; due: string } }
+    expect(vm.form.due).toBe('2026-10-08T23:59')
+    vm.form.title = 'Zoned essay, revised'
+    await flushPromises()
+    await wrapper.findAll('button').find((b) => b.text() === 'Save')!.trigger('click')
+    await flushPromises()
+    const update = writes.find((w) => w.tool === 'assignment.update')!
+    expect(update.args.title).toBe('Zoned essay, revised')
+    // Merely opening the school-zone picker does not change the instant.
+    expect(update.args.due_at).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it.each([
+    ['America/New_York', 'Asia/Hong_Kong', '2026-03-07T18:30:00Z', '2026-03-08T02:30'],
+    ['Asia/Hong_Kong', 'America/New_York', '2026-11-01T06:30:00Z', '2026-11-01T01:30'],
+  ])('does not rewrite a due instant through a %s gap/fold when only the title changes', async (reader, school, due, wall) => {
+    vi.stubEnv('TZ', reader)
+    setSchoolTimeZone(school)
+    answers['assignment.update'] = executed({ ok: true })
+    const wrapper = await mountDialog({
+      id: 'asg-dst',
+      course_id: COURSE,
+      title: 'DST essay',
+      points_possible: 10,
+      due_at: due,
+      published_at: null,
+      created_at: '2026-09-01T00:00:00Z',
+    })
+    const vm = wrapper.vm as unknown as { form: { title: string; due: string } }
+    expect(vm.form.due).toBe(wall)
+    vm.form.title = 'DST essay, revised'
+    await flushPromises()
+    await wrapper.findAll('button').find((b) => b.text() === 'Save')!.trigger('click')
+    await flushPromises()
+    const update = writes.find((w) => w.tool === 'assignment.update')!
+    expect(update.args.title).toBe('DST essay, revised')
+    expect(update.args.due_at).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('refuses a nonexistent school wall time instead of silently moving it', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    setSchoolTimeZone('America/New_York')
+    const wrapper = await mountDialog({
+      id: 'asg-gap',
+      course_id: COURSE,
+      title: 'Gap essay',
+      points_possible: 10,
+      due_at: '2026-03-06T15:59:00Z',
+      published_at: null,
+      created_at: '2026-09-01T00:00:00Z',
+    })
+    const vm = wrapper.vm as unknown as { form: { due: string }; dueError: string }
+    vm.form.due = '2026-03-08T02:30'
+    await flushPromises()
+    expect(vm.dueError).toContain('does not exist')
+    await wrapper.findAll('button').find((b) => b.text() === 'Save')!.trigger('click')
+    await flushPromises()
+    expect(writes.filter((w) => w.tool === 'assignment.update')).toEqual([])
     wrapper.unmount()
   })
 })

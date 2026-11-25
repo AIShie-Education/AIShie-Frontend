@@ -16,7 +16,7 @@ import { formatNumber, formatPct as fractionPct } from '@/utils/format'
 import { classFigure, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
-import { joinParts } from '@/utils/parts'
+import { joinParts, joinSentences } from '@/utils/parts'
 import GroupGlyph from './GroupGlyph.vue'
 
 const props = defineProps<{
@@ -208,21 +208,25 @@ function postedUnder(cell: MatrixCell): CellView['posted'] {
 }
 function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null }): string {
   const said: string[] = []
+  let figure = ''
   // A grade from a group's has its marks beside the figure: the figure is
   // said whole here too, should the cell cut it short.
   const sayFigure = !!shown.full || !!cell.group
   if (cell.state === 'draft') {
-    if (sayFigure) said.push(shown.full ?? shown.text)
+    if (sayFigure) figure = shown.full ?? shown.text
     said.push(
       cell.postedScore !== null && cell.postedScore !== undefined
         ? t('classbook.draftOver', { score: formatScore(cell.postedScore) })
         : t('classbook.draftOnly'),
     )
   } else if (cell.overridden) said.push(joinParts([shown.full ?? shown.text, t('classbook.state.overridden')]))
-  else if (sayFigure) said.push(shown.full ?? shown.text)
+  else if (sayFigure) figure = shown.full ?? shown.text
   if (cell.waiting) said.push(t('classbook.waiting'))
   if (cell.group) said.push(groupWords(cell))
-  return said.join(' ')
+  const sentences = joinSentences(said)
+  // A figure is not a sentence: keep its separating space in every language,
+  // while the sentences after it follow the language's own joining rule.
+  return figure ? (sentences ? `${figure} ${sentences}` : figure) : sentences
 }
 /** A grade given from a group's, in words: whose group, and how the member's score was set apart. */
 function groupWords(cell: MatrixCell): string {

@@ -611,12 +611,16 @@ export interface ContrastMiss {
   ratio: number
 }
 
+/** A failed ratio is truncated, so a value just below AA never displays as AA. */
+export const ratioForReport = (ratio: number) => Math.floor(ratio * 100) / 100
+
 /**
  * The words on the page, or in the part of it a selector names, that read at
  * less than WCAG AA (4.5:1; 3:1 at 24 px, or 18.66 px bold) against the
  * ground they are drawn on, with their colours. A control that is disabled is
  * not held to it, as WCAG does not; nor is a separator, nor text kept for a
- * screen reader alone (clipped).
+ * screen reader alone (clipped). Visible aria-hidden text is measured too.
+ * A visible word whose ink or ground cannot be measured is a failure, never a silent pass.
  */
 export function wordsBelowAA(page: Page, within = 'body'): Promise<ContrastMiss[]> {
   return page.evaluate((within) => {
@@ -658,7 +662,7 @@ export function wordsBelowAA(page: Page, within = 'body'): Promise<ContrastMiss[
       return (hi + 0.05) / (lo + 0.05)
     }
     const hex = ({ r, g, b }: Rgba) => '#' + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
-    const page = parse(getComputedStyle(document.body).backgroundColor)!
+    const page = parse(getComputedStyle(document.body).backgroundColor)
     /** The ground under an element: its own and its ancestors' backgrounds, laid one over another; null under an image. */
     const groundOf = (el: Element): Rgba | null => {
       const layers: Rgba[] = []
@@ -671,7 +675,8 @@ export function wordsBelowAA(page: Page, within = 'body'): Promise<ContrastMiss[
           if (bg.a >= 1) break
         }
       }
-      let ground = layers.length && layers[layers.length - 1].a >= 1 ? layers.pop()! : page
+      if (!layers.length && !page) return null
+      let ground = layers.length && layers[layers.length - 1].a >= 1 ? layers.pop()! : page!
       while (layers.length) ground = over(layers.pop()!, ground)
       return ground
     }
@@ -694,13 +699,22 @@ export function wordsBelowAA(page: Page, within = 'body'): Promise<ContrastMiss[
       if (box.width <= 1 || box.height <= 1) continue
       const cs = getComputedStyle(el)
       if (cs.visibility !== 'visible' || cs.clip !== 'auto') continue
-      if (el.closest('[aria-hidden="true"], .is-disabled, [disabled], [aria-disabled="true"]')) continue
+      if (el.closest('.is-disabled, [disabled], [aria-disabled="true"]')) continue
       let opacity = 1
       for (let e: Element | null = el; e; e = e.parentElement) opacity *= Number(getComputedStyle(e).opacity)
       if (opacity < 0.1) continue
       const ink = parse(cs.color)
       const ground = groundOf(el)
-      if (!ink || !ground) continue
+      if (!ink || !ground) {
+        out.push({
+          text: text.slice(0, 40),
+          where: `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`,
+          fg: cs.color,
+          bg: ground ? 'ink not measurable' : 'ground not measurable',
+          ratio: 0,
+        })
+        continue
+      }
       const fg = over({ ...ink, a: ink.a * opacity }, ground)
       const r = ratio(fg, ground)
       const size = parseFloat(cs.fontSize)
@@ -711,7 +725,7 @@ export function wordsBelowAA(page: Page, within = 'body'): Promise<ContrastMiss[
           where: `${el.tagName.toLowerCase()}.${[...el.classList].join('.')}`,
           fg: hex(fg),
           bg: hex(ground),
-          ratio: Math.round(r * 100) / 100,
+          ratio: Math.floor(r * 100) / 100,
         })
     }
     return out

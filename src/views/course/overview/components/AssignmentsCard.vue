@@ -136,7 +136,7 @@ const groups = computed(() => [
                 <span class="assignments__meta">
                   <span>{{ t('overview.assignments.due') }}</span>
                   <TimeText :value="r.a.due_at" relative cutoff />
-                  <span class="assignments__dot">·</span>
+                  <span class="assignments__dot" aria-hidden="true">·</span>
                   <span>{{ t('overview.assignments.points', { n: formatDecimal(r.a.points_possible) }) }}</span>
                 </span>
               </span>

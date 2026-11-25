@@ -5,7 +5,7 @@ export default {
   paused: '页面在后台时暂停检查',
   archived: '这门课已归档，之后不会再有新动态。',
   checkFailed: '暂时无法检查新动态，稍后会再试',
-  lastChecked: '上次检查',
+  lastCheckedAt: '上次检查：{at}',
   filterLabel: '显示以下类别的动态',
   filter: {
     all: '全部',

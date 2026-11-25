@@ -12,6 +12,7 @@ import { computed, markRaw, nextTick, onBeforeUnmount, onMounted, provide, react
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useCourseStore } from '@/stores/course'
+import { scriptLanguage } from '@/utils/script'
 import { useSessionStore } from '@/stores/session'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useContainerWidth } from '@/composables/useContainerWidth'
@@ -211,7 +212,7 @@ watch([navWidth, locale], () => void nextTick(() => revealActive(false)), { flus
               ><span class="app-sep">·</span>{{ course.course.section }}</template
             ></span
           >
-          <span class="course-head__title" :title="course.course.title">{{ course.course.title }}</span>
+          <span class="course-head__title" :title="course.course.title" :lang="scriptLanguage(course.course.title)">{{ course.course.title }}</span>
           <span class="course-head__tags">
             <StatusTag v-if="course.course.status !== 'active'" vocab="courseStatus" :value="course.course.status" />
             <StatusTag v-if="course.role && rolesDiffer" vocab="role" :value="course.role" />

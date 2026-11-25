@@ -14,6 +14,7 @@ import AiBadge from '@/components/AiBadge.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import '@/styles/chat-prose.css'
 import ChatDraftSteps from './ChatDraftSteps.vue'
+import { scriptLanguage } from '@/utils/script'
 import ChatStatusLine from './ChatStatusLine.vue'
 import { stepDone, type ConversationDraft } from './draft'
 
@@ -36,7 +37,7 @@ const idle = computed(() => !text.value && !steps.value.some((s) => !stepDone(s)
   <article class="chat-msg is-agent chat-draft" :aria-label="authorName" aria-busy="true">
     <header class="chat-msg__head">
       <AgentAvatar :name="authorName" size="small" />
-      <span class="chat-msg__author">{{ authorName }}</span>
+      <span class="chat-msg__author" :lang="scriptLanguage(authorName)">{{ authorName }}</span>
       <AiBadge />
     </header>
     <ChatDraftSteps v-if="steps.length" :steps="steps" :collapsed="!!text" class="chat-draft__steps" />

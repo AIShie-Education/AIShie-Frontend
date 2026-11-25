@@ -11,6 +11,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import type { Course } from '@/api/types'
+import { scriptLanguage } from '@/utils/script'
 import { useCourseNav } from './courseNav'
 
 const props = defineProps<{ course: Pick<Course, 'id' | 'code' | 'section' | 'title'> }>()
@@ -43,7 +44,7 @@ const sub = computed(() =>
                 ><span class="app-sep">·</span>{{ props.course.section }}</template
               ></span
             >
-            <span class="course-crumbs__title">{{ props.course.title }}</span>
+            <span class="course-crumbs__title" :lang="scriptLanguage(props.course.title)">{{ props.course.title }}</span>
           </a>
         </router-link>
       </li>

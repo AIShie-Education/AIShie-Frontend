@@ -93,6 +93,24 @@ describe('UsageCard', () => {
     expect(w.find('.usage-card__of-usd').text()).toBe('of US$100.00 a day')
   })
 
+  it('joins the quota sentences without an ASCII space in Chinese', async () => {
+    setLocale('zh-Hans')
+    state.usage = planUsage({
+      limits: {
+        per_owner_day: 150,
+        per_asker_day: 20,
+        per_day: 5000,
+        per_owner_day_usd: '2.500000',
+        per_asker_day_usd: null,
+        per_day_usd: '100.000000',
+      },
+    })
+    const w = await card()
+    const text = w.find('.usage-card__limits').text()
+    expect(text).toContain('。')
+    expect(text).not.toMatch(/。\s/)
+  })
+
   it('says since when, and when the counts start again, in the reader’s time, from the runtime’s day', async () => {
     vi.stubEnv('TZ', 'Asia/Hong_Kong')
     const w = await card()

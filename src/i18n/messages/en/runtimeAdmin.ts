@@ -421,6 +421,7 @@ export default {
     intro:
       'What models cost, in dollars per million tokens: the server’s price file, and the site’s prices before it. The school’s quotas in dollars, and the costs below, count by these.',
     version: 'Table in force: {version}',
+    utcDays: 'Every price’s start day is a UTC day.',
     add: 'Add a price',
     empty: 'The table has no price yet.',
     unpricedTitle: 'These models of the school’s plan have no price today, so a quota in dollars cannot hold them:',
@@ -536,6 +537,7 @@ export default {
     intro:
       'The model calls the ledger recorded, in dollars, as each was priced when it was made. A price changed since does not change them.',
     span: 'Days',
+    utcDays: 'The range and every daily row use UTC days.',
     since: 'From',
     until: 'To',
     keys: 'Keys',

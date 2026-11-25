@@ -75,6 +75,7 @@ beforeEach(() => {
 afterEach(() => {
   for (const w of mounted.splice(0)) w.unmount()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
   setLocale('en')
   document.body.innerHTML = ''
 })
@@ -286,5 +287,33 @@ describe('My actions, a column the same on every row', () => {
     await mountAsTa()
     expect(heads()).toEqual(['Action', 'Status', 'When', 'Decided'])
     expect(rows()[0]!.textContent).toContain('Rejected')
+  })
+})
+
+describe('My actions, a stored member refusal', () => {
+  it('explains Core’s exact seat-end message with a zoned cut-off, not raw English UTC', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const message = 'your membership ends at 2026-11-02T04:47:35Z; you cannot give one that lasts longer'
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'action.list_mine') {
+        return {
+          actions: [
+            {
+              ...ACTIONS[0],
+              action_type: 'member.add',
+              status: 'failed',
+              result: { error: { code: 'forbidden', message } },
+            },
+          ],
+        }
+      }
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    await mountAsTa()
+    const note = document.body.querySelector('.my-actions__note')!.textContent!
+    expect(note).toContain('Your own seat ends at 2026-11-02 12:47 (Hong Kong Standard Time)')
+    expect(note).not.toContain('2026-11-02T04:47:35Z')
+    expect(note).not.toContain('your membership ends at')
   })
 })

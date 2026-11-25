@@ -9,6 +9,7 @@ import { i18n } from '@/i18n'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { formatDecimal } from '@/utils/format'
+import { joinSentences } from '@/utils/parts'
 import { groupRefusalScopes, isGroupAction } from '@/views/course/groups/components/groupEvents'
 import { forgetGroupNames } from '@/views/course/groups/components/groupNames'
 import { useMyAgents } from './myAgents'
@@ -159,7 +160,7 @@ function explain(
     if (!te(k)) bare = true
     parts.push(te(k) ? t(k) : authz)
   }
-  return parts.length ? { text: parts.join(' '), worded: !bare } : { text: null, worded: false }
+  return parts.length ? { text: joinSentences(parts), worded: !bare } : { text: null, worded: false }
 }
 
 /**

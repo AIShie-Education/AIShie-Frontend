@@ -295,7 +295,9 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <span v-else class="app-muted">{{ t('activity.live', { n: POLL_MS / 1000 }) }}</span>
           <span class="activity__refresh">
             <span v-if="lastChecked" class="activity__checked app-muted">
-              {{ t('activity.lastChecked') }} <TimeText :value="lastChecked" relative />
+              <i18n-t keypath="activity.lastCheckedAt" scope="global">
+                <template #at><TimeText :value="lastChecked" relative /></template>
+              </i18n-t>
             </span>
             <RefreshButton :loading="checking || (loading && !loaded)" @click="refresh" />
           </span>

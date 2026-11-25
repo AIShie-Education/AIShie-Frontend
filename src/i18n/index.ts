@@ -8,11 +8,49 @@ import 'dayjs/locale/zh-cn'
 import 'dayjs/locale/zh-tw'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import localizedFormat from 'dayjs/plugin/localizedFormat'
+import updateLocale from 'dayjs/plugin/updateLocale'
 import { loadFontsFor } from '@/styles/fonts'
 import { setNumberLocale } from '@/utils/format'
 
 dayjs.extend(relativeTime)
 dayjs.extend(localizedFormat)
+dayjs.extend(updateLocale)
+
+// Dayjs's Chinese relative-time formats put a space between the figure and
+// its unit; Chinese writes none (「3分鐘前」, 「3分钟内」).
+const CHINESE_RELATIVE = {
+  future: '%s內',
+  past: '%s前',
+  s: '幾秒',
+  m: '1分鐘',
+  mm: '%d分鐘',
+  h: '1小時',
+  hh: '%d小時',
+  d: '1天',
+  dd: '%d天',
+  M: '1個月',
+  MM: '%d個月',
+  y: '1年',
+  yy: '%d年',
+}
+dayjs.updateLocale('zh-tw', { relativeTime: CHINESE_RELATIVE })
+dayjs.updateLocale('zh-cn', {
+  relativeTime: {
+    future: '%s内',
+    past: '%s前',
+    s: '几秒',
+    m: '1分钟',
+    mm: '%d分钟',
+    h: '1小时',
+    hh: '%d小时',
+    d: '1天',
+    dd: '%d天',
+    M: '1个月',
+    MM: '%d个月',
+    y: '1年',
+    yy: '%d年',
+  },
+})
 
 export type Locale = 'zh-Hant' | 'zh-Hans' | 'en'
 export const LOCALES: { value: Locale; label: string }[] = [

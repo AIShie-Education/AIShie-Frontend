@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { withoutComments } from '../testUtils/sourceText.spec'
 
 // Every one of the app's own custom properties that a style reads is set
 // somewhere. A var() of one nobody sets is no error to a browser: the
@@ -25,26 +26,27 @@ const sources = [
   ...raw(import.meta.glob<string>('/index.html', { query: '?raw', import: 'default', eager: true })),
 ]
 
-/** Without its comments, which may name a property no rule sets. */
-function uncommented(text: string): string {
-  let out = text
-  for (let before = ''; before !== out;) {
-    before = out
-    out = out.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
-  }
-  return out
-}
-
 /**
  * The app's custom properties (`--app-…`) the texts read with var() and do
  * not set: in a declaration (`--app-x: …`, a style object's `'--app-x': …`)
  * or with `setProperty('--app-x', …)`. A name built in a script
  * (`var(--app-${tone}-bg)`) is not read here: the text has its stem alone.
  */
-function unsetTokens(texts: readonly string[]): string[] {
+type SourceText = string | readonly [path: string, text: string]
+function commentMode(path: string, source: string): 'source' | 'css' {
+  if (path.endsWith('.css')) return 'css'
+  if (path) return 'source'
+  // String probes have no filename: recognize the plain-CSS forms used here;
+  // application sources always take the explicit path-based branch above.
+  const css = /^(?:[.#:@]|\/\*)/.test(source.trimStart()) && !/\b(?:const|let|function|import|export|return)\b|=>|\.style\b/.test(source)
+  return css ? 'css' : 'source'
+}
+function unsetTokens(inputs: readonly SourceText[]): string[] {
   const set = new Set<string>()
   const read = new Set<string>()
-  for (const text of texts.map(uncommented)) {
+  for (const input of inputs) {
+    const [path, source] = typeof input === 'string' ? ['', input] : input
+    const text = withoutComments(source, commentMode(path, source))
     for (const m of text.matchAll(/(?<![\w-])['"]?(--app-[\w-]+)['"]?\s*:/g)) set.add(m[1]!)
     for (const m of text.matchAll(/setProperty\(\s*['"`](--app-[\w-]+)/g)) set.add(m[1]!)
     for (const m of text.matchAll(/var\(\s*(--app-[\w-]+)/g)) {
@@ -56,7 +58,7 @@ function unsetTokens(texts: readonly string[]): string[] {
 
 describe('the app’s custom properties', () => {
   it('reads none that no style sets', () => {
-    expect(unsetTokens(sources.map(([, text]) => text))).toEqual([])
+    expect(unsetTokens(sources)).toEqual([])
   })
 
   it('finds one read and never set, however it is written', () => {
@@ -71,8 +73,37 @@ describe('the app’s custom properties', () => {
     expect(unsetTokens(['el.style.setProperty(\'--app-z\', "2px")', '.a { width: var(--app-z) }'])).toEqual([])
   })
 
-  it('does not take a comment as setting one, nor a name built in a script as read', () => {
+  it('does not take a comment as setting or reading one, nor a name built in a script as read', () => {
     expect(unsetTokens(['/* --app-c: 1px */ .a { width: var(--app-c) }'])).toEqual(['--app-c'])
+    expect(unsetTokens(['// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual(['--app-c'])
+    expect(unsetTokens([':root { --app-c: 1px } // was var(--app-c)\n'])).toEqual([])
+    expect(unsetTokens(['const glob = "./messages/*/*.ts"\n// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual([
+      '--app-c',
+    ])
+    expect(unsetTokens(['const url = "https://example.edu/a//b"\n// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual([
+      '--app-c',
+    ])
+    expect(unsetTokens(['const slashOrStar = /[/*]/; const label = `var(--app-gone)`'])).toEqual(['--app-gone'])
+    expect(unsetTokens(['const label = `${ok ? `var(--app-gone)` : ""}`'])).toEqual(['--app-gone'])
+    for (const url of ['https://example.com', 'http://example.com', '//example.com']) {
+      expect(
+        unsetTokens(['<template><p>' + url + '</p><span>{{ `var(--app-gone)` }}</span></template>']),
+      ).toEqual(['--app-gone'])
+    }
+    for (const url of ['https://example.com', 'http://example.com', '//example.com']) {
+      expect(
+        unsetTokens([`.a { src: url(${url}/font.woff2); } .b { color: var(--app-gone); }`]),
+      ).toEqual(['--app-gone'])
+      expect(
+        unsetTokens([`<style>.a { src: url("${url}/font.woff2"); } .b { color: var(--app-gone); }</style>`]),
+      ).toEqual(['--app-gone'])
+    }
+    expect(
+      unsetTokens([
+        'const x = url(/* var(--app-gone) */ value)',
+        'const y = api.url(/* var(--app-other) */ value)',
+      ]),
+    ).toEqual([])
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })

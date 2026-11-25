@@ -401,16 +401,24 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   `@/utils/format`) and send the string; show them with `formatDecimal`. Do not use
   `el-input-number` for scores (it rounds and floats).
 - **Timestamps** are RFC 3339 strings. Show with `<TimeText :value />` (absolute, relative on hover,
-  or `relative`). Send with `dayjs(x).toISOString()`; date-only fields (term `starts_on`) as
-  `YYYY-MM-DD`. Every time is on one clock, the reader's (Core keeps no school's time zone); UTC is
-  said only on hover, but where a day someone picks is UTC's (a price's day), which the words say. A
-  **cut-off**, a time something stops being taken (an assignment's due date, when a seat, a join
-  link, an invitation, a token or an export ends), is `<TimeText :value cutoff />`: its time zone
-  named in the page's language ("2026-10-08 23:59 (Hong Kong Standard Time)", 「香港標準時間
-  2026-10-08 23:59」, `common.time.zoned`) and the exact instant in UTC on hover; shown `relative`,
-  the zoned time and the UTC are both on hover. In a sentence, a cut-off is `zonedText`
-  (`@/utils/parts`); where a time is picked for one (the assignment's due date), the hint names the
-  zone it is picked in.
+  or `relative`). Send instants as ISO strings; date-only fields (term `starts_on`) as `YYYY-MM-DD`.
+  `me.get` may give `time_zone`, the school's IANA zone; when it is absent every time stays on the
+  reader's clock, as before. A **cut-off**, a time something stops being taken (an assignment's due
+  date, when a seat, a join link, an invitation, a token or an export ends), is
+  `<TimeText :value cutoff />`: school time first when Core gives a zone, with the reader's time and
+  zone beside it when they differ; otherwise the reader's zone is named in the page's language
+  ("2026-10-08 23:59 (Hong Kong Standard Time)", 「香港標準時間 2026-10-08 23:59」,
+  `common.time.zoned`). Each zone is `white-space: nowrap`, so its name never breaks inside itself.
+  The exact UTC and full zoned time are in the tooltip and its accessible description; the cut-off
+  is focusable and its tooltip opens on focus, so neither depends on hover. Shown `relative`, that
+  description also supplies the zoned time. In a sentence, a cut-off is `zonedText` (`@/utils/parts`).
+  Due-date and seat-expiry pickers keep `el-date-picker`'s `value-format` as wall strings on the
+  school's clock when configured (`toPickerWallTime`, `pickerInstant` in `@/utils/schoolTime`), never
+  a reader-local `Date` carrying school fields. An untouched existing instant is preserved across
+  reader/school DST gaps and folds; a changed nonexistent or ambiguous wall time is refused with an
+  explanation. `pickerDateDisabled` and past/future validation use the picker's own day and the real
+  instant. Hints name that clock; unset, they use the reader's. A price's day is a UTC day and says so;
+  its `TimeText` uses `reader-only`, never the school-zone conversion.
 - Optional fields: omit them (`undefined`) rather than sending `null`, unless the tool says `null`
   means something. Some updates have explicit `clear_*` flags (`clear_due_at`, `clear_component`,
   `clear_points_possible`, `clear_expiry`): use those to unset.
@@ -883,8 +891,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   for changes, late, not published, a grade not yet posted). A category is neutral, told apart by
   its icon's shape: as a tag (roles and platform roles, kinds of actor, of seat and of document,
   scopes, presets, how an agent runs) an outline in ink (Tags, above); as the activity feed's kinds
-  of event, in the neutral state tag's colours (`--app-neutral-bg`, the ground's second shade in the light
-  theme, under `--app-neutral-fg`). Whether an agent can be asked is neutral too, never
+  of event, on the neutral state tag's ground (`--app-neutral-bg`, the ground's second shade in the light
+  theme), with its icon in the third ink (`--app-ink-3`). Whether an agent can be asked is neutral too, never
   green as "online" is; only its not running, which wants its owner, is amber, and never by its hue
   alone: whether it can be asked is a dot's shape (AskableDot, below). What is new or
   unread, and a count of what waits for the reader's decision, is indigo. A
@@ -965,8 +973,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   rendered Markdown and nothing else, and `-mark` (11) for Latin letters and
   figures alone in a mark of a fixed size ("AI", "PDF" on a file, an id, a key, a file's size), never
   Chinese. In Chinese, either script, `xs` and `sm` are 13 and 14 px: a Han character at 12 px is a
-  blur on a laptop's screen, so 12 px is left to English and figures; check that a tag, a button or
-  a table's cell still holds its words in Chinese. An icon drawn on its own takes a step too; one in a
+  blur on a laptop's screen, so 12 px is left to English and figures. The same steps apply to Han
+  data marked `:lang(zh)` inside an English page. Check that a tag, a button or a table's cell still
+  holds its words in Chinese. An icon drawn on its own takes a step too; one in a
   line of text, the text's. A size relative to the text around it (`em`) is a step's too, from 1em to
   2em, never smaller: the text around may be Chinese at 13 px. Strong
   text (a name, a label, a table's heading, a figure) is `var(--app-weight-strong)`, 600, and 500 in
@@ -1648,17 +1657,24 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   `aishie.locale`. Element Plus follows the same `ui.locale` through `App.vue`'s
   `<el-config-provider>` (`elementLocale` in `i18n/elementPlus.ts`), as does the menu's check mark.
   Each option of the menu and the selects names its language in itself, and says which it is in
-  (`:lang="l.value"`), for a screen reader (`src/i18n/languageMenus.spec.ts`).
+  (`:lang="l.value"`), for a screen reader (`src/i18n/languageMenus.spec.ts`); it also carries
+  `data-lang-option`, the font watcher's one deliberate exclusion.
 - **Typefaces follow the script, not the page's language alone.** A page in Chinese sets Latin
-  letters, figures and their punctuation (Latin-1, the en dash, the bullet, the minus sign) in Plex
-  and Source Serif, as an English page does, through the stacks' first family, `'AIshie Latin'`
-  (`styles/fonts-latin.css`), and the rest in Noto TC or SC: Han and full-width punctuation, the
-  quotation marks, the ellipsis and the em dash, which Chinese doubles (「——」). A page in English
-  sets the Chinese it shows (a name, a course's title, what is typed into a field) in Noto TC, loaded
-  the first time it shows any (`styles/fonts.ts`); a language's own name marked with its `lang` does
-  not count. Buttons and fields take the stacks as the rest of the page does (`styles/main.css`), not
-  the browser's own face for them. No stack names PMingLiU or SimSun, which have no bold, and Noto
-  comes before any Chinese face of the system's (`src/styles/stacks.spec.ts`).
+  letters, figures and their punctuation (Basic Latin, Latin-1, Latin Extended and Vietnamese) in
+  Plex and Source Serif, as an English page does, through `'AIshie Latin'` and `'AIshie Latin Serif'`
+  (`styles/fonts-latin.css`), whose subsets, weights and files match the English imports
+  (`fonts.spec.ts`). Traditional Chinese puts Latin data's curly apostrophes and quotes in the
+  quote-only `AIshie Latin Hant` faces; Simplified Chinese keeps “” in Noto. Han and full-width
+  punctuation otherwise use Noto TC or SC. Data in another script is marked with `scriptLanguage`
+  (`@/utils/script`): AgentName, MemberName, owners' chips, chat authors and course/file titles set
+  `lang` when their text has Han. The Chinese `xs` and `sm` size steps follow `:lang(zh)` on any
+  element, not `html` alone. A page in English loads Noto TC the first time Chinese shows
+  (`styles/fonts.ts`), including Chinese inside a `lang` attribute; only a language menu's own names
+  (`data-lang-option`) and the static boot fallback (`data-font-ignore`) do not trigger that load.
+  Buttons and fields take the stacks as the rest
+  of the page does (`styles/main.css`), not the browser's own face for them. No stack names PMingLiU
+  or SimSun, which have no bold, and Noto comes before any Chinese face of the system's
+  (`src/styles/stacks.spec.ts`).
 - Shared words are in `common` (`common.actions.save`, `common.labels.status`, …) and Core's
   vocabularies in `enums` (`enums.perm.grade_submit`, `enums.actionStatus.proposed`, …). Use them
   rather than repeating them.
@@ -1694,7 +1710,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   (“How do loops end?”, 「迴圈怎樣結束？」: the language's own marks, and upright, as Chinese has no
   italic but one a browser fakes), and the parts of a line of facts `common.sep` ("PDF ·
   1.2 MB": `{{ t('common.sep') }}` between them in a template, `joinParts` from `@/utils/parts` in
-  a string). A course's code and section is `<span class="app-sep">·</span>` with no spaces, so
+  a string). Whole sentences are joined with `joinSentences` from the same module: a space in English, none in
+  Chinese; in a template, use one message with slots instead of message + space + component. A
+  course's code and section is `<span class="app-sep">·</span>` with no spaces, so
   that a Chinese typeface does not make it a full-width one, and `courseCodeText` where only a
   string will do (a label read aloud, a QR code's name, an option). A dot that is an element of its
   own, a divider drawn `aria-hidden`, is a drawing and may stay. Numbers go through

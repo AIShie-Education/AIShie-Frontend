@@ -9,7 +9,7 @@
 import { computed, onMounted, ref, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import { read, type ApiError } from '@/api/http'
+import { ApiError, read } from '@/api/http'
 import { toApiError } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
 import { useSessionStore } from '@/stores/session'
@@ -24,6 +24,7 @@ import ActionActor from './components/ActionActor.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import RevisesLine from './components/RevisesLine.vue'
 import { reasonText, storedDecision, storedError, typeLabel, type ActionRow } from './components/actionText'
+import { explainRefusal } from '@/views/course/members/components/seat'
 
 const props = defineProps<{ courseId: string }>()
 const { t } = useI18n()
@@ -166,7 +167,13 @@ useTableRelayout(tableRef, [narrow, statusShown, decidedShown])
 /** A line saying why it did not happen, where it did not. */
 function outcomeNote(a: ActionRow): string | null {
   const e = storedError(a)
-  if (e) return reasonText(e, a.action_type) ?? t('common.pair', { label: t('actions.outcome.coreSays'), value: e.message })
+  if (e) {
+    if (a.action_type.startsWith('member.')) {
+      const explained = explainRefusal(new ApiError({ status: 400, code: e.code, message: e.message, details: e.details }))
+      if (explained) return explained
+    }
+    return reasonText(e, a.action_type) ?? t('common.pair', { label: t('actions.outcome.coreSays'), value: e.message })
+  }
   const d = storedDecision(a)
   if (!d?.reason) return null
   return a.status === 'changes_requested'

@@ -48,6 +48,7 @@ export default {
     due: 'Due',
     duePlaceholder: 'No due date',
     dueHint: 'On your clock, in {zone}. Work handed in after the due date is marked late.',
+    dueHintSchool: 'On the school’s clock, in {zone}. Work handed in after the due date is marked late.',
     component: 'Counts toward',
     componentNone: 'Nothing — practice work',
     componentHint:

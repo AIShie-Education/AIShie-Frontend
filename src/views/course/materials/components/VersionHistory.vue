@@ -79,7 +79,7 @@ function linkTo(v: DocumentVersion) {
           <!-- Names come from the member list; without it only one's own name is known. -->
           <template v-if="course.can('member_read') || v.author_member_id === course.myMemberId">
             <MemberName :id="v.author_member_id" show-kind />
-            <span class="version-item__dot">·</span>
+            <span class="version-item__dot" aria-hidden="true">·</span>
           </template>
           <TimeText :value="v.created_at" relative />
         </div>
@@ -95,7 +95,7 @@ function linkTo(v: DocumentVersion) {
               <span class="version-item__count">{{
                 t('common.files.count', { n: filesOf(v).length }, filesOf(v).length)
               }}</span>
-              <span class="version-item__dot">·</span>
+              <span class="version-item__dot" aria-hidden="true">·</span>
               <span>{{ formatBytes(totalOf(v)) }}</span>
             </template>
             <template v-else>

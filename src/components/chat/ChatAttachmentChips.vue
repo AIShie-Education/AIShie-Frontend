@@ -11,7 +11,7 @@ import type { UploadItem } from '@/composables/useUploadQueue'
 import { useUploadText } from '@/composables/useUploadText'
 import { formatBytes } from '@/utils/format'
 import { FILE_ICON, fileKind, REFUSAL_SCOPE, type ChatAttachments } from './attachments'
-import { joinParts } from '@/utils/parts'
+import { joinParts, joinSentences } from '@/utils/parts'
 
 const props = defineProps<{
   attachments: ChatAttachments
@@ -59,7 +59,7 @@ watch(
       said.delete(k)
     }
     if (added) lines.unshift(t('common.upload.announce.added', { n: added }, added))
-    if (lines.length) announce(lines.join(' '))
+    if (lines.length) announce(joinSentences(lines))
   },
 )
 </script>

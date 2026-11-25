@@ -5,7 +5,7 @@ export default {
   paused: '頁面在背景時暫停檢查',
   archived: '這門課已封存，之後不會再有新動態。',
   checkFailed: '暫時無法檢查新動態，稍後會再試',
-  lastChecked: '上次檢查',
+  lastCheckedAt: '上次檢查：{at}',
   filterLabel: '顯示以下類別的動態',
   filter: {
     all: '全部',

@@ -68,7 +68,6 @@ export default {
     unknown: '未知',
     yes: '是',
     no: '否',
-    optional: '選填',
     // After a field's label, its own word, with the space the language puts before it: "Email (optional)".
     optionalTag: '（選填）',
     loading: '載入中…',
@@ -210,6 +209,10 @@ export default {
     due: '截止{t}',
     noDue: '無截止日期',
     zoned: '{zone} {time}',
+    schoolAndReader: '學校：{school}；你的時間：{reader}',
+    description: '{zoned}；確切時間：{utc}。',
+    nonexistent: '{zone}不存在這個時間，請另選時間。',
+    ambiguous: '這個時間在{zone}出現兩次，請另選時間。',
     // A cut-off with its zone, and how far off it is: "2026-10-08 23:59 (Hong Kong Standard Time), in 5 days".
     cutoff: '{at}（{rel}）',
   },

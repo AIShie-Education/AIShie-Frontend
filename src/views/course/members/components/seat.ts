@@ -311,7 +311,7 @@ const EXPLAIN: [RegExp, (m: RegExpMatchArray) => string][] = [
   [/assignment scope is a list; you cannot grant every assignment/, () => t('members.refusal.assignmentsAll')],
   [/list assignments that are in your own scope/, () => t('members.refusal.assignmentsOutside')],
   [
-    /your own membership ends at (\S+); you cannot give one that lasts longer/,
+    /your (?:own )?membership ends at (\S+); you cannot give one that lasts longer/,
     (m) => t('members.refusal.outlives', { t: zonedText(m[1]!) }),
   ],
   [/not on your own membership/, () => t('members.refusal.ownSeat')],

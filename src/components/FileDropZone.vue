@@ -31,6 +31,7 @@ import { useMediaQuery } from '@/composables/useMediaQuery'
 import { useUploadQueue, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
 import { useUploadText } from '@/composables/useUploadText'
 import { formatBytes, formatPct } from '@/utils/format'
+import { joinSentences } from '@/utils/parts'
 
 const model = defineModel<UploadedFile[]>({ default: () => [] })
 /** True while any file is still to upload. */
@@ -269,7 +270,7 @@ watch(
       }
     }
     for (const k of [...said.keys()]) if (!present.has(k)) said.delete(k)
-    if (lines.length) announce(lines.join(' '))
+    if (lines.length) announce(joinSentences(lines))
   },
 )
 

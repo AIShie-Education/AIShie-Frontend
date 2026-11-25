@@ -323,7 +323,7 @@ defineExpose({ show, hide })
             :aria-controls="`${id}-language`"
             @click="onSubItem('language')"
           >
-            <span class="account-menu__glyph" lang="zh" aria-hidden="true">文</span>
+            <span class="account-menu__glyph" lang="zh" aria-hidden="true" data-lang-option>文</span>
             <span class="account-menu__label">{{ t('common.nav.language') }}</span>
             <span class="account-menu__value">{{ localeLabel }}</span>
             <el-icon class="account-menu__more" aria-hidden="true"><ArrowRight /></el-icon>
@@ -345,6 +345,7 @@ defineExpose({ show, hide })
               data-item
               tabindex="-1"
               :lang="l.value"
+              data-lang-option
               :aria-checked="ui.locale === l.value ? 'true' : 'false'"
               @click="chooseLocale(l.value)"
             >

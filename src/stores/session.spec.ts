@@ -2,10 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { ApiError, read } from '@/api/http'
 import { migrateStorage } from '@/utils/storageMigration'
+import { schoolTimeZone, setSchoolTimeZone } from '@/utils/schoolTime'
 
 // Who me.get says is signed in, and what taking up an invitation answers.
-let me: { id: string; display_name: string; platform_role?: string | null; administers?: unknown[] | null } | null =
-  null
+let me: {
+  id: string
+  display_name: string
+  platform_role?: string | null
+  administers?: unknown[] | null
+  time_zone?: string
+} | null = null
 let invite: () => Promise<{ actor_id: string; email?: string | null; login_id?: string | null; expires_at: string }>
 /** Signed in with a password someone else set: me.get is refused until they set their own. */
 let mustChange = false
@@ -46,6 +52,7 @@ const { useSessionStore } = await import('./session')
 
 beforeEach(() => {
   setActivePinia(createPinia())
+  setSchoolTimeZone(undefined)
   me = null
   mustChange = false
   forgetRuntimeAssertion.mockClear()
@@ -271,5 +278,16 @@ describe('a password someone else set', () => {
       email: null,
       loginId: 'S2023002',
     })
+  })
+})
+
+describe('the school’s time zone from me.get', () => {
+  it('is kept with the caller and dropped when they go', async () => {
+    me = { id: 'p1', display_name: 'Chan Tai Man', time_zone: 'Asia/Hong_Kong' }
+    const session = useSessionStore()
+    await session.ensure()
+    expect(schoolTimeZone.value).toBe('Asia/Hong_Kong')
+    session.clear()
+    expect(schoolTimeZone.value).toBeUndefined()
   })
 })

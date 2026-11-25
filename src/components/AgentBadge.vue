@@ -9,6 +9,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AiBadge from './AiBadge.vue'
+import { scriptLanguage } from '@/utils/script'
 
 const props = defineProps<{
   /** The actor's kind (human, agent, system); left out, the caller knows it is an agent. */
@@ -42,7 +43,7 @@ const hint = computed(() => {
   <span v-if="shown && (!noAi || owner)" class="agent-badge" :class="`is-${size ?? 'small'}`">
     <AiBadge v-if="!noAi" />
     <el-tooltip v-if="owner" :content="hint" placement="top">
-      <span class="agent-badge__owner" :tabindex="hintId ? undefined : 0">{{ owner }}</span>
+      <span class="agent-badge__owner" :tabindex="hintId ? undefined : 0" :lang="scriptLanguage(ownerName)">{{ owner }}</span>
     </el-tooltip>
     <span v-if="hintId && hint" :id="hintId" hidden>{{ hint }}</span>
   </span>

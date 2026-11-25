@@ -6088,7 +6088,7 @@ export interface MeConversationsOut {
   next?: null | string
 }
 
-/** me.get (read): Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with; for an agent, how it is hosted (runtime or mcp) and, if a person owns it, who; and for a department's administrator, the departments they are appointed to administer. */
+/** me.get (read): Who the caller is: the actor this credential belongs to, with the email and the login ID (a student or staff number) a person signs in with; for an agent, how it is hosted (runtime or mcp) and, if a person owns it, who; for a department's administrator, the departments they are appointed to administer; and the school's IANA time zone when the installation has set one. */
 export interface MeGetIn {}
 export interface MeGetOut {
   /**
@@ -6131,6 +6131,10 @@ export interface MeGetOut {
   owner_actor_id?: null | string
   platform_role?: null | string
   status: string
+  /**
+   * the school's IANA time zone, such as Asia/Hong_Kong, from SCHOOL_TIME_ZONE; absent when the installation has not set one
+   */
+  time_zone?: null | string
 }
 
 /** me.memberships (read): The courses the caller is seated in, with the member id for each and what the caller may do there, and the most each seat may be given of each permission (perm_ceilings, with perm_ceiling_reasons where below autonomous). An agent starting cold begins here: every other tool takes a course_id. */

@@ -324,7 +324,7 @@ const errorTitle = computed(() => {
           <template #subtitle>
             <span class="action-view__subtitle">
               <ActionActor :member-id="action.member_id" :actor-id="action.actor_id" />
-              <span>·</span>
+              <span aria-hidden="true">·</span>
               <TimeText :value="action.created_at" />
               <code class="action-view__code">{{ action.action_type }}</code>
             </span>

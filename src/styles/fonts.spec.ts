@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import fontsSource from './fonts.ts?raw'
+import latinSource from './fonts-latin.css?raw'
 
 // Each script's typefaces, as the chunks setLocale fetches: which were loaded.
 const loaded = vi.hoisted(() => [] as string[])
@@ -78,8 +80,11 @@ describe('a page in English', () => {
     loadFontsFor('en')
     await settle()
     add(
-      '<ul><li lang="zh-Hant">繁體中文</li><li lang="zh-Hans"><span>简体中文</span></li><li lang="en">English</li></ul>',
+      '<ul><li lang="zh-Hant" data-lang-option>繁體中文</li><li lang="zh-Hans" data-lang-option><span>简体中文</span></li><li lang="en" data-lang-option>English</li></ul>',
     )
+    add('<button data-lang-option><span lang="zh">文</span></button>')
+    // The static boot fallback is not live page data either.
+    add('<div data-font-ignore><p lang="zh-Hant">無法開啟 AIshie</p></div>')
     // What a browser that runs scripts never shows (index.html's loading screen has some).
     add('<noscript>需要啟用 JavaScript</noscript>')
     await settle()
@@ -150,7 +155,7 @@ describe('a page in English', () => {
     await settle()
     expect(loaded).toEqual([])
 
-    add('<h1>程式設計入門</h1>')
+    add('<h1 lang="zh-Hant">程式設計入門</h1>')
     loadFontsFor('zh-Hans')
     loadFontsFor('en')
     expect(loaded).toEqual([])
@@ -164,5 +169,35 @@ describe('a page in English', () => {
     add('<p>陳大文</p>')
     await settle()
     expect(loaded).toEqual(['Noto SC'])
+  })
+})
+
+describe('the Latin alias faces', () => {
+  it('use the same weights and Latin, Latin Extended and Vietnamese files as the English imports', () => {
+    const imports = [...fontsSource.matchAll(/@fontsource\/(ibm-plex-sans|source-serif-4)\/(\d+)\.css/g)]
+    expect(imports.map((m) => [m[1], m[2]])).toEqual([
+      ['ibm-plex-sans', '400'],
+      ['ibm-plex-sans', '500'],
+      ['ibm-plex-sans', '600'],
+      ['source-serif-4', '600'],
+    ])
+    const faces = [...latinSource.matchAll(/@font-face\s*\{[^}]+\}/g)].map((m) => m[0])
+    for (const [, family, weight] of imports) {
+      const alias = family === 'ibm-plex-sans' ? 'AIshie Latin' : 'AIshie Latin Serif'
+      for (const subset of ['latin', 'latin-ext', 'vietnamese']) {
+        const file = `${family}-${subset}-${weight}-normal.woff2`
+        expect(
+          faces.some(
+            (f) =>
+              new RegExp(`font-family: '${alias}';`).test(f) &&
+              new RegExp(`font-weight: ${weight};`).test(f) &&
+              f.includes(file) &&
+              !f.includes('Hant'),
+          ),
+          `${alias} ${weight} ${file}`,
+        ).toBe(true)
+      }
+    }
+    expect(faces.filter((f) => !f.includes('Hant')).length).toBe(imports.length * 3)
   })
 })

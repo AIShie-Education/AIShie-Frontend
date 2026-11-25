@@ -17,7 +17,6 @@
 // administrator's pasted ID is then looked up in the directory (actor.get).
 import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import dayjs from 'dayjs'
 import type { FormInstance, FormRules } from 'element-plus'
 import { isApiError, read, type ApiError, type ToolIn } from '@/api/http'
 import { ROLES, type Actor, type AutonomyLevel, type Perm, type PermLevels, type Preset } from '@/api/types'
@@ -26,7 +25,14 @@ import { errorMessage } from '@/composables/useErrors'
 import { useCourseStore } from '@/stores/course'
 import { useSessionStore } from '@/stores/session'
 import { capToCeilings, newSeatCeilings } from '@/utils/ceilings'
-import { isUuid, shortId } from '@/utils/format'
+import { isUuid, shortId, timeZoneName } from '@/utils/format'
+import {
+  pickerDateDisabled,
+  pickerInstant,
+  schoolTimeZone,
+  toPickerWallTime,
+  ZonedWallTimeError,
+} from '@/utils/schoolTime'
 import { isLoginId } from '@/utils/loginId'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
@@ -68,7 +74,7 @@ const emit = defineEmits<{
   retryPresets: []
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const course = useCourseStore()
 const session = useSessionStore()
 const { run, pending, lastError } = useWrite('member.add')
@@ -82,7 +88,7 @@ const form = reactive({
   assignmentScope: 'all',
   students: [] as string[],
   assignments: [] as string[],
-  expiresAt: null as Date | null,
+  expiresAt: null as string | null,
   perms: {} as PermLevels,
 })
 const permsOpen = ref<string[]>([])
@@ -142,9 +148,26 @@ watch(
 
 // The caller's own seat, where it is known: a new seat may not outlast it.
 const myExpiry = computed(() => (course.permsSource === 'exact' ? (course.seat?.expires_at ?? null) : null))
-function defaultExpiry(): Date | null {
-  return myExpiry.value ? new Date(myExpiry.value) : null
+function defaultExpiry(): string | null {
+  return myExpiry.value ? toPickerWallTime(myExpiry.value) : null
 }
+function expiryISO(): string | null {
+  return form.expiresAt ? pickerInstant(form.expiresAt, myExpiry.value) : null
+}
+function safeExpiryISO(): string | null {
+  try {
+    return expiryISO()
+  } catch {
+    return null
+  }
+}
+const disabledDate = (date: Date) => pickerDateDisabled(date)
+const expiryZone = computed(() =>
+  (locale.value, timeZoneName(safeExpiryISO() ?? new Date().toISOString(), schoolTimeZone.value)),
+)
+const expiryHelp = computed(() =>
+  t(schoolTimeZone.value ? 'members.add.expiresHelpSchool' : 'members.add.expiresHelp', { zone: expiryZone.value }),
+)
 
 // --- What will be sent -------------------------------------------------------
 const overrides = computed<PermLevels>(() => {
@@ -166,7 +189,7 @@ const problems = computed(() =>
         students: form.students,
         assignmentScope: form.assignmentScope,
         assignments: form.assignments,
-        expiresAt: form.expiresAt ? form.expiresAt.toISOString() : null,
+        expiresAt: safeExpiryISO(),
         listsItself: listsItself.value,
       })
     : [],
@@ -377,16 +400,23 @@ const rules = computed<FormRules>(() => ({
   presetId: [{ required: true, message: t('common.errors.required'), trigger: 'change' }],
   expiresAt: [
     {
-      validator: (_r, v: Date | null, cb) =>
-        !v || v.getTime() > Date.now() ? cb() : cb(new Error(t('members.add.expiresPast'))),
+      validator: (_r, v: string | null, cb) => {
+        if (!v) return cb()
+        try {
+          const iso = expiryISO()
+          if (!iso || Date.parse(iso) <= Date.now()) return cb(new Error(t('members.add.expiresPast')))
+          cb()
+        } catch (e) {
+          if (e instanceof ZonedWallTimeError && e.problem !== 'invalid') {
+            return cb(new Error(t(`common.time.${e.problem}`, { zone: expiryZone.value })))
+          }
+          cb(new Error(t('common.errors.invalid')))
+        }
+      },
       trigger: 'change',
     },
   ],
 }))
-
-function disabledDate(d: Date) {
-  return dayjs(d).endOf('day').isBefore(dayjs())
-}
 
 async function submit() {
   if (!formRef.value || !preset.value || seatedAs.value || owner.value !== null) return
@@ -400,7 +430,7 @@ async function submit() {
   if (form.studentScope === 'listed' && form.students.length) args.listed_students = [...form.students]
   if (form.assignmentScope === 'listed' && form.assignments.length) args.listed_assignments = [...form.assignments]
   if (Object.keys(overrides.value).length) args.perms = { ...overrides.value }
-  if (form.expiresAt) args.expires_at = dayjs(form.expiresAt).toISOString()
+  if (form.expiresAt) args.expires_at = expiryISO()!
 
   const out = await run(args, { notify: false })
   if (!out) return // refused or failed: shown in the form, which stays open
@@ -694,14 +724,18 @@ function capToMine() {
           <el-date-picker
             v-model="form.expiresAt"
             type="datetime"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm"
             :placeholder="t('members.add.expiresNever')"
             :disabled-date="disabledDate"
             clearable
             class="add-member__date"
           />
           <div class="app-form-hint">
-            {{ t('members.add.expiresHelp') }}
-            <template v-if="myExpiry"> {{ t('members.add.myExpiry') }} <TimeText :value="myExpiry" /> </template>
+            <p>{{ expiryHelp }}</p>
+            <i18n-t v-if="myExpiry" keypath="members.add.myExpiryAt" tag="p" scope="global">
+              <template #at><TimeText :value="myExpiry" cutoff /></template>
+            </i18n-t>
           </div>
         </div>
       </el-form-item>

@@ -148,6 +148,24 @@ describe('explainRefusal', () => {
   })
 })
 
+describe('explainRefusal, Core’s exact seat-end wording', () => {
+  it('translates the refusal and names the cut-off’s zone instead of showing raw UTC English', async () => {
+    vi.stubEnv('TZ', 'Asia/Hong_Kong')
+    const { explainRefusal, err } = await page()
+    const out = explainRefusal(
+      err(
+        403,
+        'forbidden',
+        'your membership ends at 2026-11-02T04:47:35Z; you cannot give one that lasts longer',
+      ),
+    )
+    expect(out).toContain('Your own seat ends at 2026-11-02 12:47 (Hong Kong Standard Time)')
+    expect(out).not.toContain('2026-11-02T04:47:35Z')
+    expect(out).not.toContain('your membership ends at')
+    vi.unstubAllEnvs()
+  })
+})
+
 describe('explainRefusal, above a seat’s ceiling', () => {
   it('says which permission, how far, why, and on whose seat a change to many stopped', async () => {
     const { explainRefusal } = await page()

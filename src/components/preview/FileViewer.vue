@@ -53,6 +53,7 @@ import { courseLine, dateLine, type PrintRequest } from '@/composables/usePrintL
 import { FILE_REFUSAL_SCOPE } from '@/utils/documentFiles'
 import { FILE_ICON, fileKind } from '@/utils/files'
 import { formatBytes } from '@/utils/format'
+import { scriptLanguage } from '@/utils/script'
 import {
   codeLanguageOf,
   decodeText,
@@ -572,12 +573,12 @@ function onClosed() {
           <el-icon><component :is="icon" /></el-icon>
         </span>
         <div class="file-viewer__titles">
-          <h2 :id="titleId" :class="titleClass" class="file-viewer__name" :title="file.filename">
+          <h2 :id="titleId" :class="titleClass" class="file-viewer__name" :title="file.filename" :lang="scriptLanguage(file.filename)">
             {{ file.filename }}
           </h2>
           <p class="file-viewer__meta">
             <span class="file-viewer__facts">{{ meta }}</span>
-            <span v-if="state.title && state.title !== file.filename" class="file-viewer__of"
+            <span v-if="state.title && state.title !== file.filename" class="file-viewer__of" :lang="scriptLanguage(state.title)"
               ><span class="file-viewer__dot" aria-hidden="true">·</span>{{ state.title }}</span
             >
           </p>

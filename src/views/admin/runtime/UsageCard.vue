@@ -21,7 +21,7 @@ import RefreshButton from '@/components/RefreshButton.vue'
 import TimeText from '@/components/TimeText.vue'
 import RuntimeAsync from './RuntimeAsync.vue'
 import { formatCount, formatMoney } from '@/utils/format'
-import { joinParts } from '@/utils/parts'
+import { joinParts, joinSentences } from '@/utils/parts'
 
 const { t } = useI18n()
 // A phone's layout, an owner's model calls and cost under their name, where the
@@ -48,6 +48,21 @@ const usdLimits = computed(() => {
 const schoolSpent = computed(() => {
   const d = data.value
   return !!d && d.limits.per_day !== null && d.total.answers >= d.limits.per_day
+})
+const limitsText = computed(() => {
+  const d = data.value
+  if (!d) return ''
+  const sentences = [
+    t('runtimeAdmin.usage.limits', {
+      owner: formatCount(d.limits.per_owner_day),
+      asker: formatCount(d.limits.per_asker_day),
+    }),
+  ]
+  if (usdLimits.value) {
+    sentences.push(t('runtimeAdmin.usage.limitsUsd', usdLimits.value))
+    if (d.limits.per_day_usd != null) sentences.push(t('runtimeAdmin.usage.noTranscription'))
+  }
+  return joinSentences(sentences)
 })
 </script>
 
@@ -95,20 +110,7 @@ const schoolSpent = computed(() => {
             </dd>
           </div>
         </dl>
-        <p class="app-form-hint usage-card__limits">
-          {{
-            t('runtimeAdmin.usage.limits', {
-              owner: formatCount(data.limits.per_owner_day),
-              asker: formatCount(data.limits.per_asker_day),
-            })
-          }}
-          <template v-if="usdLimits">
-            {{ t('runtimeAdmin.usage.limitsUsd', usdLimits) }}
-            <span v-if="data.limits.per_day_usd != null" class="usage-card__no-transcription">{{
-              t('runtimeAdmin.usage.noTranscription')
-            }}</span>
-          </template>
-        </p>
+        <p class="app-form-hint usage-card__limits">{{ limitsText }}</p>
 
         <AppEmpty v-if="!owners.length" :text="t('runtimeAdmin.usage.empty')" class="usage-card__empty" />
         <el-table v-else ref="tableRef" :data="owners" row-key="tenant_id" class="usage-card__table">

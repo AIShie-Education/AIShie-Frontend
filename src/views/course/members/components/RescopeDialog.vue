@@ -6,12 +6,19 @@
 // seat; narrowing is always allowed.
 import { computed, reactive, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import dayjs from 'dayjs'
 import { User } from '@element-plus/icons-vue'
 import type { ToolIn } from '@/api/http'
 import type { Member, PermLevels } from '@/api/types'
 import { useWrite, announce } from '@/composables/useWrite'
 import { useCourseStore } from '@/stores/course'
+import { timeZoneName } from '@/utils/format'
+import {
+  pickerDateDisabled,
+  pickerInstant,
+  schoolTimeZone,
+  toPickerWallTime,
+  ZonedWallTimeError,
+} from '@/utils/schoolTime'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import StatusTag from '@/components/StatusTag.vue'
@@ -26,7 +33,7 @@ const open = defineModel<boolean>({ default: false })
 const props = defineProps<{ courseId: string; member: Member }>()
 const emit = defineEmits<{ done: [status: 'executed' | 'proposed', actionId: string] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const course = useCourseStore()
 const { run, pending, lastError } = useWrite('member.rescope')
 
@@ -37,7 +44,7 @@ const form = reactive({
   assignmentScope: 'all',
   assignments: [] as string[],
   expiry: 'keep' as ExpiryMode,
-  expiresAt: null as Date | null,
+  expiresAt: null as string | null,
 })
 
 function reset() {
@@ -47,7 +54,7 @@ function reset() {
   form.assignmentScope = m.assignment_scope
   form.assignments = [...(m.listed_assignments ?? [])]
   form.expiry = 'keep'
-  form.expiresAt = m.expires_at ? new Date(m.expires_at) : null
+  form.expiresAt = m.expires_at ? toPickerWallTime(m.expires_at) : null
   lastError.value = null
 }
 watch(open, (v) => v && reset(), { immediate: true })
@@ -62,11 +69,25 @@ const assignmentScopeChanged = computed(() => form.assignmentScope !== props.mem
 const assignmentsChanged = computed(
   () => form.assignmentScope === 'listed' && !sameSet(form.assignments, props.member.listed_assignments ?? []),
 )
+function expiryISO(): string | null {
+  return form.expiresAt ? pickerInstant(form.expiresAt, props.member.expires_at ?? null) : null
+}
+function safeExpiryISO(): string | null {
+  try {
+    return expiryISO()
+  } catch {
+    return null
+  }
+}
 const expiryChanged = computed(() => {
   if (form.expiry === 'clear') return !!props.member.expires_at
   if (form.expiry === 'set') {
     if (!form.expiresAt) return false
-    return !props.member.expires_at || form.expiresAt.getTime() !== new Date(props.member.expires_at).getTime()
+    try {
+      return !props.member.expires_at || expiryISO() !== new Date(props.member.expires_at).toISOString()
+    } catch {
+      return true
+    }
   }
   return false
 })
@@ -79,8 +100,25 @@ const changed = computed(
     expiryChanged.value,
 )
 
-const expiryInvalid = computed(
-  () => form.expiry === 'set' && (!form.expiresAt || form.expiresAt.getTime() <= Date.now()),
+const expiryError = computed(() => {
+  if (form.expiry !== 'set' || !form.expiresAt) return null
+  try {
+    const iso = expiryISO()
+    return !iso || Date.parse(iso) <= Date.now() ? t('members.add.expiresPast') : null
+  } catch (e) {
+    if (e instanceof ZonedWallTimeError && e.problem !== 'invalid') {
+      return t(`common.time.${e.problem}`, { zone: expiryZone.value })
+    }
+    return t('common.errors.invalid')
+  }
+})
+const expiryInvalid = computed(() => form.expiry === 'set' && (!form.expiresAt || !!expiryError.value))
+const disabledDate = (date: Date) => pickerDateDisabled(date)
+const expiryZone = computed(() =>
+  (locale.value, timeZoneName(safeExpiryISO() ?? new Date().toISOString(), schoolTimeZone.value)),
+)
+const expiryZoneText = computed(() =>
+  t(schoolTimeZone.value ? 'members.rescope.expiryZoneSchool' : 'members.rescope.expiryZone', { zone: expiryZone.value }),
 )
 
 // Students on the list who are no longer current students of the course:
@@ -133,15 +171,11 @@ const after = computed<Shape>(() => ({
     form.expiry === 'clear'
       ? null
       : form.expiry === 'set' && form.expiresAt
-        ? form.expiresAt.toISOString()
+        ? (safeExpiryISO() ?? before.value.expiresAt)
         : before.value.expiresAt,
 }))
 const isGrant = computed(() => changed.value && widens(before.value, after.value))
 const problems = computed(() => (isGrant.value ? grantProblems(after.value) : []))
-
-function disabledDate(d: Date) {
-  return dayjs(d).endOf('day').isBefore(dayjs())
-}
 
 async function submit() {
   if (!changed.value || expiryInvalid.value) return
@@ -156,7 +190,7 @@ async function submit() {
   }
   if (expiryChanged.value) {
     if (form.expiry === 'clear') args.clear_expiry = true
-    else if (form.expiresAt) args.expires_at = dayjs(form.expiresAt).toISOString()
+    else if (form.expiresAt) args.expires_at = expiryISO()!
   }
   const out = await run(args, { notify: false })
   if (!out) return
@@ -254,11 +288,16 @@ async function submit() {
             v-if="form.expiry === 'set'"
             v-model="form.expiresAt"
             type="datetime"
+            format="YYYY-MM-DD HH:mm"
+            value-format="YYYY-MM-DDTHH:mm"
             :disabled-date="disabledDate"
             class="rescope__date"
           />
-          <div v-if="expiryInvalid && form.expiresAt" class="rescope__error">{{ t('members.add.expiresPast') }}</div>
-          <div class="app-form-hint">{{ t('members.rescope.expiryHelp') }}</div>
+          <div v-if="expiryError" class="rescope__error">{{ expiryError }}</div>
+          <div class="app-form-hint">
+            <p>{{ t('members.rescope.expiryHelp') }}</p>
+            <p>{{ expiryZoneText }}</p>
+          </div>
         </div>
       </el-form-item>
     </el-form>

@@ -15,6 +15,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useCourseStore } from '@/stores/course'
+import { scriptLanguage } from '@/utils/script'
 import AgentAvatar from './AgentAvatar.vue'
 import AiBadge from './AiBadge.vue'
 import IdText from './IdText.vue'
@@ -34,7 +35,7 @@ const unnamable = computed(() => course.level('member_read') === 'denied' || cou
 
 <template>
   <span v-if="!id">—</span>
-  <span v-else-if="name" class="member-name" :class="{ 'is-agent': agent }" :title="id">
+  <span v-else-if="name" class="member-name" :class="{ 'is-agent': agent }" :title="id" :lang="scriptLanguage(name)">
     <AgentAvatar v-if="agent" :name="name" size="small" />
     <!-- 「（你）」 is with the name, not a flex item after it: the gap would part them. -->
     <span
