@@ -41,6 +41,7 @@ import { ElMessage } from 'element-plus'
 import { ApiError, fetchBlob, isAbort } from '@/api/http'
 import type { TextStatus, TextVersion } from '@/api/types'
 import MarkdownView from '@/components/MarkdownView.vue'
+import AppNote from '@/components/AppNote.vue'
 import PrintButton from '@/components/PrintButton.vue'
 import { toApiError } from '@/composables/useAsync'
 import { errorMessage, notifyError } from '@/composables/useErrors'
@@ -692,10 +693,7 @@ function onClosed() {
         :name="file.filename"
       />
       <div v-else-if="view.as === 'textVersion'" class="file-viewer__text-version">
-        <p class="file-viewer__text-note" role="note">
-          <el-icon aria-hidden="true"><InfoFilled /></el-icon>
-          <span>{{ t('preview.office.textVersion') }}</span>
-        </p>
+        <AppNote plain class="file-viewer__text-note">{{ t('preview.office.textVersion') }}</AppNote>
         <div class="file-viewer__paper">
           <MarkdownView :source="view.body" code-tools :empty="t('preview.text.empty')" />
         </div>
@@ -910,21 +908,8 @@ function onClosed() {
   padding: 16px;
 }
 .file-viewer__text-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   max-width: 860px;
   margin: 0 auto 12px;
-  padding: 2px 0 2px 16px;
-  border-left: 2px solid var(--app-indigo-line);
-  color: var(--app-ink-2);
-  font-size: var(--app-text-sm);
-  line-height: 1.55;
-}
-.file-viewer__text-note .el-icon {
-  margin-top: 3px;
-  flex-shrink: 0;
-  color: var(--el-color-info);
 }
 .file-viewer__paper {
   max-width: 860px;

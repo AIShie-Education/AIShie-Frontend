@@ -7,6 +7,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AppResult from '@/components/AppResult.vue'
+import AppNote from '@/components/AppNote.vue'
 import OperatorDetail from '../components/OperatorDetail.vue'
 import { adminErrorText, isNotAdmin, isNotOffered } from './runtimeAdmin'
 
@@ -21,10 +22,9 @@ const notAdmin = computed(() => !!props.error && isNotAdmin(props.error))
 <template>
   <div class="runtime-async">
     <div v-if="loading" v-loading="true" class="runtime-async__loading" />
-    <p v-else-if="notOffered" class="runtime-async__not-offered" role="status">
-      <el-icon aria-hidden="true"><InfoFilled /></el-icon>
-      <span>{{ t('runtimeAdmin.state.notOffered') }}</span>
-    </p>
+    <AppNote v-else-if="notOffered" plain class="runtime-async__not-offered">
+      {{ t('runtimeAdmin.state.notOffered') }}
+    </AppNote>
     <AppResult
       v-else-if="notAdmin"
       kind="forbidden"
@@ -53,17 +53,7 @@ const notAdmin = computed(() => !!props.error && isNotAdmin(props.error))
   min-height: 120px;
 }
 .runtime-async__not-offered {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
   margin: 0;
-  font-size: var(--app-text-sm);
-  line-height: var(--app-lh-text);
-  color: var(--el-text-color-secondary);
-}
-.runtime-async__not-offered .el-icon {
-  flex-shrink: 0;
-  margin-top: 3px;
 }
 .runtime-async__error :deep(.el-alert__description) {
   margin-top: 8px;

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import type { ApiError } from '@/api/http'
 import type { Membership } from '@/api/types'
 import AsyncState from '@/components/AsyncState.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import IdText from '@/components/IdText.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
@@ -28,7 +29,7 @@ const rolesVary = computed(() => new Set(props.seats.map((s) => s.role)).size > 
     </h2>
     <p class="app-form-hint seats-card__hint">{{ t('account.seats.hint') }}</p>
     <AsyncState :loading="loading && !rows.length" :error="rows.length ? null : error" @retry="emit('retry')">
-      <p v-if="!rows.length" class="app-muted seats-card__empty">{{ t('account.seats.empty') }}</p>
+      <AppEmpty v-if="!rows.length" :text="t('account.seats.empty')" />
       <ul v-else class="seats-list">
         <li v-for="s in rows" :key="s.member_id" class="seat">
           <router-link :to="{ name: 'course-overview', params: { courseId: s.course_id } }" class="seat__course">
@@ -71,10 +72,6 @@ const rolesVary = computed(() => new Set(props.seats.map((s) => s.role)).size > 
 }
 .seats-card__hint {
   margin: -6px 0 12px;
-}
-.seats-card__empty {
-  margin: 0;
-  padding: 8px 0;
 }
 .seats-list {
   list-style: none;

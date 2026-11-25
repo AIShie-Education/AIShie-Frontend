@@ -12,7 +12,21 @@ import { call, coursePath, demo, hostOnRuntime, photograph, signIn, type CoreRep
 const STAMP = Date.now().toString(36)
 const TUTOR = `Privacy tutor ${STAMP}`
 const QUESTION = `Who marks the lab report? (${STAMP})`
-const LINE = `Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. ${TUTOR} sends it to its AI model’s provider to answer.`
+const READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format([
+  'The two taking part',
+  'course staff',
+  'people and agents that decide actions',
+  'other members it answers',
+  'site and department administrators',
+])
+const LINE = `${READERS} can read this; ${TUTOR} sends it to its AI model’s provider.`
+const ZH_READERS = new Intl.ListFormat('zh-Hans', { type: 'conjunction' }).format([
+  '对话双方',
+  '课程教职员',
+  '负责审批操作的人和智能体',
+  '它回答的其他成员',
+  '网站及部门管理员',
+])
 
 const w = { tutorId: '' }
 
@@ -69,7 +83,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.getByRole('heading', { name: 'Before you ask' })).toBeVisible()
     await expect(first.locator('.data-flow__icon')).toBeVisible()
     await expect(first.locator('li')).toHaveText([
-      'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
+      `${READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
       `${TUTOR} sends what you write here to its AI model’s provider to answer it.`,
       'Nothing here is deleted: a message you withdraw is hidden, but kept.',
     ])
@@ -80,7 +94,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await first.getByRole('button', { name: 'More' }).click()
     const notice = noticeOf(page)
     await expect(notice).toBeVisible()
-    await expect(notice.getByRole('heading', { name: 'Who can read this conversation' })).toBeVisible()
+    await expect(notice.getByRole('heading', { name: 'Who can read this conversation' })).toHaveCount(1)
     await expect(
       notice.locator('.data-flow').getByRole('heading', { name: 'Where it goes to be answered' }),
     ).toBeVisible()
@@ -89,6 +103,9 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(notice).toContainText(`${TUTOR} is hosted on AIshie.`)
     await expect(notice).toContainText('This page cannot show you which provider it is.')
     await expect(notice).toContainText('Conversations are never deleted.')
+    await expect(notice).toContainText(
+      'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
+    )
     await photograph(page, 'privacy-notice')
     await page.keyboard.press('Escape')
     await expect(notice).toBeHidden()
@@ -126,9 +143,47 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.getByRole('heading', { name: '提问之前' })).toBeVisible()
     await first.getByRole('button', { name: '知道了' }).click()
     await expect(panel.locator('.chat-pane__privacy-text')).toHaveText(
-      `课程教职员、课程中负责审批操作的智能体，以及网站和部门管理员，都可以阅读这段对话。${TUTOR}会把内容发送给其 AI 模型的供应商来生成回答。`,
+      `${ZH_READERS}可阅读这段对话；${TUTOR}会把内容发送给其 AI 模型的供应商生成回答。`,
     )
     await panel.locator('.chat-pane__privacy').getByRole('button', { name: /^详情/ }).click()
     await expect(page.getByRole('dialog', { name: '谁会阅读，内容会发送到哪里' })).toContainText('对话永远不会被删除。')
   })
+
+  for (const locale of ['en', 'zh-Hant', 'zh-Hans'] as const) {
+    for (const width of [400, 390]) {
+      test(`the composer line is clamped to one line with More visible at ${width}px in ${locale}`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 844 })
+        await page.addInitScript((l) => {
+          try {
+            localStorage.setItem('aishie.locale', l)
+          } catch {}
+        }, locale)
+        await signIn(page, demo().actors.ken)
+        const panel = await openChat(page)
+        await panel.locator('button.resp-row').filter({ hasText: TUTOR }).click()
+        await panel.locator('.chat-pane__privacy-first-actions button').last().click()
+
+        const line = panel.locator('.chat-pane__privacy')
+        const text = line.locator('.chat-pane__privacy-text')
+        const more = line.locator('.chat-pane__privacy-more')
+        await expect(text).toBeVisible()
+        await expect(text).toHaveCSS('white-space', 'nowrap')
+        await expect(text).toHaveCSS('text-overflow', 'ellipsis')
+        await expect(more).toBeVisible()
+        await expect(more).toBeInViewport()
+        const size = await text.evaluate((el) => ({
+          clientHeight: el.clientHeight,
+          scrollHeight: el.scrollHeight,
+          lineHeight: Number.parseFloat(getComputedStyle(el).lineHeight),
+        }))
+        expect(size.clientHeight).toBeLessThanOrEqual(Math.ceil(size.lineHeight) + 1)
+        expect(size.scrollHeight).toBeLessThanOrEqual(Math.ceil(size.lineHeight) + 1)
+        const lineBox = (await line.boundingBox())!
+        const moreBox = (await more.boundingBox())!
+        expect(moreBox.x).toBeGreaterThanOrEqual(lineBox.x)
+        expect(moreBox.x + moreBox.width).toBeLessThanOrEqual(lineBox.x + lineBox.width + 1)
+        await photograph(page, `privacy-line-${locale}-${width}`)
+      })
+    }
+  }
 })

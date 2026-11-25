@@ -8,7 +8,7 @@ import vueParser from 'vue-eslint-parser'
 /** Navigation: the activity bar and the side bar, a course's tabs, its top bar and the grades' tabs. */
 const NAVIGATION = ['src/layouts/**/*.{ts,vue}', 'src/components/sidebar/**/*.{ts,vue}']
 const FILLED =
-  'Navigation’s icons are outlined, never filled (docs/CONVENTIONS.md): take an outlined icon, not *Filled, Stamp, List, Grid or Menu.'
+  'Navigation and icon families are outlined, never filled (docs/CONVENTIONS.md): take an outlined icon, not *Filled, Stamp, List, Grid or Menu.'
 /**
  * Element Plus's filled icons: every *Filled one, and those solid by design
  * whose names do not say so (Stamp, List, Grid, Menu: a stamp, a clipboard,
@@ -198,7 +198,9 @@ export default [
     rules: { 'app/element-look': 'error' },
   },
   {
-    files: NAVIGATION,
+    // The activity feed's family chips are one outlined family too: feed.ts
+    // names their components as strings, which the syntax rule below reads.
+    files: [...NAVIGATION, 'src/views/course/activity/components/feed.ts'],
     ignores: ['**/*.spec.ts'],
     plugins: { aishie: { rules: { 'no-solid-icon-in-template': solidIconInTemplate } } },
     rules: {

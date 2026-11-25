@@ -9,6 +9,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Link, User } from '@element-plus/icons-vue'
 import { read } from '@/api/http'
 import { isUuid } from '@/utils/format'
+import { splitNameEnd } from '@/utils/initials'
 import { ROLES, type Member, type MemberSummary } from '@/api/types'
 import { usePaged } from '@/composables/useAsync'
 import { useContainerNarrow, useTableRelayout } from '@/composables/useContainerWidth'
@@ -290,14 +291,19 @@ function rowClass({ row }: { row: MemberSummary }) {
                   <AgentName :name="row.display_name" class="members__agent-name" />
                 </span>
                 <template v-else>
-                  <el-icon class="members__kind-icon"><User /></el-icon>
-                  <!-- 「（你）」 is with the name, not a flex item after it: the line's gap would part them. -->
-                  <span class="members__who"
-                    ><span class="members__name-text">{{ row.display_name }}</span
-                    ><span v-if="row.id === course.myMemberId" class="members__me app-you">{{
-                      t('common.labels.youTag')
-                    }}</span></span
+                  <span class="members__person">
+                    <el-icon class="members__kind-icon"><User /></el-icon>
+                  <!-- The last word and 「（你）」 stay together; the rest wraps beside the person's icon. -->
+                  <span class="members__who">{{ splitNameEnd(row.display_name).head }}<span
+                      class="members__name-end"
+                      :class="{ 'is-me': row.id === course.myMemberId }"
+                    ><span class="members__name-text">{{ splitNameEnd(row.display_name).end }}</span
+                      ><span v-if="row.id === course.myMemberId" class="members__me app-you">{{
+                        t('common.labels.youTag')
+                      }}</span></span
+                    ></span
                   >
+                  </span>
                 </template>
                 <el-tooltip v-if="row.login_id" :content="t('members.loginId')" placement="top">
                   <code class="members__login-id" tabindex="0">{{ row.login_id }}</code>
@@ -358,7 +364,7 @@ function rowClass({ row }: { row: MemberSummary }) {
             v-if="!narrow"
             prop="created_at"
             :label="t('members.columns.dates')"
-            min-width="185"
+            min-width="154"
             sortable
           >
             <template #default="{ row }">
@@ -419,7 +425,7 @@ function rowClass({ row }: { row: MemberSummary }) {
 }
 .members__name {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: 2px 6px;
   min-width: 0;
@@ -436,20 +442,31 @@ function rowClass({ row }: { row: MemberSummary }) {
   font-weight: 500;
   text-wrap: balance;
 }
-/* The name and 「（你）」 after it, with no gap between them: the name is cut short first. */
+/* A person's whole name wraps beside the icon, in balanced lines. Its last
+   word and 「（你）」 share one unbreakable span, as an agent's last word and AI do. */
 .members__who {
-  display: flex;
-  align-items: baseline;
   min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  font-weight: 500;
+}
+.members__name-end.is-me {
+  white-space: nowrap;
 }
 .members__name-text {
   font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+.members__person {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
 }
 .members__kind-icon {
   flex-shrink: 0;
+  align-items: center;
+  height: 1lh;
   color: var(--el-text-color-secondary);
 }
 .members__login-id {

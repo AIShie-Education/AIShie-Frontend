@@ -32,12 +32,12 @@
 
 :root {
   --hl-text: #1f2328;
-  --hl-keyword: #cf222e;
-  --hl-title: #8250df;
+  --hl-keyword: #a40e26;
+  --hl-title: #6639ba;
   --hl-constant: #0550ae;
   --hl-string: #0a3069;
   --hl-builtin: #953800;
-  --hl-comment: #6e7781;
+  --hl-comment: #57606a;
   --hl-tag: #116329;
   --hl-add-fg: #116329;
   --hl-add-bg: #dafbe1;

@@ -266,9 +266,9 @@ describe('HostedAgentCard: what the owner can do', () => {
     await flushPromises()
     expect(s.to('POST', RUNTIME.pause)).toHaveLength(1)
     expect(s.to('POST', RUNTIME.pause)[0].body).toBeUndefined()
-    const updated = w.emitted('update')![0][0] as Record<string, unknown>
+    const updated = w.emitted('update')![0][0]
     expect(updated).toMatchObject({ status: 'paused' })
-    expect('revocation' in updated).toBe(false)
+    expect(updated).not.toHaveProperty('revocation')
     // Its token was revoked: whether people can ask it is read again.
     expect(w.emitted('changed')).toBeTruthy()
     expect(vi.mocked(ElMessage).mock.calls.at(-1)![0]).toMatchObject({ type: 'success' })

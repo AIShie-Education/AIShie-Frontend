@@ -9,14 +9,16 @@ import { useI18n } from 'vue-i18n'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import type { PrivacyNotice } from './privacy'
 
-defineProps<{ notice: PrivacyNotice }>()
+withDefaults(defineProps<{ notice: PrivacyNotice; showReadersHeading?: boolean }>(), {
+  showReadersHeading: true,
+})
 const { t } = useI18n()
 </script>
 
 <template>
   <div class="chat-privacy">
     <section>
-      <h3 class="chat-privacy__heading">{{ t('chat.visibleTo.title') }}</h3>
+      <h3 v-if="showReadersHeading" class="chat-privacy__heading">{{ t('chat.visibleTo.title') }}</h3>
       <ul>
         <li v-for="(line, i) in notice.readers" :key="i">
           {{ 'key' in line ? t(`chat.visibleTo.${line.key}`) : line.text }}

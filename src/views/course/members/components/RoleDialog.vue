@@ -144,7 +144,7 @@ function goReach() {
 }
 .role-dialog__p {
   margin: 4px 0 8px;
-  line-height: 1.55;
+  line-height: var(--app-lh-text);
 }
 .role-dialog__links {
   display: flex;

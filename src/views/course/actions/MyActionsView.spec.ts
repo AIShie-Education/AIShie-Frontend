@@ -167,6 +167,66 @@ describe('My actions, a proposal sent back for changes', () => {
     expect(rowOf(ACTIONS[1]!.id)).toBeDefined()
   })
 
+  it('resets a chosen status whose chip is gone after a refresh, showing the unfiltered rows', async () => {
+    let refreshed = false
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'action.list_mine') return { actions: refreshed ? [ACTIONS[0]] : ACTIONS }
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    const w = await mountAsTa()
+    await w
+      .findAll('.filter-chips .filter-chip')
+      .find((c) => c.attributes('data-value') === 'changes_requested')!
+      .trigger('click')
+    await flushPromises()
+    expect(rows()).toHaveLength(1)
+    expect(rowOf(ACTIONS[1]!.id)).toBeDefined()
+
+    // A refresh clears items while it reads, but a choice that comes back
+    // stays chosen; only one absent from the completed reload resets to All.
+    await w.get('.refresh-button').trigger('click')
+    await flushPromises()
+    expect(
+      w.findAll('.filter-chips .filter-chip').find((c) => c.attributes('data-value') === 'changes_requested')!
+        .attributes('aria-checked'),
+    ).toBe('true')
+    expect(rows()).toHaveLength(1)
+    expect(rowOf(ACTIONS[1]!.id)).toBeDefined()
+
+    refreshed = true
+    await w.get('.refresh-button').trigger('click')
+    await flushPromises()
+    const chips = w.findAll('.filter-chips .filter-chip')
+    expect(chips.map((c) => c.text())).toEqual(['All 1', 'Executed 1'])
+    expect(chips[0]!.attributes('aria-checked')).toBe('true')
+    expect(chips[0]!.attributes('tabindex')).toBe('0')
+    expect(rows()).toHaveLength(1)
+    expect(rowOf(ACTIONS[0]!.id)).toBeDefined()
+    expect(w.text()).not.toContain('None of your actions match this filter.')
+  })
+
+  it('makes the awaiting-review count a radio chip that filters to those actions', async () => {
+    const pending = { ...ACTIONS[0]!, status: 'proposed', review_state: 'pending' }
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'action.list_mine') return { actions: [pending, ACTIONS[1]] }
+      if (tool === 'agent.list') return { agents: [] }
+      throw new ApiError({ status: 403, code: 'forbidden', message: 'permission denied' })
+    })
+    const w = await mountAsTa()
+    const review = w
+      .findAll('.filter-chips .filter-chip')
+      .find((c) => c.attributes('data-value') === 'awaiting-review')!
+    expect(review.text()).toBe('Awaiting review 1')
+    expect(review.attributes('role')).toBe('radio')
+    expect(w.find('.my-actions__summary .app-tag').exists()).toBe(false)
+    await review.trigger('click')
+    await flushPromises()
+    expect(review.attributes('aria-checked')).toBe('true')
+    expect(rows()).toHaveLength(1)
+    expect(rowOf(pending.id)).toBeDefined()
+  })
+
   it.each([
     ['zh-Hant', '需要修改：', '已退回修改'],
     ['zh-Hans', '需要修改：', '已退回修改'],

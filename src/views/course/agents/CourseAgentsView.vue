@@ -164,18 +164,12 @@ function onAdded(out: { status: 'executed'; memberId: string } | { status: 'prop
         }}</router-link>
       </AppNote>
 
-      <el-alert
-        v-if="requests.data.value"
-        type="warning"
-        show-icon
-        :closable="false"
-        class="course-agents__notice"
-        :title="t('courseAgents.requests', { n: requests.data.value }, requests.data.value)"
-      >
+      <AppNote v-if="requests.data.value" class="course-agents__notice">
+        {{ t('courseAgents.requests', { n: requests.data.value }, requests.data.value) }}
         <router-link :to="{ name: 'course-approvals', params: { courseId } }">
           {{ t('courseAgents.openApprovals') }}
         </router-link>
-      </el-alert>
+      </AppNote>
 
       <AsyncState
         :loading="members.loading.value && !members.data.value"

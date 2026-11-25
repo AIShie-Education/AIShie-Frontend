@@ -248,7 +248,7 @@ async function copy() {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-style: italic;
+  font-style: normal;
   font-size: var(--app-text-md);
 }
 .chat-msg__reason {

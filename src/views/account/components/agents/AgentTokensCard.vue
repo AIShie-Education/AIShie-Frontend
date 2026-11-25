@@ -13,6 +13,7 @@ import { useSessionStore } from '@/stores/session'
 import AppTag from '@/components/AppTag.vue'
 import { toneOf } from '@/components/tags'
 import AsyncState from '@/components/AsyncState.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import TimeText from '@/components/TimeText.vue'
 import { credentialState, maskedToken, type CredentialState } from '../credentials'
 
@@ -106,7 +107,7 @@ defineExpose({ revokeById })
       <el-switch v-model="showInactive" :active-text="t('agents.tokens.showInactive', { n: inactiveCount })" />
     </div>
     <AsyncState :loading="loading && !credentials" :error="credentials ? null : error" @retry="emit('retry')">
-      <p v-if="!shown.length" class="app-muted tokens-card__empty">{{ t('agents.tokens.empty') }}</p>
+      <AppEmpty v-if="!shown.length" :text="t('agents.tokens.empty')" />
       <ul v-else class="tokens-list">
         <li v-for="{ c, state } in shown" :key="c.id" class="token" :class="{ 'is-inactive': state !== 'active' }">
           <el-icon :size="20" class="token__icon"><Key /></el-icon>
@@ -165,10 +166,6 @@ defineExpose({ revokeById })
 <style scoped>
 .tokens-card__sub {
   margin: -6px 0 12px;
-}
-.tokens-card__empty {
-  margin: 0;
-  padding: 4px 0;
 }
 .tokens-card__toolbar {
   display: flex;

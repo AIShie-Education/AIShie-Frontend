@@ -12,6 +12,7 @@ import { useI18n } from 'vue-i18n'
 import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm } from '@/api/types'
 import { useCourseStore } from '@/stores/course'
 import PermEditor from '@/components/PermEditor.vue'
+import InfoIcon from '@/components/InfoIcon.vue'
 import { ceilingsOf } from '@/utils/ceilings'
 import StatusTag from '@/components/StatusTag.vue'
 import { presetLabel } from '@/views/course/members/components/seat'
@@ -58,7 +59,7 @@ const ceilings = computed(() => ceilingsOf(course.membership))
 
     <p class="perms__source" :class="`is-${course.permsSource}`">
       <el-icon v-if="course.permsSource === 'exact'"><CircleCheck /></el-icon>
-      <el-icon v-else-if="course.permsSource === 'preset'"><InfoFilled /></el-icon>
+      <el-icon v-else-if="course.permsSource === 'preset'"><InfoIcon /></el-icon>
       <el-icon v-else><Warning /></el-icon>
       <span v-if="course.permsSource === 'exact'">{{ t('overview.perms.exact') }}</span>
       <span v-else-if="course.permsSource === 'preset'">{{ presetText }}</span>

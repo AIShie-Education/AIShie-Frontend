@@ -10,6 +10,7 @@ import { Filter, Lock } from '@element-plus/icons-vue'
 import { PERMS, SCOPED_PERMS, type AutonomyLevel, type Perm, type PermLevels } from '@/api/types'
 import { aboveCeiling, ceilingNote, ceilingOf, type Ceilings } from '@/utils/ceilings'
 import AppTag from './AppTag.vue'
+import InfoIcon from './InfoIcon.vue'
 import LevelSelect from './LevelSelect.vue'
 import StatusTag from './StatusTag.vue'
 
@@ -86,7 +87,7 @@ function shown(p: Perm): AutonomyLevel | undefined {
           {{ warn[p] }}
         </span>
         <span v-else-if="aboveCeiling(ceilings, p, shown(p))" class="perm-editor__over">
-          <el-icon><InfoFilled /></el-icon>
+          <el-icon><InfoIcon /></el-icon>
           {{ t('common.ceiling.worksAs', { level: t(`enums.level.${ceilingOf(ceilings, p)}`) }) }}
         </span>
       </div>

@@ -16,6 +16,7 @@ import { useSessionStore } from '@/stores/session'
 import { useAdministersCourse } from '@/composables/useAdministersCourse'
 import { useContainerWidth } from '@/composables/useContainerWidth'
 import { useMediaQuery } from '@/composables/useMediaQuery'
+import { scrollBehavior } from '@/utils/motion'
 import AppEmpty from '@/components/AppEmpty.vue'
 import AppNote from '@/components/AppNote.vue'
 import { SIDEBAR_DRAWER_MAX_WIDTH } from '@/components/sidebar/frame'
@@ -174,7 +175,7 @@ function revealActive(smooth: boolean) {
   let to = el.scrollLeft
   if (left < to) to = Math.max(0, left)
   else if (right > to + el.clientWidth) to = right - el.clientWidth
-  if (to !== el.scrollLeft) el.scrollTo({ left: to, behavior: smooth ? 'smooth' : 'auto' })
+  if (to !== el.scrollLeft) el.scrollTo({ left: to, behavior: scrollBehavior(smooth) })
   measureEnds()
 }
 watch([nav, scrolls], () => void nextTick(() => revealActive(false)), { flush: 'post' })

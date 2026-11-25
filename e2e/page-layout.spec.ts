@@ -579,6 +579,9 @@ test.describe('a course’s tables beside the side bar', () => {
     // 1000 px alone would not have done.
     await page.goto(coursePath('members'))
     await expect(page.locator('.members__table')).toBeVisible()
+    await layout(page, 1280, 800, { side: true })
+    await expect.poll(() => headingsOf(page, '.members__table')).toContain('Dates')
+    expect(await tableScrollsSideways(page, '.members__table')).toBe(false)
     await layout(page, 1100, 800, { side: true })
     await expect.poll(() => headingsOf(page, '.members__table')).toContain('Role')
     await layout(page, 1000, 800, { side: true })
@@ -1120,6 +1123,61 @@ test.describe('the platform’s settings beside the side bar', () => {
     await expect.poll(() => headingsOf(page, jobs)).toContain('Finished')
     await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
     await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
+  })
+})
+
+test.describe('course toolbars, tabs and forbidden pages on a phone', () => {
+  test('both English approvals tabs fit, and a Chinese subtitle leaves no one-word last line', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await signIn(page, demo().actors.instructor)
+    await page.goto(coursePath('approvals'))
+    const nav = page.locator('.approvals__tabs .el-tabs__nav').first()
+    await expect(nav).toBeVisible()
+    const navBox = await box(nav)
+    for (const item of await page.locator('.approvals__tabs .el-tabs__item').all()) {
+      const b = await box(item)
+      expect(b.x).toBeGreaterThanOrEqual(navBox.x - 1)
+      expect(b.x + b.width).toBeLessThanOrEqual(navBox.x + navBox.width + 1)
+      expect(await item.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true)
+    }
+    expect(await page.locator('.approvals__tabs .el-tabs__nav-prev:visible, .approvals__tabs .el-tabs__nav-next:visible').count()).toBe(0)
+
+    for (const locale of ['zh-Hant', 'zh-Hans']) {
+      await page.addInitScript((value) => localStorage.setItem('aishie.locale', value), locale)
+      await page.reload()
+      const subtitle = page.locator('.page-header__subtitle')
+      await expect(subtitle).toBeVisible()
+      expect(await subtitle.evaluate((el) => getComputedStyle(el).getPropertyValue('text-wrap-style'))).toBe('balance')
+      const lines = await subtitle.evaluate((el) => {
+        const range = document.createRange()
+        range.selectNodeContents(el)
+        return [...range.getClientRects()].filter((r) => r.width > 0).map((r) => r.width)
+      })
+      // 「覆核。」／「审核。」 alone would be about 42 px; balance keeps a useful last line instead.
+      if (lines.length > 1) expect(lines.at(-1)!).toBeGreaterThan(50)
+      await photograph(page, `layout-approvals-390-${locale}`)
+    }
+  })
+
+  for (const width of [1280, 390])
+    test(`the activity’s last check sits beside Refresh at ${width} px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 844 })
+      await signIn(page, demo().actors.instructor)
+      await page.goto(coursePath('activity'))
+      const checked = page.locator('.activity__checked')
+      const refresh = page.locator('.activity__status .refresh-button')
+      await expect(checked).toBeVisible()
+      const [c, r] = await Promise.all([box(checked), box(refresh)])
+      expect(Math.abs(r.x - (c.x + c.width))).toBeLessThanOrEqual(12)
+    })
+
+  test('a student opening Members by address gets no Core English refusal in zh-Hant', async ({ page }) => {
+    await signIn(page, demo().actors.yuki)
+    await page.addInitScript(() => localStorage.setItem('aishie.locale', 'zh-Hant'))
+    await page.goto(coursePath('members'))
+    const result = page.locator('.app-result--forbidden')
+    await expect(result).toBeVisible()
+    expect(await result.textContent()).not.toMatch(/[A-Za-z]{3,}/)
   })
 })
 

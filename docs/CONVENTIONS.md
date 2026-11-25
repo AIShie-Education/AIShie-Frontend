@@ -383,8 +383,9 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   its members now and, where they differ, whom its work is for; the students in no group under the
   groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
   missing for its members now less those another group's work names already (`missingFor`,
-  `inOtherWork`, from the rows, as Core records it), named so in its confirmation, and not offered
-  on a group with nobody left to record it for, saying why; offered only to a seat
+  `inOtherWork`, from the rows, as Core records it), named so in its confirmation. The roster loads
+  every cursor page before offering it, since a moved student's row may be after the first 200; it
+  is not offered on a group with nobody left to record it for, saying why, and is offered only to a seat
   that reaches every one of them, as Core requires: a seat listed to some students is shown only those
   of each group's members, and the group's size from its set (`group_set.get`) says how many more
   there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
@@ -646,7 +647,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 - What only an administrator of the course does from inside it (purging what was uploaded by
   mistake) is offered by `useAdministersCourse()` (`@/composables/useAdministersCourse`): a platform
   administrator, or one of the course's department or one above it.
-- Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure.
+- Reads that are refused (403) are shown by `<AsyncState>` as "no permission", not as a failure,
+  with the explanation in the page's language rather than Core's raw English message.
 - Permission names and which tool needs which are in Core's `docs/schema.md` §2.2. A few borrow:
   the grading scheme is written with `assignment_write` and read with `grade_read`; reading the
   course, assignments, the event feed and your own actions needs `document_read`; correcting
@@ -764,8 +766,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   reads as chosen, or as news. Element Plus's `*Filled` icons, and those solid by design whose names
   do not say so (`Stamp`, `List`, `Grid`, `Menu`), are refused in navigation's files
   (`src/layouts`, `src/components/sidebar`) by `npm run lint` (`eslint.config.js`), however they are
-  named: imported, as a string, or as a tag in a template. Another solid glyph found among them goes
-  on that list.
+  named: imported, as a string, or as a tag in a template. The activity feed's family chips are one
+  outlined family too, and the same rule covers `activity/components/feed.ts`'s string-named icons.
+  Another solid glyph found among them goes on that list.
 - A page inside a course whose route does not say which tab it belongs to calls
   `useCourseTab(() => routeName)` (`@/composables/useCourseTab`) with the route whose tab to highlight
   (a document that is an assignment's instructions → `'course-assignments'`). A page that is another
@@ -821,6 +824,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
 
   A row holds two chips at most. Whether an agent can be asked is a dot before its name
   (`AskableDot`), not a chip; how it runs is said once, on its own page (HostingTag, above).
+  In the chat's agent picker, where an answer level must also be shown, the seat's purpose is words
+  beside that level rather than a third chip.
   `npm run lint` refuses an `el-tag` anywhere but in `AppTag`, however a template names it (`<el-tag>`,
   `<ElTag>`, `<component is="el-tag">`), as it does each of Element Plus's looks below
   (`eslint.config.js`, `app/element-look`, with `src/lint/elementLook.spec.ts`).
@@ -830,7 +835,8 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   second ink at a paragraph's leading, stopping at the measure, under a title in the ink where it has
   one; `closable` where it says what was just done, its close button a square of 28 px (44 on a touch
   screen). `plain` was a note without the tint it had until design wave 3; every note is one now, and
-  `plain` is kept for the places that ask for it. An `el-alert` is a
+  `plain` is kept for the places that ask for it. No paragraph explanation draws its own solid
+  `InfoFilled`; a control which opens an explanation uses the outlined `InfoIcon` instead. An `el-alert` is a
   warning or an error, or an outcome reported in green, and says which in its template, where lint
   reads it: `type="warning"`, `"error"` or `"success"`, or a choice among them (`:type="ok ?
   'success' : 'error'"`). Lint refuses `info`, `primary` (drawn as info is), none, and a type only the
@@ -854,9 +860,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   so that a row of chips over a list of role tags reads as controls over labels; the chosen one in the
   indigo's words on its tint, with a 2 px bar in the indigo at its foot, as a course's chosen tab has;
   one with nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
-  count (a lower bound, "12+", while there is more to load), one at a time, radios to the keyboard and a
-  screen reader; counts a list shows by state are these chips too, never a row of tags that cannot be
-  pressed. A chip counts the rows it filters, no others: where a select has already narrowed the list to
+  count (a lower bound, "12+", while there is more to load; a scoped list may name the first choice for its
+  default, such as This course, instead of All). They are one radio group to the keyboard and a screen reader:
+  only the chosen chip is a tab stop, Left/Right and Up/Down choose and focus the previous/next chip (wrapping
+  at the ends), Home/End choose the first/last, and Enter or Space chooses without clearing the chosen radio.
+  Counts a list shows by state are these chips too, never a row of tags that cannot be pressed; My actions'
+  awaiting-review count is one and filters to those rows. A chip that disappears after a reload cannot stay
+  chosen invisibly: its filter returns to All. A chip counts the rows it filters, no others: where a select has already narrowed the list to
   one (a student on the submissions page), there is nothing left to filter and there are no chips. A
   count is in the chip's own ink, set apart by its weight, never faded below the contrast text keeps. A
   choice of many (an assignment, a student, a type) stays a select. A segmented control (`el-radio-group`
@@ -963,7 +973,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   Chinese, whose Noto Sans has no 600 and would set it at 700; a `<strong>`, a `<b>` or a `<th>` with
   no rule of its own takes it too (`main.css`), not the browser's bold, except an author's emphasis in
   rendered Markdown, which keeps a heading's weight; a heading, and a figure that stands for a card,
-  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Leading is
+  is `var(--app-heading-weight)` (600; 700 in Chinese); other weights are 400 and 500. Latin marks
+  drawn in Plex in every language (the "AI" badge and an agent's initials) take
+  `--app-weight-latin`, always 600 because that Plex face is loaded. Leading is
   `var(--app-lh-ui)` (1.5; 1.6 in Chinese) for the interface (a label, a cell, a button, an empty
   place's line); `--app-lh-text` for a paragraph (a note, where data goes) and `--app-lh-prose` for
   rendered Markdown and a chat's answers, both 1.7 in every language, the site's (its spec found
@@ -1014,7 +1026,9 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   no finger hits, and is typed into (`styles/element.css`); dialogs with `el-dialog` (`width="560px"`,
   `destroy-on-close`; a global rule keeps every dialog within a phone's width), the submit button
   bound to `pending` from `useWrite`. Confirm destructive or
-  irreversible actions with `ElMessageBox.confirm`. A dialog and a message box are framed in a
+  irreversible actions with `ElMessageBox.confirm`. A confirmation shows none of Element Plus's
+  amber status icons: its words say what happens, and the last step of a destructive one carries the
+  solid red button. A dialog and a message box are framed in a
   control's edge (a ring of 1 px, which takes no width from what they hold, as a border would) with 2 px corners
   and cast no shadow, their title over a rule (one that fills a phone's
   screen has neither frame nor corners); a drawer is square, ruled along the edge it opens from, its
@@ -1196,8 +1210,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
   grades' own tabs (40), the links of the phone's menu (44), a filter's chips (40, every
   `el-check-tag`: FilterChips and the activity's families), a page's way back (`PageHeader`'s, 40)
-  and the top bar's way up (`CourseCrumbs`' links, 44) among them. Never set `maximum-scale` or
-  `user-scalable` in the viewport: zooming is the reader's.
+  and the top bar's way up (`CourseCrumbs`' links, 44) among them. A segmented control's radio buttons are
+  44 px tall there (40 small), with their text centred; a pager's previous/next buttons and numbers are at
+  least 40 × 40; and every select's dropdown options are at least 44 px tall. None of these touch-only rules
+  changes what a mouse sees. Never set `maximum-scale` or `user-scalable` in the viewport: zooming is the reader's.
+- **Motion follows the reader's system preference.** `styles/main.css` has a global
+  `@media (prefers-reduced-motion: reduce)` block that removes delays and repeating animation and shortens
+  transitions, animations and smooth CSS scrolling to an imperceptible duration everywhere, Element Plus and
+  overlays included. A component that starts motion by script checks the same query: use `scrollBehavior()`
+  (`@/utils/motion`) for every requested smooth scroll, and `useMediaQuery(REDUCED_MOTION_QUERY)` for ongoing
+  script animation such as `ChatSpinner`, responding if the preference changes while it is shown. Never write
+  another unconditional `behavior: 'smooth'`. Reduced motion leaves the state or progress the motion conveyed
+  visible in a still form; it does not hide content or stop reading and writing.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
   component. Opening adds an entry to history at the page's own address, back closes the overlay
@@ -1528,12 +1552,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   operated elsewhere, a closed conversation, one waiting for approval) is one muted line above the
   composer, never an alert box. Under the composer, for the one asking, one muted line, after the
   shield where data goes is said (`DataFlowNotice compact`, "Notes and alerts"), says who
-  else reads the conversation and where the agent sends it, with "More" for the whole notice
-  (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read this" opens too: who reads
-  it is Core's `visible_to`; where it goes follows how the agent is hosted, a provider named only
+  else reads the conversation and where the agent sends it, clamped to one line with "More" always
+  visible for the whole notice (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read
+  this" opens too. The line's and the first-time point's reader names come from the same Core
+  `visible_to` list as the notice, however narrow it is; a person's old conversation does not repeat
+  the dialog's reader heading. Where it goes follows how the agent is hosted, a provider named only
   for the caller's own agent, whose model the runtime tells its owner (`useAnswerModels`), and its
-  fallback's provider too where it is another; and nothing in it is deleted, a withdrawn message
-  kept (its files listed in an export, never held there). A new conversation opens at its foot,
+  fallback's provider too where it is another. On the school's plan an operator-hosted provider id
+  (`openai_compatible`, `vllm`, `ollama`, `lmstudio`) is never shown as a company: the school offer's
+  real label names its own model server, or the words stay generic where there is no label. Nothing
+  is deleted: a withdrawn message is kept (its files listed in an export, never held there), and a
+  question or answer that waited for approval but was not posted is kept with its text in the action
+  record and audit exports. A new conversation opens at its foot,
   the first time on the points, scrolled until More and Got it show. The first time a person
   starts a conversation in this browser (`aishie.chatPrivacySeen.<actorId>`), its points, in a
   `DataFlowNotice` as the notice's "Where it goes to be answered" is, are on

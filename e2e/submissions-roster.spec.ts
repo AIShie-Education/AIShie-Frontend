@@ -81,11 +81,15 @@ test('the instructor sees who has not started on an assignment, and marks them m
   await expect(summary.getByRole('radio', { name: 'All 2' })).toHaveAttribute('aria-checked', 'true')
   await expect(summary.getByRole('radio', { name: 'Not started 1' })).toBeVisible()
   await expect(summary.getByRole('radio', { name: 'Submitted 1' })).toBeVisible()
-  // Pressed, one state's students alone, and pressed again all of them.
+  // Pressed, one state's students alone. Pressing the chosen radio again
+  // keeps it chosen; All is the explicit way back to every student.
   await summary.getByRole('radio', { name: 'Submitted 1' }).click()
   await expect(page.locator('.roster-table .el-table__row')).toHaveCount(1)
   await expect(page.locator('.roster-table .el-table__row')).toContainText('Yuki Tanaka')
   await summary.getByRole('radio', { name: 'Submitted 1' }).click()
+  await expect(summary.getByRole('radio', { name: 'Submitted 1' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.roster-table .el-table__row')).toHaveCount(1)
+  await summary.getByRole('radio', { name: 'All 2' }).click()
   await expect(page.locator('.roster-table .el-table__row')).toHaveCount(2)
   // Filtered to one student, there is nothing left to filter: no counts that would hold students the
   // roster does not show.

@@ -24,6 +24,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { shortId } from '@/utils/format'
 import { formatCountdown } from '@/utils/countdown'
+import { scrollBehavior } from '@/utils/motion'
 import AppNote from '@/components/AppNote.vue'
 import AppTag from '@/components/AppTag.vue'
 import DataFlowNotice from '@/components/DataFlowNotice.vue'
@@ -156,7 +157,7 @@ watch(
   async (now, before) => {
     if (!now || now === before) return
     await nextTick()
-    news.value?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' })
+    news.value?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() })
   },
 )
 
