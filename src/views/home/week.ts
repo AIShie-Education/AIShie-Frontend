@@ -65,6 +65,14 @@ export function weekBounds(now: number, timeZone: string): WeekBounds {
   return { start, end, from, to }
 }
 
+/** Format the calendar-date placeholders as UTC; applying the school zone here would shift a negative-offset week's dates back a day. */
+export function formatWeekRange(bounds: WeekBounds, locale: string): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', timeZone: 'UTC' }).formatRange(
+    bounds.from,
+    bounds.to,
+  )
+}
+
 export interface WeekSummary {
   bounds: WeekBounds
   due: number

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CourseFacts, Membership } from './courseFacts'
-import { weekBounds, weekSummary } from './week'
+import { formatWeekRange, weekBounds, weekSummary } from './week'
 
 const NOW = Date.parse('2026-10-03T08:00:00Z') // Saturday
 const DAY = 86_400_000
@@ -44,6 +44,17 @@ describe('the home page week', () => {
       '2026-09-28',
       '2026-10-04',
     ])
+  })
+
+  it('formats the placeholder dates in UTC so a negative-offset school keeps Monday–Sunday', () => {
+    // The Monday placeholder is 2026-09-28T00:00Z. Formatting it in New York
+    // would wrongly show Sunday 27 September; these are calendar placeholders.
+    const bounds = weekBounds(Date.parse('2026-09-30T12:00:00Z'), 'America/New_York')
+    const range = formatWeekRange(bounds, 'en')
+    expect(range).toContain('Sep 28')
+    expect(range).toContain('Oct 4')
+    expect(range).not.toContain('Sep 27')
+    expect(range).not.toContain('Oct 5')
   })
 
   it('keeps the two week boundaries correct across a daylight-saving change', () => {

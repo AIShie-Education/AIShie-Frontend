@@ -11,7 +11,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { useCourseFacts } from './courseFacts'
-import { weekSummary } from './week'
+import { formatWeekRange, weekSummary } from './week'
 import { useNow } from '@/composables/useNow'
 import { formatList } from '@/utils/format'
 import { readerTimeZone, schoolTimeZone } from '@/utils/schoolTime'
@@ -48,11 +48,7 @@ const week = computed(() => weekSummary(courses.value, facts, now.value, homeTim
 const weekRange = computed(() => {
   if (!week.value) return ''
   try {
-    return new Intl.DateTimeFormat(locale.value, {
-      month: 'short',
-      day: 'numeric',
-      timeZone: homeTimeZone.value,
-    }).formatRange(week.value.bounds.from, week.value.bounds.to)
+    return formatWeekRange(week.value.bounds, locale.value)
   } catch {
     return ''
   }
