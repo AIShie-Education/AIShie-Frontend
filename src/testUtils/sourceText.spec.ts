@@ -41,6 +41,20 @@ export function withoutComments(text: string): string {
     return text.length
   }
 
+  function cssUrl(from: number): number {
+    let quote = ''
+    for (let i = from + 4; i < text.length; i++) {
+      const c = text[i]!
+      if (quote) {
+        if (c === '\\') i++
+        else if (c === quote) quote = ''
+      } else if (c === "'" || c === '"') quote = c
+      else if (c === '\\') i++
+      else if (c === ')') return i + 1
+    }
+    return text.length
+  }
+
   function htmlTag(from: number): number {
     let quote = ''
     for (let i = from + 1; i < text.length; i++) {
@@ -122,6 +136,11 @@ export function withoutComments(text: string): string {
       if (c === '}' && inTemplate && braces === 0) return i
       if (c === '{') braces++
       else if (c === '}' && braces > 0) braces--
+      if (/^url\(/i.test(text.slice(i, i + 4)) && !/[\w-]/.test(text[i - 1] ?? '')) {
+        i = cssUrl(i) - 1
+        previous = 'operand'
+        continue
+      }
       if (/[A-Za-z0-9_$]/.test(c)) {
         let end = i + 1
         while (/[\w$]/.test(text[end] ?? '')) end++
@@ -171,11 +190,70 @@ describe('the source comment lexer used by the guards', () => {
     },
   )
 
+  it.each(['https://example.com', 'http://example.com', '//example.com'])(
+    'does not read CSS url(%s), quoted or unquoted, as a JavaScript comment',
+    (url) => {
+      for (const value of [url, `"${url}"`]) {
+        const source = `.a { src: url(${value}); } /* gone */ .b { color: red; }`
+        const out = withoutComments(source)
+        expect(out).toContain(url)
+        expect(out).not.toContain('gone')
+        expect(out).toContain('.b { color: red; }')
+      }
+    },
+  )
+
   it('strips block and line comments while keeping their lines', () => {
     const out = withoutComments('const a = 1 /* gone */ // too\nconst b = 2')
     expect(out).not.toContain('gone')
     expect(out).not.toContain('too')
     expect(out.split('\n')).toHaveLength(2)
     expect(out).toContain('const b = 2')
+  })
+})
+
+describe('the comment-rule context matrix', () => {
+  const cases = [
+    {
+      name: 'JS string and line comment',
+      source: 'const url = "https://example.com"; // gone\nconst n = 1',
+      keep: ['https://example.com', 'const n = 1'],
+      drop: ['gone'],
+    },
+    {
+      name: 'JS regex and nested template literal',
+      source: 'const re = /https?:\\/\\//; const label = `${ok ? /* gone */ `${n}%` : "http://example.com"}`',
+      keep: ['/https?', '${n}%', 'http://example.com'],
+      drop: ['gone'],
+    },
+    {
+      name: 'HTML text and tag attributes',
+      source: '<template><a href="https://example.com">//example.com</a><!-- gone --></template>',
+      keep: ['https://example.com', '//example.com'],
+      drop: ['gone'],
+    },
+    {
+      name: 'Vue moustache expression',
+      source: '<template><span>{{ /* gone */ value }}</span></template>',
+      keep: ['value'],
+      drop: ['gone'],
+    },
+    {
+      name: 'CSS URL and block comment',
+      source: '.a { src: url(https://example.com); } /* gone */ .b { color: red; }',
+      keep: ['https://example.com', '.b { color: red; }'],
+      drop: ['gone'],
+    },
+    {
+      name: 'Vue style URL and block comment',
+      source: '<style>.a { src: url(//example.com); } /* gone */ .b { color: red; }</style>',
+      keep: ['//example.com', '.b { color: red; }'],
+      drop: ['gone'],
+    },
+  ]
+  it.each(cases)('$name', ({ source, keep, drop }) => {
+    const out = withoutComments(source)
+    for (const text of keep) expect(out).toContain(text)
+    for (const text of drop) expect(out).not.toContain(text)
   })
 })

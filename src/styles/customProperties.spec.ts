@@ -79,6 +79,14 @@ describe('the app’s custom properties', () => {
         unsetTokens(['<template><p>' + url + '</p><span>{{ `var(--app-gone)` }}</span></template>']),
       ).toEqual(['--app-gone'])
     }
+    for (const url of ['https://example.com', 'http://example.com', '//example.com']) {
+      expect(
+        unsetTokens([`.a { src: url(${url}/font.woff2); } .b { color: var(--app-gone); }`]),
+      ).toEqual(['--app-gone'])
+      expect(
+        unsetTokens([`<style>.a { src: url("${url}/font.woff2"); } .b { color: var(--app-gone); }</style>`]),
+      ).toEqual(['--app-gone'])
+    }
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })
