@@ -40,6 +40,7 @@ const global = {
 }
 
 const tutor: Respondent = {
+  actor_id: 'core-agent-1',
   member_id: 'tutor',
   display_name: 'Course tutor',
   kind: 'agent',

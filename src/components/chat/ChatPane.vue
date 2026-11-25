@@ -219,10 +219,17 @@ const isDraft = computed(() => !props.conversationId)
 
 // --- Who it is with -----------------------------------------------------------------
 
+/** The Core actor id when the conversation discloses it; an older Core has none. */
+function actorIdOf(r: object): string | null {
+  const id = (r as { actor_id?: unknown }).actor_id
+  return typeof id === 'string' && id ? id : null
+}
+
 interface Party {
   name: string
   kind: string
   memberId: string
+  actorId: string | null
   ownerName?: string | null
   mine?: boolean
   lastSeenAt?: string | null
@@ -238,6 +245,7 @@ const other = computed<Party | null>(() => {
           name: r.display_name,
           kind: r.kind,
           memberId: r.member_id,
+          actorId: actorIdOf(r),
           ownerName: r.owner_name,
           mine: r.is_my_delegate,
           lastSeenAt: r.last_seen_at,
@@ -252,6 +260,7 @@ const other = computed<Party | null>(() => {
     name: r.display_name,
     kind: r.kind,
     memberId: r.member_id,
+    actorId: actorIdOf(r),
     ownerName: r.owner_name,
     mine: role.value === 'opener' && r.is_delegate_of_opener,
     lastSeenAt: r.last_seen_at,
@@ -307,6 +316,7 @@ const answer = useAnswerModels({
   courseId: props.courseId,
   name: () => (other.value?.kind === 'agent' ? other.value.name : null),
   memberId: () => (other.value?.kind === 'agent' ? other.value.memberId : null),
+  actorId: () => (other.value?.kind === 'agent' ? other.value.actorId : null),
   hosting,
   mine: () => role.value === 'opener' && !!other.value?.mine && hosting.value === 'runtime',
 })
@@ -721,6 +731,7 @@ function startAgain() {
   const r = view.value?.respondent
   if (!r) return
   emit('start', {
+    actor_id: r.actor_id,
     member_id: r.member_id,
     display_name: r.display_name,
     kind: r.kind,

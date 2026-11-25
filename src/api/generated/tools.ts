@@ -787,6 +787,28 @@ export interface AgentRuntimeAgentOut {
   status: string
 }
 
+/** agent_runtime.check_ask (read): For the site's agent runtime alone: whether a person signed in to it may ask an agent in a course now. The runtime knows the person by Core's assertion (its sub). Core applies conversation.ask's caller permission, course and seat liveness, agent kind, hosting and live-token, and addressing rules, without opening a conversation or writing a message. Every refusal, and every unknown actor, agent or course, returns may_ask false with no reason and no other information; in particular no model or provider is revealed. True means the question would be allowed, including one requiring confirmation. */
+export interface AgentRuntimeCheckAskIn {
+  /**
+   * the person signed in to the runtime: the sub of the assertion Core made for them
+   */
+  actor_id: string
+  /**
+   * the agent they would ask, seated in the course
+   */
+  agent_id: string
+  /**
+   * the course in which they would ask the agent
+   */
+  course_id: string
+}
+export interface AgentRuntimeCheckAskOut {
+  /**
+   * whether that person may ask that agent in that course now, by exactly the rules of conversation.ask; false, and nothing more, for any refusal or unknown id
+   */
+  may_ask: boolean
+}
+
 /** agent_runtime.check_owner (read): For the site's agent runtime alone: whether a person owns an agent, before the runtime does anything about it for them — hosting it, changing its settings, stopping it. The runtime knows the person by Core's assertion (its sub); this says whether they own the agent, and, if they do, the agent as agent_runtime.agent says it, with whether the runtime may host it (hostable: an mcp agent is not_runtime_hosted). Of anyone else's agent, or an id that is no agent's, it says owns false and nothing else. */
 export interface AgentRuntimeCheckOwnerIn {
   /**
@@ -2254,6 +2276,10 @@ export interface ConversationGetOut {
   pending_reply_action_id?: null | string
   respondent: {
     /**
+     * the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation
+     */
+    actor_id: string
+    /**
      * its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now
      */
     answer_level: string
@@ -2351,6 +2377,10 @@ export interface ConversationInboxOut {
         }
         pending_reply_action_id?: null | string
         respondent: {
+          /**
+           * the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation
+           */
+          actor_id: string
           /**
            * its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now
            */
@@ -2455,6 +2485,10 @@ export interface ConversationListOut {
         }
         pending_reply_action_id?: null | string
         respondent: {
+          /**
+           * the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation
+           */
+          actor_id: string
           /**
            * its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now
            */
@@ -2590,6 +2624,10 @@ export interface ConversationMessagesOut {
     }
     pending_reply_action_id?: null | string
     respondent: {
+      /**
+       * the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation
+       */
+      actor_id: string
       /**
        * its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now
        */
@@ -2877,6 +2915,10 @@ export interface ConversationRespondentsOut {
   respondents:
     | null
     | {
+        /**
+         * the agent's actor id, for the runtime's agent endpoints; this list contains only agents you may address
+         */
+        actor_id: string
         /**
          * autonomous: answers appear at once; pending_review: they appear and are reviewed after; confirm_required: each waits for a person's approval
          */
@@ -8746,6 +8788,7 @@ export interface ToolMap {
   'actor.suspend': { in: ActorSuspendIn; out: ActorSuspendOut; kind: 'write' }
   'actor.update': { in: ActorUpdateIn; out: ActorUpdateOut; kind: 'write' }
   'agent_runtime.agent': { in: AgentRuntimeAgentIn; out: AgentRuntimeAgentOut; kind: 'read' }
+  'agent_runtime.check_ask': { in: AgentRuntimeCheckAskIn; out: AgentRuntimeCheckAskOut; kind: 'read' }
   'agent_runtime.check_owner': { in: AgentRuntimeCheckOwnerIn; out: AgentRuntimeCheckOwnerOut; kind: 'read' }
   'agent_runtime.issue_token': { in: AgentRuntimeIssueTokenIn; out: AgentRuntimeIssueTokenOut; kind: 'write' }
   'agent_runtime.rendition_claim': { in: AgentRuntimeRenditionClaimIn; out: AgentRuntimeRenditionClaimOut; kind: 'ephemeral' }
@@ -8944,6 +8987,7 @@ export const TOOL_ROUTES: { readonly [K in ToolName]: ToolRoute } = {
   'actor.suspend': { method: 'POST', path: '/v1/actors/{actor_id}/suspend', kind: 'write' },
   'actor.update': { method: 'POST', path: '/v1/actors/{actor_id}', kind: 'write' },
   'agent_runtime.agent': { method: 'GET', path: '/v1/services/agent_runtime/agents/{agent_id}', kind: 'read' },
+  'agent_runtime.check_ask': { method: 'GET', path: '/v1/services/agent_runtime/actors/{actor_id}/courses/{course_id}/agents/{agent_id}/may-ask', kind: 'read' },
   'agent_runtime.check_owner': { method: 'GET', path: '/v1/services/agent_runtime/owners/{actor_id}/agents/{agent_id}', kind: 'read' },
   'agent_runtime.issue_token': { method: 'POST', path: '/v1/services/agent_runtime/agents/{agent_id}/token', kind: 'write' },
   'agent_runtime.rendition_claim': { method: 'POST', path: '/v1/services/agent_runtime/renditions/claim', kind: 'ephemeral' },

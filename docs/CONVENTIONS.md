@@ -1567,10 +1567,10 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   this" opens too. The line's and the first-time point's reader names come from the same Core
   `visible_to` list as the notice, however narrow it is; a person's old conversation does not repeat
   the dialog's reader heading. Where it goes follows how the agent is hosted. For the caller's own
-  agent the runtime's owner row gives the full model; for another agent `useAnswerModels` resolves
-  its Core agent UUID through `member.get` and calls the asker-facing privacy route, whose safe
-  labels name the primary and every fallback. A missing route or label, an old Core, or a failed
-  call keeps generic wording. On the school's plan an operator-hosted provider id
+  agent the runtime's owner row gives the full model; for another agent `useAnswerModels` reads
+  the respondent's Core `actor_id` from the conversation itself and calls the asker-facing privacy
+  route, whose safe labels name the primary and every fallback. A missing route or label, an old
+  Core without `actor_id`, or a failed call keeps generic wording; it never falls back to `member.get`. On the school's plan an operator-hosted provider id
   (`openai_compatible`, `vllm`, `ollama`, `lmstudio`) is never shown as a company: the school offer's
   real label names its own model server, or the words stay generic where there is no label. Nothing
   is deleted: a withdrawn message is kept (its files listed in an export, never held there), and a

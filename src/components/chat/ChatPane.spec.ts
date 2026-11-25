@@ -32,7 +32,7 @@ vi.mock('@/api/http', async (orig) => {
           ...(server.draft !== undefined ? { draft: server.draft } : {}),
         }
       if (tool === 'conversation.respondents') return { respondents: server.respondents }
-      if (tool === 'member.get') return { actor_id: 'core-agent-1' }
+      if (tool === 'member.get') throw new Error('member.get must not be called for provider privacy')
       throw new Error(`no answer for ${tool}`)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
@@ -216,6 +216,7 @@ function view(over: Partial<ConversationView> = {}): ConversationView {
     opener: { member_id: 'student', display_name: 'Chan Tai Man', kind: 'human' },
     respondent: {
       member_id: 'tutor',
+      ...({ actor_id: 'core-agent-1' } as const),
       display_name: 'Course tutor',
       kind: 'agent',
       role: 'assistant',
@@ -231,6 +232,7 @@ function view(over: Partial<ConversationView> = {}): ConversationView {
 
 /** The course tutor as conversation.respondents lists it, while it takes conversations in the site. */
 const tutorOffered: Respondent = {
+  actor_id: 'core-agent-1',
   member_id: 'tutor',
   display_name: 'Course tutor',
   kind: 'agent',
@@ -772,6 +774,7 @@ describe('ChatPane', () => {
   it('keeps the “AI” and whether it can be asked whole in its header, and says whose agent it is on hover', async () => {
     seat('student')
     const respondent: Respondent = {
+      actor_id: 'core-agent-1',
       member_id: 'mine',
       display_name: 'Introduction to Programming weekly revision and practice tutor',
       kind: 'agent',
@@ -799,6 +802,7 @@ describe('ChatPane', () => {
     writeAnswer = () => executed({ conversation_id: 'c2', message_id: 'm1' })
     const respondent: Respondent = {
       member_id: 'tutor',
+      ...({ actor_id: 'core-agent-1' } as const),
       display_name: 'Course tutor',
       kind: 'agent',
       role: 'assistant',
@@ -1074,6 +1078,18 @@ describe('ChatPane: who reads it, and where it goes', () => {
         (el) => el.textContent === 'Who can read this conversation',
       ),
     ).toHaveLength(1)
+  })
+
+  it('keeps generic wording on an older Core without respondent.actor_id, without member.get', async () => {
+    seat('student')
+    signedIn()
+    const respondent = { ...view().respondent }
+    delete (respondent as { actor_id?: string }).actor_id
+    server.view = view({ respondent })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(runtimeCalls).toEqual([])
+    expect(w.find('.chat-pane__privacy-text').text()).toContain('Course tutor sends it to its AI model’s provider.')
   })
 
   it('names another agent’s providers from the asker-facing privacy route, including its fallback', async () => {

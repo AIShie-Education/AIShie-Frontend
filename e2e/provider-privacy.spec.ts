@@ -1,6 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
 import { call, coursePath, demo, photograph, signIn } from './support'
 
+// Only the dedicated Core+Runtime job starts these services. The general
+// Playwright suite has no runtime and must not run this integration spec.
+test.skip(!process.env.E2E_RUNTIME_URL, 'requires the real Runtime started by scripts/ci-runtime.sh')
+
 // A real Core and the pinned agent runtime, both started by CI. The tutor is
 // hosted through the runtime API and given an OpenAI model with a fake key;
 // no paid model is called. The browser must learn the provider before the

@@ -191,6 +191,7 @@ start() {
     SSO_ALLOW_PRIVATE_ISSUERS=true
     # Exercise the school-zone contract in integration; unit tests cover unset.
     "SCHOOL_TIME_ZONE=${E2E_SCHOOL_TIME_ZONE:-Asia/Hong_Kong}"
+    "RUNTIME_AUDIENCES=$URL/runtime"
   )
   if [ "$mode" = binary ]; then
     # What it runs, as its command line reads once nohup has made way
@@ -228,10 +229,10 @@ start() {
     umask 077
     # E2E_ROOT_TOKEN is root's signed-in session, not an API token (see the
     # top of this script); the name stays, so that nothing reading it changes.
-    printf "export E2E_CORE_URL='%s'\nexport E2E_ROOT_TOKEN='%s'\nexport E2E_PASSWORD='%s'\n" "$URL" "$session" "$password" > "$DIR/env"
+    printf "export E2E_CORE_URL='%s'\nexport E2E_ROOT_TOKEN='%s'\nexport E2E_PASSWORD='%s'\nexport E2E_RUNTIME_AUDIENCE='%s'\n" "$URL" "$session" "$password" "$URL/runtime" > "$DIR/env"
   )
   if in_actions; then
-    printf 'E2E_CORE_URL=%s\nE2E_ROOT_TOKEN=%s\nE2E_PASSWORD=%s\n' "$URL" "$session" "$password" >> "$GITHUB_ENV"
+    printf 'E2E_CORE_URL=%s\nE2E_ROOT_TOKEN=%s\nE2E_PASSWORD=%s\nE2E_RUNTIME_AUDIENCE=%s\n' "$URL" "$session" "$password" "$URL/runtime" >> "$GITHUB_ENV"
   fi
   echo "Core is up on $URL, on the database $dbname; root's session and password are in $DIR/env:"
   echo "  . $DIR/env"

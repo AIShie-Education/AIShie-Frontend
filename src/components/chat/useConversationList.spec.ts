@@ -46,6 +46,7 @@ function conv(n: number, lastAt: string | null = null, respondent = 'r'): Conver
     last_message_at: lastAt,
     opener: { member_id: 'o', display_name: 'Opener', kind: 'human' },
     respondent: {
+      actor_id: `${respondent}-actor`,
       member_id: respondent,
       display_name: 'Tutor',
       kind: 'agent',

@@ -27,6 +27,7 @@ const c1: ConversationView = {
   last_author_member_id: 'tutor',
   opener: { member_id: 'me-k1', display_name: 'Ada', kind: 'human' },
   respondent: {
+    actor_id: 'core-agent-1',
     member_id: 'tutor',
     display_name: 'Course tutor',
     kind: 'agent',
@@ -110,6 +111,7 @@ const Passthrough = (name: string) =>
 const View = { render: () => null }
 
 const tutor: Respondent = {
+  actor_id: 'core-agent-1',
   member_id: 'tutor',
   display_name: 'Course tutor',
   kind: 'agent',

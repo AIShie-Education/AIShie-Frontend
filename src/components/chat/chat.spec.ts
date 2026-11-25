@@ -63,6 +63,7 @@ function view(
     created_at: '2026-09-26T11:00:00Z',
     opener: { member_id: 'opener', display_name: 'Chan Tai Man', kind: 'human' },
     respondent: {
+      actor_id: 'core-agent-1',
       member_id: 'agent',
       display_name: 'Course tutor',
       kind: 'agent',
