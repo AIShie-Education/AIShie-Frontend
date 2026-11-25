@@ -398,7 +398,7 @@ async function save() {
 }
 .peer-form__criterion {
   padding: 8px 0 4px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-form__criterion:first-child {
   border-top: 0;

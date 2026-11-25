@@ -28,14 +28,14 @@ describe('StatusTag', () => {
     expect(tag('submissionState', 'draft').classes()).toContain('el-tag--info')
   })
 
-  it('draws every state as a tinted pill, never an outline or a dark one', () => {
+  it('draws every state on its tint, never an outline or a solid one', () => {
     for (const [vocab, value] of [
       ['actionStatus', 'executed'],
       ['memberStatus', 'paused'],
       ['courseStatus', 'archived'],
     ] as const) {
       const t = tag(vocab, value)
-      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--pill', 'el-tag--light']))
+      expect(t.classes()).toEqual(expect.arrayContaining(['app-tag--state', 'el-tag--light']))
     }
   })
 
@@ -62,6 +62,28 @@ describe('StatusTag', () => {
     expect(confirm.classes()).toContain('is-confirm_required')
     expect(confirm.classes()).not.toContain('el-tag--warning')
     expect(confirm.text()).toBe('Needs approval')
+  })
+
+  it('draws autonomous as a label beside its bolt, never as a solid tag, its words unchanged', () => {
+    for (const [locale, text] of [
+      ['en', 'Answers at once'],
+      ['zh-Hant', '即時回覆'],
+      ['zh-Hans', '即时回复'],
+    ] as const) {
+      setLocale(locale)
+      const t = tag('answerLevel', 'autonomous')
+      expect(t.classes()).toEqual(expect.arrayContaining(['app-level-tag', 'is-autonomous']))
+      // No effect of a solid tag (a count's) and no tone of an outcome: main.css draws its frame.
+      expect(t.classes()).not.toContain('el-tag--dark')
+      expect(t.classes()).not.toContain('app-tag--count')
+      expect(t.classes()).toContain('el-tag--info')
+      expect(t.find('svg.level-icon path').exists()).toBe(true)
+      expect(t.text()).toBe(text)
+    }
+    // The other levels keep marks of their own: an eye for pending_review, not the bolt.
+    const review = tag('answerLevel', 'pending_review')
+    expect(review.classes()).toContain('is-pending_review')
+    expect(review.find('svg.level-icon circle').exists()).toBe(true)
   })
 
   it('shows a category as an identity: outlined, with its icon, in no colour of an outcome', () => {

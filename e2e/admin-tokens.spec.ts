@@ -122,7 +122,9 @@ test.describe('an agent’s tokens on its admin page', () => {
     expect(await meStatus(secondToken)).toBe(200)
     const agent = await call(root().token, 'GET', `/v1/actors/${agentId}`)
     expect(agent.body.result.status).toBe('active')
-    await expect(page.locator('.page-header')).toContainText('Active')
+    // Active, the usual standing, is said in the facts alone, not again beside the name.
+    await expect(page.locator('.actor__desc')).toContainText('Active')
+    await expect(page.locator('.page-header')).not.toContainText('Active')
   })
 })
 

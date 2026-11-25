@@ -45,9 +45,15 @@ const NAME_WIDTH = 208
  * after it, and a draft its flag, which together take 119 px for a score of
  * two places in the hundreds ("100.25 ± 草稿"), where another assignment's
  * cell has room for 87; it has 123, a little to spare for another machine's
- * fonts.
+ * fonts. A total's is as wide as its heading needs: a component's name, in
+ * the strong weight, then 總分 or "total" ("Assignments總分" at 14 px in
+ * Chinese), whose word must fit a line whole, never "Assignment|s", sorted
+ * by or not. Its title keeps the sort arrow's room beside it either way (the
+ * style, .matrix__head.is-total), and so has 96 px of the 128: "Assignments"
+ * is 85 px in the strong weight, "Presentations" 91.
  */
-const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? 96 : c.groupWork ? 140 : 104)
+const TOTAL_WIDTH = 128
+const widthOf = (c: MatrixColumn) => (c.kind === 'total' ? TOTAL_WIDTH : c.groupWork ? 140 : 104)
 const tableWidth = computed(() => NAME_WIDTH + props.columns.reduce((s, c) => s + widthOf(c), 0))
 
 // ---------------------------------------------------------------------------
@@ -439,10 +445,13 @@ function meanHint(col: MatrixColumn): string {
 
 <style scoped>
 /*
- * The table scrolls in a box of its own, so that its header row stays at
+ * The table scrolls in a place of its own, so that its header row stays at
  * the top and the names at the left as it scrolls either way, and the
  * averages at its foot. Rows are a fixed 44 px, which the drawing of only
- * the rows near the screen relies on.
+ * the rows near the screen relies on. It is drawn in rules alone, as every
+ * table is: a rule between rows, a stronger one under the header and above
+ * the foot, and one at the right of the names held in place; no frame
+ * around it and no grid of cells.
  */
 .matrix {
   position: relative;
@@ -451,8 +460,6 @@ function meanHint(col: MatrixColumn): string {
   overflow: auto;
   /* Until it is measured (fit): about what is above it in a window of 1280. */
   max-height: max(360px, calc(100dvh - 440px));
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
   overscroll-behavior: contain;
 }
 .matrix:focus-visible {
@@ -469,9 +476,8 @@ function meanHint(col: MatrixColumn): string {
 .matrix__table th,
 .matrix__table td {
   padding: 0 8px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
-  border-right: 1px solid var(--el-border-color-extra-light);
-  background: var(--app-card, var(--el-bg-color));
+  border-bottom: var(--app-rule);
+  background: var(--app-page);
   box-sizing: border-box;
 }
 .matrix__row {
@@ -499,7 +505,7 @@ function meanHint(col: MatrixColumn): string {
   padding-bottom: 6px;
   text-align: left;
   font-weight: 500;
-  border-bottom: 1px solid var(--el-border-color);
+  border-bottom: 1px solid var(--app-line-strong);
 }
 .matrix__table tbody th,
 .matrix__table tfoot th {
@@ -508,19 +514,19 @@ function meanHint(col: MatrixColumn): string {
   z-index: 1;
   text-align: left;
   font-weight: 400;
-  border-right: 1px solid var(--el-border-color);
+  border-right: 1px solid var(--app-line-strong);
 }
 .matrix__table thead th.matrix__corner {
   left: 0;
   z-index: 3;
-  border-right: 1px solid var(--el-border-color);
+  border-right: 1px solid var(--app-line-strong);
 }
 .matrix__table tfoot th,
 .matrix__table tfoot td {
   position: sticky;
   bottom: 0;
   height: 40px;
-  border-top: 1px solid var(--el-border-color);
+  border-top: 1px solid var(--app-line-strong);
   border-bottom: 0;
   background: var(--el-fill-color-light);
   font-weight: var(--app-weight-strong);
@@ -556,8 +562,10 @@ function meanHint(col: MatrixColumn): string {
 .matrix__sort:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 1px;
-  border-radius: 2px;
+  border-radius: var(--app-radius);
 }
+/* A heading's title, on two lines at most, broken between words; only a word longer than a whole line is broken
+   inside, which would otherwise run on under the next column. */
 .matrix__head-title {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -592,7 +600,11 @@ function meanHint(col: MatrixColumn): string {
 .matrix__open:focus-visible {
   color: var(--el-color-primary);
 }
+/* A total's title keeps the sort arrow's room (an icon of 1em, after a 2 px gap) beside it whether or not its column
+   is the one sorted by, so that sorting by it breaks its heading where it was broken, never inside a word that fitted:
+   a component's name has 96 px of the 128 either way. */
 .matrix__head.is-total .matrix__head-title {
+  max-width: calc(100% - 1em - 2px);
   font-weight: var(--app-weight-strong);
 }
 /* Totals stand apart from the work they add up: a tint, and a heavier figure. */
@@ -625,7 +637,7 @@ function meanHint(col: MatrixColumn): string {
 .matrix__status {
   flex-shrink: 0;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 16px;
   border: 1px solid currentColor;
@@ -711,7 +723,7 @@ function meanHint(col: MatrixColumn): string {
   display: inline-block;
   overflow: clip;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 17px;
   white-space: nowrap;

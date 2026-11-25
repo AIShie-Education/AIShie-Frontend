@@ -10,11 +10,10 @@ export default {
     newTip: '开始新对话',
     history: '过往对话',
     close: '关闭对话面板',
-    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
-    minimize: '最小化对话窗口',
-    // Its left edge and its top, which resize it.
-    width: '对话窗口宽度',
-    height: '对话窗口高度',
+    // The pane's head row: minimized, it opens again on what it showed; closed, on a new conversation.
+    minimize: '最小化对话',
+    // Its left edge, which resizes it.
+    width: '对话宽度',
     backToHistory: '返回过往对话',
     backToAgents: '返回智能体列表',
     pickTitle: '向智能体提问',
@@ -46,6 +45,7 @@ export default {
     empty: '这里暂时没有可以回答你问题的智能体。',
     offlineHint: '这个智能体目前似乎没有在运行，回复可能需要一段时间。',
     sharedHint: '它也会回答其他成员，会记住每个人写给它的内容，并可能转述给他们。',
+    sharedHintAll: '课程智能体也会回答其他成员，会记住每个人写给它们的内容，并可能转述给他们。',
   },
   between: '{opener} → {respondent}',
   messagesLabel: '消息',

@@ -563,42 +563,32 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
 <style scoped>
 .event-item {
   /* A category is told by its icon's shape, never by a hue: hues are for
-     outcomes (docs/CONVENTIONS.md, "Colour"). What is new is indigo. */
+     outcomes (docs/CONVENTIONS.md, "Colour"). What is new is indigo: its
+     line at the row's left, square-ended, and its kind's glyph. The row is
+     a row of the list, between its rules: no box and no ground. */
   --event-accent: var(--app-ink-3);
   display: flex;
   gap: 12px;
-  padding: 12px 12px 12px 10px;
-  border-radius: var(--app-radius-item);
-  border-left: 3px solid transparent;
+  padding: var(--app-space-md) var(--app-space-sm) var(--app-space-md) var(--app-space-md);
   min-width: 0;
 }
 .event-item.is-fresh {
   --event-accent: var(--app-indigo);
-  background: var(--el-color-primary-light-9);
-  border-left-color: var(--el-color-primary);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
 }
 .event-item.is-compact {
-  padding: 8px 4px;
+  padding: var(--app-space-sm) var(--app-space-xs) var(--app-space-sm) var(--app-space-sm);
   gap: 10px;
 }
+/* The kind's glyph alone, at the text's size: no circle behind it. */
 .event-item__icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  margin-top: 2px;
   color: var(--event-accent);
-  /* A category's ground, the neutral pill's: the ground's second shade in the
-     light theme; in the dark one a step above the card, from which the second
-     shade, just below it, hardly stands out. */
-  background: var(--app-neutral-bg);
   font-size: var(--app-text-lg);
 }
 .event-item.is-compact .event-item__icon {
-  width: 28px;
-  height: 28px;
   font-size: var(--app-text-md);
 }
 .event-item__body {
@@ -626,7 +616,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   align-items: center;
   gap: 8px;
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .event-item__who {
   display: flex;
@@ -669,7 +659,7 @@ const actionTo = computed<RouteLocationRaw | null>(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   min-width: 0;
   overflow-wrap: anywhere;
 }

@@ -126,21 +126,22 @@ const forbidden = computed(() => props.forbidden || !!props.error?.isForbidden)
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
+.sub-grades > li {
+  border-bottom: var(--app-rule);
+}
+/* A grade, a row between rules. */
 .sub-grades__row {
   display: flex;
   align-items: center;
   gap: 8px 14px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
+  padding: var(--app-space-sm);
   color: inherit;
   text-decoration: none;
 }
 .sub-grades__row:hover {
-  border-color: var(--el-color-primary-light-5);
   background: var(--el-fill-color-light);
 }
 .sub-grades__row.is-superseded {

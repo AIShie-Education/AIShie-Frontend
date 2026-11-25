@@ -28,7 +28,6 @@ const ICON: Record<AgentHosting, string> = { runtime: 'Monitor', mcp: 'Connectio
         v-for="h in AGENT_HOSTINGS"
         :key="h"
         :value="h"
-        border
         class="hosting-choice__option"
         :class="`hosting-choice__option--${h}`"
       >
@@ -51,19 +50,21 @@ const ICON: Record<AgentHosting, string> = { runtime: 'Monitor', mcp: 'Connectio
   position: relative;
   width: 100%;
 }
+/* The two ways an agent runs: plain radios on rows between rules, not a box each. */
 .hosting-choice__options {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   width: 100%;
+  border-top: var(--app-rule);
 }
 .hosting-choice__option {
   height: auto;
   margin: 0;
-  padding: 10px 14px;
+  padding: 10px 0;
   align-items: flex-start;
   white-space: normal;
+  border-bottom: var(--app-rule);
 }
 .hosting-choice__option :deep(.el-radio__input) {
   margin-top: 3px;
@@ -88,9 +89,10 @@ const ICON: Record<AgentHosting, string> = { runtime: 'Monitor', mcp: 'Connectio
   font-weight: normal;
   color: var(--el-text-color-secondary);
 }
-/* Left unchosen in a form that asks for it: both choices say so. */
+/* Left unchosen in a form that asks for it: both choices say so, a red line at their left. */
 .el-form-item.is-error .hosting-choice__option {
-  border-color: var(--el-color-danger);
+  padding-left: var(--app-space-md);
+  box-shadow: inset 3px 0 0 var(--el-color-danger);
 }
 .hosting-choice__fixed {
   display: flex;

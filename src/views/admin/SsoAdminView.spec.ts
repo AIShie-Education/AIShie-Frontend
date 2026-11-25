@@ -137,7 +137,7 @@ describe('the list of providers', () => {
     ]
     for (const [locale, status, why] of [
       ['en', 'Issuer not public', 'which the server reaches only if its operator allows it'],
-      ['zh-Hant', '簽發者位址非公開', '除非伺服器營運者允許'],
+      ['zh-Hant', '簽發者地址非公開', '除非伺服器營運者允許'],
       ['zh-Hans', '颁发者地址非公开', '除非服务器运维者允许'],
     ] as const) {
       const w = await page(locale)

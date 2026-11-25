@@ -206,7 +206,7 @@ function entryText(e: SheetEntry): string {
 .peer-proposal__table th,
 .peer-proposal__table td {
   padding: 6px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   text-align: left;
 }
 .peer-proposal__table thead th {

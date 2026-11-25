@@ -26,6 +26,17 @@ describe('the element-look lint rule', () => {
     expect(await problems('<el-empty />', 'src/components/AsyncState.vue')).toHaveLength(1)
   })
 
+  it('refuses Element Plus’s result anywhere but AppResult, whatever its icon, and points to AppResult', async () => {
+    for (const result of [
+      '<el-result icon="warning" title="Not found" />',
+      '<el-result icon="error" :title="t(\'x\')"><template #extra><el-button>Retry</el-button></template></el-result>',
+      '<ElResult title="Done" />',
+    ])
+      expect(await problems(result), result).toEqual([expect.stringContaining('AppResult')])
+    expect(await problems('<el-result title="x" />', 'src/components/AsyncState.vue')).toHaveLength(1)
+    expect(await problems('<el-result :sub-title="subTitle"><template #title>x</template></el-result>', 'src/components/AppResult.vue')).toEqual([])
+  })
+
   it('refuses an explanation in an el-alert, of type info or none, and points to AppNote; lets a warning or an error be one', async () => {
     for (const alert of ['<el-alert type="info" title="x" />', '<el-alert title="x" :closable="false" show-icon />'])
       expect(await problems(alert)).toEqual([expect.stringContaining('AppNote')])
@@ -95,5 +106,40 @@ describe('the element-look lint rule', () => {
   it('lets AppTag, which draws every tag, use one', async () => {
     expect(await problems('<el-tag>x</el-tag>', 'src/components/AppTag.vue')).toEqual([])
     expect(await problems('<AppTag tone="wait">x</AppTag>')).toEqual([])
+  })
+
+  it('refuses an outlined, pill or round button, written or bound, and lets a solid one or words be', async () => {
+    for (const button of [
+      '<el-button plain>x</el-button>',
+      '<el-button type="danger" plain size="small">Revoke</el-button>',
+      '<el-button type="primary" :plain="true">x</el-button>',
+      '<el-button round>x</el-button>',
+      '<el-button text circle aria-label="More"><el-icon /></el-button>',
+      '<ElButton circle aria-label="Next" />',
+      '<component is="el-button" plain>x</component>',
+    ])
+      expect(await problems(button), button).toEqual([expect.stringContaining('text button')])
+    for (const button of [
+      '<el-button type="primary">Publish</el-button>',
+      '<el-button>Cancel</el-button>',
+      '<el-button type="primary" text>Approve</el-button>',
+      '<el-button type="danger" text>Archive</el-button>',
+      '<el-button link type="primary">Details</el-button>',
+      '<el-button text aria-label="More"><el-icon /></el-button>',
+      '<el-button :plain="false">x</el-button>',
+    ])
+      expect(await problems(button), button).toEqual([])
+  })
+
+  it('refuses a bordered checkbox or radio, and an el-card, anywhere', async () => {
+    expect(await problems('<el-checkbox v-model="on" label="Show archived" border />')).toEqual([
+      expect.stringContaining('checkbox'),
+    ])
+    expect(await problems('<el-radio value="a" border>A</el-radio>')).toEqual([expect.stringContaining('radio')])
+    expect(await problems('<ElRadio value="a" :border="wide">A</ElRadio>')).toHaveLength(1)
+    expect(await problems('<el-checkbox v-model="on" label="Show archived" />')).toEqual([])
+    expect(await problems('<el-radio value="a">A</el-radio>')).toEqual([])
+    expect(await problems('<el-card>x</el-card>')).toEqual([expect.stringContaining('.app-card')])
+    expect(await problems('<el-card>x</el-card>', 'src/components/SomeCard.vue')).toHaveLength(1)
   })
 })

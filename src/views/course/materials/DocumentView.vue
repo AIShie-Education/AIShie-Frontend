@@ -500,7 +500,7 @@ function noteSource(): PrintRequest {
         <el-button
           v-if="canWrite && active"
           type="danger"
-          plain
+          text
           :disabled="writeDisabled"
           :loading="archiver.pending.value"
           @click="archive"
@@ -511,7 +511,7 @@ function noteSource(): PrintRequest {
         <el-button
           v-if="canUnarchive"
           type="primary"
-          plain
+          text
           :disabled="!course.writable"
           :loading="unarchiver.pending.value"
           @click="unarchive"
@@ -527,7 +527,7 @@ function noteSource(): PrintRequest {
           size="default"
         />
         <el-tooltip v-if="canPurge" :content="t('materials.document.purge.adminOnly')" placement="bottom">
-          <el-button type="danger" plain @click="openPurge(null)">
+          <el-button type="danger" text @click="openPurge(null)">
             <el-icon><Delete /></el-icon>
             <span>{{ t('materials.document.actions.purge') }}</span>
           </el-button>
@@ -689,7 +689,14 @@ function noteSource(): PrintRequest {
                 v-else
                 :text="showVersions ? t('materials.document.emptyDoc') : t('materials.document.noVersion')"
               >
-                <el-button v-if="canWrite && active" type="primary" :disabled="writeDisabled" @click="openVersion()">
+                <!-- The header's New version is the page's one solid button; this is the same action, as words. -->
+                <el-button
+                  v-if="canWrite && active"
+                  type="primary"
+                  text
+                  :disabled="writeDisabled"
+                  @click="openVersion()"
+                >
                   {{ t('materials.document.addFirst') }}
                 </el-button>
               </AppEmpty>
@@ -754,7 +761,6 @@ function noteSource(): PrintRequest {
               <template v-else-if="doc.kind === 'submission' || doc.kind === 'feedback'">
                 <p class="doc-side__hint doc-side__rules">{{ t(`materials.document.owned.${doc.kind}`) }}</p>
                 <router-link :to="back" class="doc-side__owner">
-                  <el-icon><Right /></el-icon>
                   {{
                     doc.kind === 'submission'
                       ? t('materials.document.owned.openSubmission')
@@ -827,10 +833,9 @@ function noteSource(): PrintRequest {
 .doc-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 16px;
 }
 /* Two columns while the text keeps 420 px or more beside the 320 px one. */
-@container (max-width: 759px) {
+@container (max-width: 775px) {
   .doc-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -868,7 +873,7 @@ function noteSource(): PrintRequest {
   gap: 8px;
   padding-bottom: 12px;
   margin-bottom: 16px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .doc-content__seq {
@@ -906,9 +911,7 @@ function noteSource(): PrintRequest {
   margin: 12px 0 0;
 }
 .doc-side__owner {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
   margin-top: 8px;
   font-size: var(--app-text-sm);
 }

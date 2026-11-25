@@ -41,13 +41,12 @@ const course = useCourseStore()
 const session = useSessionStore()
 // Role and status go under the name, and the preset and dates are left out
 // (they are on the member's page), where the page is narrower than 720 px (the
-// list's toolbar 669 px or less), by its own width, not the window's: the side
+// list's toolbar 719 px or less), by its own width, not the window's: the side
 // bar takes from it. Wider, every column, the table scrolling sideways where
 // they do not all fit.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 669)
+const narrow = useContainerNarrow(toolbar, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
-useTableRelayout(tableRef, narrow)
 const presets = usePresets()
 
 const PAGE = 100
@@ -90,6 +89,16 @@ const rows = computed(() =>
     (m) => !kind.value || (kind.value === 'agent' ? m.kind === 'agent' : m.kind !== 'agent'),
   ),
 )
+/**
+ * Whether any row's state is not the usual one (active, and not past its
+ * end): only then is there a Status column. A column that says Active on
+ * every row says nothing (docs/CONVENTIONS.md, "Tags").
+ */
+const statusVaries = computed(() =>
+  rows.value.some((m) => m.status !== 'active' || isExpired(m.expires_at)),
+)
+// The table is laid out again as its columns change: by its width, and as the Status column comes and goes.
+useTableRelayout(tableRef, [narrow, statusVaries])
 // member.list has no kind filter, so People and Agents are picked out of the
 // pages loaded so far. Nobody of that kind among them says nothing about the
 // pages not yet loaded: then the empty state says so and offers the rest.
@@ -243,7 +252,7 @@ function rowClass({ row }: { row: MemberSummary }) {
           <el-option value="" :label="t('members.filters.anyRole')" />
           <el-option v-for="r in ROLES" :key="r" :value="r" :label="t(`enums.role.${r}`)" />
         </el-select>
-        <el-checkbox v-model="includeRemoved" :label="t('members.filters.includeRemoved')" border />
+        <el-checkbox v-model="includeRemoved" :label="t('members.filters.includeRemoved')" />
       </div>
 
       <AsyncState
@@ -313,7 +322,12 @@ function rowClass({ row }: { row: MemberSummary }) {
                  padding, and the cell's ellipsis stood after it as a clipped dot. -->
             <template #default="{ row }"><RoleTag :member="row" no-icon /></template>
           </el-table-column>
-          <el-table-column v-if="!narrow" prop="status" :label="t('members.columns.status')" min-width="100">
+          <el-table-column
+            v-if="!narrow && statusVaries"
+            prop="status"
+            :label="t('members.columns.status')"
+            min-width="100"
+          >
             <template #default="{ row }">
               <div class="members__tags">
                 <StatusTag vocab="memberStatus" :value="row.status" />
@@ -477,9 +491,6 @@ function rowClass({ row }: { row: MemberSummary }) {
 @media (max-width: 600px) {
   .members__role {
     width: 100%;
-  }
-  .app-card {
-    padding: 12px;
   }
 }
 </style>

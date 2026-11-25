@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // What is under way, as an agent chat says it while it works: a small glyph
-// turning (ChatSpinner), what it is doing ("Thinking…"), and how long it
-// has been at it, in seconds from `since` (a time on Core's clock), then
-// minutes and seconds. A note may follow (its answers wait for approval).
+// turning (ChatSpinner), what it is doing ("Thinking…"), in the third ink
+// and still, and how long it has been at it, in seconds from `since` (a
+// time on Core's clock), then minutes and seconds. A note may follow (its answers wait for approval).
 // The seconds are for the eye: a screen reader is told the words, once, not
 // every tick.
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -59,21 +59,9 @@ const elapsed = computed(() => {
   line-height: var(--app-lh-ui);
   color: var(--app-ink-3);
 }
-/* The words, with a light passing over them, as an agent chat's working line. */
+/* The words, in the third ink, still: what it is doing and, after them, how long. */
 .chat-status__label {
-  background: linear-gradient(
-    90deg,
-    var(--app-ink-3) 0%,
-    var(--app-ink-3) 35%,
-    var(--app-ink) 50%,
-    var(--app-ink-3) 65%,
-    var(--app-ink-3) 100%
-  );
-  background-size: 250% 100%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  color: transparent;
-  animation: chat-status-shine 2.4s linear infinite;
+  color: var(--app-ink-3);
 }
 .chat-status__time {
   font-variant-numeric: tabular-nums;
@@ -82,20 +70,5 @@ const elapsed = computed(() => {
 .chat-status__sub {
   font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
-}
-@keyframes chat-status-shine {
-  from {
-    background-position: 100% 0;
-  }
-  to {
-    background-position: -150% 0;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .chat-status__label {
-    animation: none;
-    background: none;
-    color: var(--app-ink-3);
-  }
 }
 </style>

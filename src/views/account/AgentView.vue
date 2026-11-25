@@ -188,11 +188,9 @@ function onBrought() {
         </template>
       </template>
       <template v-if="agent">
-        <el-button @click="renaming = true">
-          <el-icon><Edit /></el-icon>
-          <span>{{ t('agents.detail.rename') }}</span>
-        </el-button>
-        <el-button v-if="standing === 'active'" type="danger" plain :loading="suspendW.pending.value" @click="suspend">
+        <!-- Suspending, which is destructive, comes first, at the row's far end from the one solid button and
+             never beside it; reactivating takes its place. -->
+        <el-button v-if="standing === 'active'" type="danger" text :loading="suspendW.pending.value" @click="suspend">
           <el-icon><CircleClose /></el-icon>
           <span>{{ t('agents.detail.suspend') }}</span>
         </el-button>
@@ -205,7 +203,7 @@ function onBrought() {
           <span>
             <el-button
               type="primary"
-              plain
+              text
               :disabled="standing !== 'suspendedByMe'"
               :loading="reactivateW.pending.value"
               @click="reactivate"
@@ -215,6 +213,10 @@ function onBrought() {
             </el-button>
           </span>
         </el-tooltip>
+        <el-button @click="renaming = true">
+          <el-icon><Edit /></el-icon>
+          <span>{{ t('agents.detail.rename') }}</span>
+        </el-button>
         <el-button type="primary" :disabled="suspended" @click="bringOpen = true">
           <el-icon><Plus /></el-icon>
           <span>{{ t('agents.bring.open') }}</span>
@@ -345,7 +347,6 @@ function onBrought() {
 .agent-view__grid {
   display: grid;
   grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 16px;
 }
 .agent-view__desc :deep(.el-descriptions__label) {
   white-space: nowrap;
@@ -356,11 +357,17 @@ function onBrought() {
 .agent-view__fixed {
   margin-top: 2px;
 }
+/* Sections as far apart as anywhere: 32 px (24 on a phone). */
 .agent-view__section {
-  margin-top: 16px;
+  margin-top: var(--app-space-2xl);
+}
+@media (max-width: 600px) {
+  .agent-view__section {
+    margin-top: var(--app-space-xl);
+  }
 }
 /* Two columns (3 : 2) while the main one keeps 420 px or more. */
-@container (max-width: 719px) {
+@container (max-width: 735px) {
   .agent-view__grid {
     grid-template-columns: minmax(0, 1fr);
   }

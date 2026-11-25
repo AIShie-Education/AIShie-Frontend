@@ -164,7 +164,7 @@ test.describe('the account menu', () => {
     await page.keyboard.press('Enter')
     const dialog = page.locator('.about-dialog')
     await expect(dialog).toBeVisible()
-    await expect(dialog).toContainText('The LMS for the agent era')
+    await expect(dialog).toContainText('AI agents as course members')
     // Modal: its overlay is what lies over the side bar, the header and the page, not they over it.
     const url = page.url()
     for (const [x, y] of [

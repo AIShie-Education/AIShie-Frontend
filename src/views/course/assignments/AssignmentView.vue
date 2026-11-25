@@ -361,7 +361,7 @@ function refresh() {
           <span>
             <el-button
               type="danger"
-              plain
+              text
               :disabled="!course.writable || started || unpublishProposed"
               :loading="unpublishW.pending.value"
               @click="unpublish"
@@ -442,7 +442,6 @@ function refresh() {
                   class="assignment-view__doclink"
                 >
                   {{ t('assignments.detail.openDocument') }}
-                  <el-icon><ArrowRight /></el-icon>
                 </router-link>
               </h2>
               <p v-if="!assignment.instructions_document_id" class="app-muted assignment-view__none">
@@ -657,7 +656,6 @@ function refresh() {
 .assignment-view__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 16px;
 }
 .assignment-view__doclink {
   display: inline-flex;
@@ -679,7 +677,7 @@ function refresh() {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .assignment-view__facts {
@@ -712,7 +710,7 @@ function refresh() {
   margin-top: 12px;
 }
 /* Two columns while the main one keeps 420 px or more beside the 300 px one. */
-@container (max-width: 739px) {
+@container (max-width: 755px) {
   .assignment-view__layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -723,10 +721,5 @@ function refresh() {
 }
 .assignment-view__gone-at {
   margin: 0 0 12px;
-}
-@media (max-width: 640px) {
-  .app-card {
-    padding: 14px;
-  }
 }
 </style>

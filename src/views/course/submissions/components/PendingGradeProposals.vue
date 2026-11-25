@@ -2,11 +2,11 @@
 // Grades proposed for this work that wait for someone to approve them. Each
 // links to its action, where a decider approves or rejects it and its
 // proposer follows it; beside it, what approving it would come to, as far as
-// the grades that can be read show.
+// the grades that can be read show. Every one of them waits, as the heading
+// says and the amber line marks: no tag says it again on each row.
 import { useI18n } from 'vue-i18n'
 import type { ActionSummary, Decimal, GradeSummary } from '@/api/types'
 import MemberName from '@/components/MemberName.vue'
-import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { formatDecimal, formatPercent } from '@/utils/format'
 import { proposalFate, proposedOutOf, proposedScore } from './proposals'
@@ -40,7 +40,6 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
               / {{ formatDecimal(outOf(p), 4) }}{{ t('common.sep') }}{{ formatPercent(proposedScore(p), outOf(p)) }}
             </span>
           </div>
-          <StatusTag vocab="actionStatus" :value="p.status" />
           <div class="pending-proposals__meta">
             <span>
               <span class="app-muted">{{ t('submissions.proposals.proposer') }}</span>
@@ -82,22 +81,25 @@ function outOf(p: ActionSummary): Decimal | null | undefined {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
+.pending-proposals__list > li {
+  border-bottom: var(--app-rule);
+}
+/* A grade proposed and waiting: a row between rules, the amber line of what
+   waits at its left, not an amber box. */
 .pending-proposals__row {
   display: flex;
   align-items: center;
   gap: 8px 14px;
   flex-wrap: wrap;
-  padding: 10px 12px;
-  border: 1px dashed var(--el-color-warning-light-5);
-  border-radius: var(--app-radius-item);
-  background: var(--el-color-warning-light-9);
+  padding: var(--app-space-sm) var(--app-space-sm) var(--app-space-sm) var(--app-space-md);
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
   color: inherit;
   text-decoration: none;
 }
 .pending-proposals__row:hover {
-  border-color: var(--el-color-warning);
+  background: var(--el-fill-color-light);
 }
 .pending-proposals__score {
   display: flex;

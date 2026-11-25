@@ -12,7 +12,7 @@
 // takes, and that it cannot be undone (DeletionAtStake), wherever it is
 // decided from; approving it is confirmed in solid red, the last step of
 // what cannot be taken back.
-import { computed, nextTick, ref, useId, useTemplateRef } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, useId, useTemplateRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage, ElNotification } from 'element-plus'
 import StatusTag from '@/components/StatusTag.vue'
@@ -34,10 +34,29 @@ const props = withDefaults(
     size?: 'small' | 'default'
     /** The caller's own decision on this, waiting for approval: nothing more to do here meanwhile. */
     waiting?: string | null
+    /**
+     * Whether the view's one solid button is here: its Approve (or Reviewed)
+     * while no decision is open, its form's confirm while one is. In a list
+     * whose items all carry the same decision (the approvals queue), only
+     * one item leads: the first, the next to decide in a list kept oldest
+     * first, or the one whose decision was opened last. The others' Approve
+     * and confirm are the same actions in indigo words.
+     */
+    lead?: boolean
   }>(),
-  { size: 'default' },
+  { size: 'default', lead: true },
 )
-const emit = defineEmits<{ done: [Done] }>()
+const emit = defineEmits<{
+  done: [Done]
+  /** A decision's form opened (true) or closed (false): the list it is in moves its lead here, and back. */
+  choosing: [open: boolean]
+  /**
+   * Whether the reader can approve it here (or mark it reviewed), as soon as that is known and whenever it
+   * changes: not when it is their own party's, theirs to decide elsewhere, their own decision on it waits for
+   * approval, or the course is archived. The list it is in leads with the first that can be.
+   */
+  decidable: [can: boolean]
+}>()
 const { t, locale } = useI18n()
 const course = useCourseStore()
 const specs = useSpecs()
@@ -87,6 +106,11 @@ const blockedText = computed(() => {
   const key = b === 'ownAgentLevel' && props.mode === 'review' ? 'ownAgentLevelReview' : b
   return t(`actions.decision.blocked.${key}`, { who: deciders.value })
 })
+watch(
+  () => !blocked.value && !approveBlocked.value,
+  (can) => emit('decidable', can),
+  { immediate: true },
+)
 /** The caller's own agent's: decided as its owner, at once (by_owner). */
 const asOwner = computed(() => rules.isOwnAgent(props.action))
 const needsApproval = computed(() => course.needsApproval('action_decide') && !asOwner.value)
@@ -94,6 +118,13 @@ const needsApproval = computed(() => course.needsApproval('action_decide') && !a
 type Choice = Decision | 'reviewed' | 'escalated'
 const choice = ref<Choice | null>(null)
 const text = ref('')
+watch(
+  () => choice.value !== null,
+  (open) => emit('choosing', open),
+)
+onBeforeUnmount(() => {
+  if (choice.value !== null) emit('choosing', false)
+})
 
 /** A deletion of an assignment for good, waiting for approval: what approving it takes is said here. */
 const deletion = computed(
@@ -314,6 +345,7 @@ function tell(
       <template v-if="mode === 'decide'">
         <el-button
           :type="!choice || choice === 'approve' ? 'primary' : undefined"
+          :text="!lead && choice !== 'approve'"
           :size="size"
           :class="{ 'is-chosen': choice === 'approve' }"
           :aria-pressed="choice === 'approve'"
@@ -347,6 +379,7 @@ function tell(
       <template v-else>
         <el-button
           :type="!choice || choice === 'reviewed' ? 'primary' : undefined"
+          :text="!lead && choice !== 'reviewed'"
           :size="size"
           :class="{ 'is-chosen': choice === 'reviewed' }"
           :aria-pressed="choice === 'reviewed'"
@@ -398,10 +431,12 @@ function tell(
         {{ t('actions.decision.willBeProposal') }}
       </p>
       <!-- The confirm button comes first, where Tab goes from the field; the
-           row is drawn the other way round, Cancel on its left. -->
+           row is drawn the other way round, Cancel on its left. It is solid
+           where this leads (lead), as a deletion's red one always is. -->
       <div class="decide-panel__confirm">
         <el-button
           :type="deletesNow ? 'danger' : 'primary'"
+          :text="!lead && !deletesNow"
           :size="size"
           :loading="pending"
           :class="{ 'is-disabled': noteMissing }"
@@ -434,9 +469,9 @@ function tell(
   margin-left: 0;
 }
 /* The choice open below, while its form asks for a reason: its button stays
-   pressed in, a 2 px indigo edge on the indigo's tint, in bold, and the
-   other choice is an ordinary secondary button beside it; the form's own
-   button is the one primary. */
+   pressed in, on the indigo's tint, in bold, with a 1 px indigo ring inside
+   it (a text button has no edge to colour), and the other choices stay
+   words beside it; the form's own button is the one primary. */
 .decide-panel__buttons .el-button.is-chosen {
   --el-button-bg-color: var(--app-indigo-tint);
   --el-button-border-color: var(--app-indigo);
@@ -463,14 +498,13 @@ function tell(
   margin-top: 2px;
   flex-shrink: 0;
 }
+/* The reason or note, under a rule: the proposal's box holds no box of its own. */
 .decide-panel__form {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding-top: 12px;
+  border-top: var(--app-rule);
 }
 .decide-panel__hint {
   margin: 0;

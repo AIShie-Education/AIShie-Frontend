@@ -1,5 +1,12 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import { call, coursePath, openCourseTab, demo, expectToasted, keepToasts, pickOption, signIn } from './support'
+
+/** An action's status, said once on its page: under Status in its facts, not beside its title. */
+const statusFact = (page: Page) =>
+  page
+    .locator('.action-view__facts > div')
+    .filter({ has: page.locator('dt', { hasText: /^Status$/ }) })
+    .locator('dd')
 
 // Core's schema §5, told through the app: a grading agent proposes a grade,
 // the instructor approves it, posts it, and the student sees it.
@@ -23,11 +30,11 @@ test.describe.serial('the worked example', () => {
     // Open it, and approve it there.
     await card.getByRole('link', { name: 'Enter a grade' }).click()
     await expect(page).toHaveURL(new RegExp(`/actions/${d.course.proposed_grade_action}$`))
-    await expect(page.locator('.page-header').getByText('Awaiting approval')).toBeVisible()
+    await expect(statusFact(page)).toContainText('Awaiting approval')
     await page.getByRole('button', { name: 'Approve', exact: true }).click()
     await page.getByRole('button', { name: 'Approve now' }).click()
     await expectToasted(page, 'Approved and carried out')
-    await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
+    await expect(statusFact(page)).toContainText('Executed')
     await expect(page.locator('.action-timeline')).toContainText('Approved by Sato Hiroshi')
 
     // What it made: a draft grade, which the page links to.
@@ -129,7 +136,7 @@ test.describe.serial('the worked example', () => {
 
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`actions/${d.course.proposed_grade_action}`))
-    await expect(page.locator('.page-header').getByText('Executed')).toBeVisible()
+    await expect(statusFact(page)).toContainText('Executed')
     const history = page.locator('.action-timeline')
     await expect(history).toContainText('Approved by')
     await expect(history).toContainText('Carried out')

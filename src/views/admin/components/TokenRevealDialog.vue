@@ -175,10 +175,11 @@ function finish() {
   font-size: var(--app-text-md);
   font-weight: var(--app-heading-weight);
 }
+/* What to copy, set as a listing: between rules, no box. */
 .reveal__snippet {
-  background: var(--el-fill-color-light);
-  border-radius: var(--app-radius-control);
-  padding: 10px 12px;
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .reveal__snippet-label {
   font-size: var(--app-text-xs);

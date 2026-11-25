@@ -43,7 +43,9 @@ test.describe.serial('the directory and invitations', () => {
     const yuki = rows.filter({ hasText: 'Yuki Tanaka' })
     await expect(yuki).toContainText(d.actors.yuki.email!)
     await expect(yuki).toContainText('Person')
-    await expect(yuki).toContainText('Active')
+    // Everyone listed is active: no Status column says so on every row.
+    await expect(yuki).not.toContainText('Active')
+    await expect(page.locator('.actors__table thead th').filter({ hasText: /^Status$/ })).toHaveCount(0)
     await expect(yuki).toContainText('Password')
     await expect(rows.filter({ hasText: 'grader-v2' })).toHaveCount(0)
 

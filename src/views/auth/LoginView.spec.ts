@@ -9,6 +9,11 @@ import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import LoginView from './LoginView.vue'
 
+// The page's style, as written: jsdom lays nothing out.
+const loginStyle = Object.values(
+  import.meta.glob<string>('./LoginView.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
+
 vi.mock('@/api/http', async (importOriginal) => {
   const real = await importOriginal<typeof import('@/api/http')>()
   return {
@@ -266,7 +271,18 @@ describe('several identity providers on the sign-in page', () => {
       'Sign in with single sign-on',
     ])
     // Single sign-on first, the first provider the page's one primary; the password behind a link.
-    expect(buttons(w).map((b) => b.classes().includes('el-button--primary'))).toEqual([true, false, false])
+    expect(buttons(w).map((b) => b.classes().includes('el-button--primary') && !b.classes().includes('is-text'))).toEqual([
+      true,
+      false,
+      false,
+    ])
+    // The others, each its item's own way in: the indigo's words, their room at the left taken back, so that their
+    // words start at the column's left with the password's link under them, not 22 px in.
+    expect(buttons(w).map((b) => b.classes().includes('el-button--primary'))).toEqual([true, true, true])
+    expect(buttons(w).map((b) => b.classes().includes('login__sso--more'))).toEqual([false, true, true])
+    expect(loginStyle).toMatch(
+      /\.login__sso-list \.el-button\.login__sso--more \{\s*padding-inline: var\(--app-space-sm\);\s*margin-inline-start: calc\(-1 \* var\(--app-space-sm\)\);/,
+    )
     const form = w.find('form.el-form')
     expect(form.isVisible()).toBe(false)
     await w.find('button.login__use-password').trigger('click')

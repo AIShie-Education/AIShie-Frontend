@@ -26,7 +26,7 @@ const nav = useCourseNav()
 </template>
 
 <style scoped>
-/* A row of quiet links, the one shown tinted, as the side bar marks the page it is on. One row, as the
+/* A row of quiet links, the one shown underlined in the navy, as the course's tabs mark theirs. One row, as the
    course's tabs are: a tab alone on a second row reads as a fault. Where the page is too narrow for them
    with their icons (a phone, in English), the icons go; narrower still, the row scrolls sideways
    (its parent in PageHeader keeps min-width: 0 for that, rather than grow to the row's width). */
@@ -51,19 +51,19 @@ const nav = useCourseNav()
   align-items: center;
   gap: 6px;
   height: 28px;
-  padding: 0 10px;
-  border-radius: var(--app-radius-control);
+  padding: 2px 10px 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
   color: var(--el-text-color-regular);
   font-size: var(--app-text-md);
   text-decoration: none;
   white-space: nowrap;
 }
 .course-subtabs__item:hover {
-  background: var(--app-ground-2);
-  color: var(--app-ink);
+  color: var(--app-indigo);
 }
 .course-subtabs__item.is-active {
-  background: var(--app-indigo-tint);
+  border-bottom-color: var(--app-indigo);
   color: var(--app-indigo);
   font-weight: 500;
 }

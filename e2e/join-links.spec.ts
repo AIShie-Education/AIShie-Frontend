@@ -156,9 +156,9 @@ test.describe.serial('invite links', () => {
     const name = `Nora New ${STAMP}`
     const email = `nora+${STAMP}@e2e.test`
     await page.goto(w.link)
-    await expect(page.getByText('You have been invited to join')).toBeVisible()
+    // The course's title is the page's h1, its code under it.
+    await expect(page.getByRole('heading', { level: 1, name: 'Introduction to Programming' })).toBeVisible()
     await expect(page.locator('.join__code')).toHaveText('CS101 · A')
-    await expect(page.getByRole('heading', { name: 'Introduction to Programming' })).toBeVisible()
     await expect(page.getByText('You will join as a student, straight away.')).toBeVisible()
     await expect(page.getByText(/^This link works for another (10:00|0\d:[0-5]\d)\.$/)).toBeVisible()
 
@@ -405,7 +405,7 @@ test.describe.serial('invite links', () => {
       locale: 'zh-HK',
     })
     await page.goto(`/join/${link.token}`)
-    await expect(page.getByText('你獲邀加入')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Introduction to Programming' })).toBeVisible()
     await expect(page.getByText('你會立即以學生身分加入。')).toBeVisible()
     await expect(page.getByText(/^此連結尚餘(10:00|09:[0-5]\d)有效。$/)).toBeVisible()
     await expect(page.getByRole('link', { name: '登入以加入' })).toBeVisible()

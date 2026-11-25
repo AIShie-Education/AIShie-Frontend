@@ -167,7 +167,6 @@ async function submit() {
           :key="c.membership.course_id"
           :value="c.membership.course_id"
           :disabled="!!c.blocked"
-          border
           class="bring__course"
         >
           <span class="bring__course-name">
@@ -184,11 +183,11 @@ async function submit() {
       <template v-if="choice && !choice.blocked">
         <h3 class="bring__step">{{ t('agents.bring.purpose') }}</h3>
         <el-radio-group v-model="purpose" class="bring__purposes">
-          <el-radio value="personal" border class="bring__purpose">
+          <el-radio value="personal" class="bring__purpose">
             <span class="bring__purpose-name">{{ t('enums.seatPurpose.personal') }}</span>
             <span class="bring__purpose-help">{{ t('agents.bring.purposeHelp.personal') }}</span>
           </el-radio>
-          <el-radio v-if="choice.canCourseAgent" value="course" border class="bring__purpose">
+          <el-radio v-if="choice.canCourseAgent" value="course" class="bring__purpose">
             <span class="bring__purpose-name">{{ t('agents.bring.purposeCourse') }}</span>
             <span class="bring__purpose-help">{{ t('agents.bring.purposeHelp.course') }}</span>
           </el-radio>
@@ -275,22 +274,24 @@ async function submit() {
 .bring__alert {
   margin-bottom: 10px;
 }
+/* The choices: plain radios on rows between rules, not a box each. */
 .bring__courses,
 .bring__purposes {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   width: 100%;
+  border-top: var(--app-rule);
 }
 .bring__course,
 .bring__purpose {
   height: auto;
   min-height: 40px;
   margin-right: 0;
-  padding: 8px 12px;
+  padding: 8px 0;
   white-space: normal;
   align-items: flex-start;
+  border-bottom: var(--app-rule);
 }
 .bring__course :deep(.el-radio__input),
 .bring__purpose :deep(.el-radio__input) {

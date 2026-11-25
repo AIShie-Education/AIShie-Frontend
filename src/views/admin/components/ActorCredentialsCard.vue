@@ -257,7 +257,7 @@ defineExpose({ reload: () => list.reload() })
             <div class="creds__main">
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !c.label?.trim() }">{{ tokenLabel(c) }}</span>
-                <AppTag :variant="state === 'active' ? 'quiet' : 'pill'" :tone="toneOf(STATE_TAG[state])">
+                <AppTag :variant="state === 'active' ? 'quiet' : 'state'" :tone="toneOf(STATE_TAG[state])">
                   {{ t(`admin.credentials.state.${state}`) }}
                 </AppTag>
               </div>
@@ -303,7 +303,7 @@ defineExpose({ reload: () => list.reload() })
               </div>
             </div>
             <div v-if="canRevoke && state === 'active'" class="creds__actions">
-              <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
+              <el-button type="danger" text size="small" :loading="revoking === c.id" @click="revoke(c)">
                 {{ t('admin.credentials.revoke') }}
               </el-button>
             </div>
@@ -316,7 +316,7 @@ defineExpose({ reload: () => list.reload() })
               <div class="creds__head">
                 <span class="creds__name" :class="{ 'app-muted': !row.c.label?.trim() }">{{ tokenLabel(row.c) }}</span>
                 <AppTag
-                  :variant="row.state === 'active' ? 'quiet' : 'pill'"
+                  :variant="row.state === 'active' ? 'quiet' : 'state'"
                   :tone="toneOf(STATE_TAG[row.state as CredentialState])"
                 >
                   {{ t(`admin.credentials.state.${row.state}`) }}
@@ -370,7 +370,7 @@ defineExpose({ reload: () => list.reload() })
               <el-button
                 v-if="row.state === 'active'"
                 type="danger"
-                plain
+                text
                 size="small"
                 :loading="revoking === row.c.id"
                 @click="revoke(row.c)"
@@ -450,7 +450,7 @@ defineExpose({ reload: () => list.reload() })
               </div>
             </div>
             <div v-if="canRevoke && state === 'active'" class="creds__actions">
-              <el-button type="danger" plain size="small" :loading="revoking === c.id" @click="revoke(c)">
+              <el-button type="danger" text size="small" :loading="revoking === c.id" @click="revoke(c)">
                 {{ c.kind === 'session' ? t('common.actions.signOut') : t('admin.credentials.revoke') }}
               </el-button>
             </div>
@@ -518,7 +518,7 @@ defineExpose({ reload: () => list.reload() })
   font-family: var(--app-font-mono);
   font-size: var(--app-text-xs);
   background: var(--el-fill-color-light);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 1px 5px;
   white-space: nowrap;
 }
@@ -540,7 +540,7 @@ defineExpose({ reload: () => list.reload() })
   align-items: flex-start;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .creds__item:last-child {
   border-bottom: none;

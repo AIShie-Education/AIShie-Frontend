@@ -173,7 +173,7 @@ async function download(f: MessageAttachment) {
   padding: 0;
   overflow: hidden;
   border: 1px solid var(--app-line);
-  border-radius: 10px;
+  border-radius: var(--app-radius);
   background: var(--el-bg-color);
   color: inherit;
   font: inherit;
@@ -206,15 +206,14 @@ async function download(f: MessageAttachment) {
   /* Room on the right for the download over it. */
   padding: 8px 44px 8px 10px;
 }
+/* The file's kind, by its icon alone: no ground of its own in the card. */
 .msg-file__icon {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  width: 24px;
   height: 32px;
-  border-radius: 8px;
-  background: var(--app-ground-2);
   color: var(--app-ink-2);
   font-size: var(--app-text-xl);
 }
@@ -259,7 +258,7 @@ async function download(f: MessageAttachment) {
   flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid var(--el-color-danger-light-5);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   color: var(--el-color-danger);
   font-size: var(--app-text-mark);
   font-weight: var(--app-weight-strong);
@@ -277,7 +276,7 @@ async function download(f: MessageAttachment) {
   width: 32px;
   height: 32px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   font-size: var(--app-text-lg);

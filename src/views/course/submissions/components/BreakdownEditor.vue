@@ -132,6 +132,7 @@ function bad(r: BreakdownRow, field: 'criterion' | 'points' | 'max'): boolean {
 </template>
 
 <style scoped>
+/* A criterion's fields per row, rows parted by rules: fields are the only boxes. */
 .breakdown {
   display: flex;
   flex-direction: column;
@@ -145,10 +146,8 @@ function bad(r: BreakdownRow, field: 'criterion' | 'points' | 'max'): boolean {
     'criterion nums'
     'comment comment';
   gap: 6px 8px;
-  padding: 10px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-blank);
+  padding: 0 0 10px;
+  border-bottom: var(--app-rule);
 }
 .breakdown__criterion {
   grid-area: criterion;

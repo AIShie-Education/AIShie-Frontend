@@ -27,11 +27,11 @@ import { joinParts } from '@/utils/parts'
 
 const { t, te } = useI18n()
 // A phone's layout, a group's model calls under it and its tokens left out (the
-// totals above have them), where the card is as narrow as on a phone: its title
-// 542 px or less, the width it has in a window of 640 px without the side bar.
+// totals above have them), where the section is as narrow as on a phone: its
+// title 592 px or less, the width it has in a window of 640 px without the side bar.
 // By the card's own width, not the window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
-const narrow = useContainerNarrow(cardTitle, 542)
+const narrow = useContainerNarrow(cardTitle, 592)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 
@@ -289,17 +289,24 @@ function toPrices() {
   font-size: var(--app-text-sm);
   color: var(--el-color-danger);
 }
+/* The totals: figures side by side, a rule between them and the section's
+   rules above and below, not three boxes. */
 .costs-card__totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
   margin: 0 0 8px;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .costs-card__total {
-  padding: 12px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) var(--app-space-lg);
   min-width: 0;
+}
+.costs-card__total:first-child {
+  padding-left: 0;
+}
+.costs-card__total + .costs-card__total {
+  border-left: var(--app-rule);
 }
 .costs-card__total dt {
   font-size: var(--app-text-xs);
@@ -350,6 +357,13 @@ function toPrices() {
 @container (max-width: 559px) {
   .costs-card__totals {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .costs-card__total {
+    padding-left: 0;
+  }
+  .costs-card__total + .costs-card__total {
+    border-left: none;
+    border-top: var(--app-rule);
   }
 }
 </style>

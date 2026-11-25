@@ -134,15 +134,31 @@ const page = (title: string, back = false) => ({
   render: () => h(PageHeader, { title, subtitle: `About ${title}`, back: back ? '/' : undefined }),
 })
 
-async function mountCourse(to: RouteLocationRaw, role: 'instructor' | 'student' = 'instructor') {
+async function mountCourse(
+  to: RouteLocationRaw,
+  role: 'instructor' | 'student' = 'instructor',
+  opts: { status?: string; otherRoles?: string[] } = {},
+) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const session = useSessionStore()
   session.me = { id: 'ada', kind: 'human', display_name: 'Ada', status: 'active', platform_role: null } as never
   session.status = 'signedIn'
+  // The reader's seats: this course's, and any other's they hold.
+  session.memberships = [role, ...(opts.otherRoles ?? [])].map((r, i) => ({
+    member_id: `M${i + 1}`,
+    course_id: i ? `K${i}` : COURSE,
+    code: 'CS201',
+    section: '',
+    title: 'Data Structures',
+    role: r,
+    status: 'active',
+    course_status: 'active',
+    perms: {},
+  })) as never
   const store = useCourseStore()
   store.courseId = COURSE
-  store.course = { ...course, section: 'A' } as never
+  store.course = { ...course, section: 'A', status: opts.status ?? course.status } as never
   store.membership = { course_id: COURSE, member_id: 'M1', role, status: 'active' } as never
   if (role === 'student') {
     store.perms = { document_read: 'autonomous', submission_read: 'autonomous', grade_read: 'autonomous' } as never
@@ -215,16 +231,32 @@ describe('CourseLayout, on a course’s pages', () => {
     vi.restoreAllMocks()
   })
 
-  it('names the course in a line of context, its code, its name and its status, and leaves the h1 to the page', async () => {
+  it('names the course in a line of context, its code and its name, and leaves the h1 to the page', async () => {
     const w = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } })
     const head = w.find('.course-head')
     expect(head.find('.course-head__code').text()).toBe('CS201·A')
     expect(head.find('.course-head__title').text()).toBe('Data Structures')
     // Cut short where it is long, and said in full on hover.
     expect(head.find('.course-head__title').attributes('title')).toBe('Data Structures')
-    expect(head.text()).toContain('Active')
+    // The usual state says nothing: an active course shows no state, and a reader with one role among their
+    // courses no role.
+    expect(head.text()).not.toContain('Active')
+    expect(head.text()).not.toContain('Instructor')
     expect(head.find('h1').exists()).toBe(false)
     expect(w.findAll('h1').map((h1) => h1.text())).toEqual(['Materials'])
+  })
+
+  it('shows a course’s state where it is not active, and the reader’s role where their roles differ', async () => {
+    const archived = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } }, 'instructor', {
+      status: 'archived',
+    })
+    expect(archived.find('.course-head').text()).toContain('Archived')
+    archived.unmount()
+    const both = await mountCourse({ name: 'course-materials', params: { courseId: COURSE } }, 'instructor', {
+      otherRoles: ['student'],
+    })
+    expect(both.find('.course-head').text()).toContain('Instructor')
+    expect(both.find('.course-head').text()).not.toContain('Active')
   })
 
   it('offers a teacher every one of their eleven tabs where they fit, with no More', async () => {
