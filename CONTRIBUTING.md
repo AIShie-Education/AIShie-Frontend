@@ -27,6 +27,12 @@ request, on every push to `main` and once a week:
   when it fails; the report and the traces of what failed, with Core's log,
   are kept as the run's artifact `e2e-<commit>-<attempt>` when the run
   fails, and when it passes with a test that passed only on its retry.
+- **provider privacy, against Core and Runtime:** `e2e/provider-privacy.spec.ts`
+  hosts a course agent through the real runtime API pinned in
+  `.github/runtime-image`, sets an OpenAI model with a fake key, and checks the
+  privacy response and its display before the first question. It uses another
+  scratch database and keyring, started and stopped by `scripts/ci-runtime.sh`;
+  its artifact is `provider-e2e-<commit>-<attempt>` on failure.
 - **the image:** on a pull request, the weekly run and a run by hand, the
   image is built with `docker build` and `scripts/test-image.sh` runs it and
   checks it against the build: the rules it serves by, `/version.json`, its
@@ -49,7 +55,7 @@ npm run gen:api && git diff --exit-code src/api/generated
 npm run check && npm run build
 go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12   # uses the shellcheck on PATH
 shellcheck -s sh deploy/aishie-web-deploy deploy/setup-web.sh scripts/pack-dist.sh
-shellcheck deploy/aishie-web-deploy_test.sh scripts/ci-core.sh scripts/test-image.sh
+shellcheck deploy/aishie-web-deploy_test.sh scripts/ci-core.sh scripts/ci-runtime.sh scripts/test-image.sh
 deploy/aishie-web-deploy_test.sh
 ```
 
@@ -71,6 +77,13 @@ npm run gen:api -- --from "$E2E_CORE_URL" --check
 npx playwright test                         # E2E_PREVIEW=1 to test dist/, as CI does
 scripts/ci-core.sh stop
 ```
+
+For the real provider-disclosure test, with Docker and the same throwaway Core
+still up, `scripts/ci-runtime.sh start` adds the runtime pinned in
+`.github/runtime-image` and its own scratch database and keyring. Then run
+`npx playwright test e2e/provider-privacy.spec.ts`, `scripts/ci-runtime.sh stop`
+and `scripts/ci-core.sh stop` in that order. `ci-runtime.sh` never prints the
+service credential or key it generates.
 
 `ci-core.sh` creates the database when it is missing, and `stop` drops it.
 It gives Core a `SECRETS_KEY` (and the `SIGNING_KEY` it needs) made up for the
