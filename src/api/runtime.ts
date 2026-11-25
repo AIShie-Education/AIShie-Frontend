@@ -46,6 +46,7 @@ import type {
   AgentBudgets,
   AgentBudgetsPut,
   AgentPatch,
+  AgentPrivacyAnswer,
   AgentRequest,
   ClientErrorReason,
   CostQuery,
@@ -101,6 +102,7 @@ export const RUNTIME_ROUTES = {
   inspect: '/agents/inspect',
   agents: '/agents',
   agent: '/agents/{id}',
+  agentPrivacy: '/agents/{id}/privacy',
   agentToken: '/agents/{id}/token',
   agentPause: '/agents/{id}/pause',
   agentResume: '/agents/{id}/resume',
@@ -683,6 +685,11 @@ export const runtime = {
   },
   list: () => runtimeRequest<{ agents: HostedAgent[] }>('GET', RUNTIME_ROUTES.agents),
   get: (id: string) => runtimeRequest<HostedAgent>('GET', agentPath(RUNTIME_ROUTES.agent, id)),
+  /** Safe provider facts for a person who may ask this Core agent in this course. */
+  privacy: (agentId: string, courseId: string) =>
+    runtimeRequest<AgentPrivacyAnswer>('GET', agentPath(RUNTIME_ROUTES.agentPrivacy, agentId), {
+      query: { course_id: courseId },
+    }),
   /** Model and own key, at the version read (If-Match); 412 when it has moved on. Never retried. */
   update: (id: string, version: string | number, patch: AgentPatch) =>
     runtimeRequest<HostedAgent>('PATCH', agentPath(RUNTIME_ROUTES.agent, id), {

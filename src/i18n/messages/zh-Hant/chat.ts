@@ -276,12 +276,18 @@ export default {
       model: '{readers}可閱讀這段對話；{name}會把內容傳送至{provider}作答。',
       modelFallback:
         '{readers}可閱讀這段對話；{name}會把內容傳送至{provider}作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      modelUnknownFallback:
+        '{readers}可閱讀這段對話；{name}會把內容傳送至{provider}作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
+      runtimeUnknownFallback:
+        '{readers}可閱讀這段對話；{name}會把內容傳送至其 AI 模型的供應商作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
       runtime: '{readers}可閱讀這段對話；{name}會把內容傳送至其 AI 模型的供應商作答。',
       runtimeFallback:
         '{readers}可閱讀這段對話；{name}會把內容傳送至其 AI 模型的供應商作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
       schoolServer: '{readers}可閱讀這段對話；{name}會把內容傳送至學校自己的模型伺服器{provider}作答。',
       schoolServerFallback:
         '{readers}可閱讀這段對話；{name}會把內容傳送至學校自己的模型伺服器{provider}作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      schoolServerUnknownFallback:
+        '{readers}可閱讀這段對話；{name}會把內容傳送至學校自己的模型伺服器{provider}作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
       mcp: '{readers}可閱讀這段對話；{name}經由其擁有者自己的工具作答。',
       unknown: '{readers}可閱讀這段對話；內容會傳送至{name}的 AI 模型作答。',
     },
@@ -291,9 +297,15 @@ export default {
       model: '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商{provider}以作答。',
       modelFallback:
         '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商{provider}以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      modelUnknownFallback:
+        '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商{provider}以作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
+      runtimeUnknownFallback:
+        '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商以作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
       schoolServer: '{name}會把你在這裡寫的內容傳送至學校自己的模型伺服器{provider}以作答。',
       schoolServerFallback:
         '{name}會把你在這裡寫的內容傳送至學校自己的模型伺服器{provider}以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
+      schoolServerUnknownFallback:
+        '{name}會把你在這裡寫的內容傳送至學校自己的模型伺服器{provider}以作答；學校的模型無法作答時，則傳送至其擁有者的 AI 模型供應商。',
       runtime: '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商以作答。',
       runtimeFallback:
         '{name}會把你在這裡寫的內容傳送至其 AI 模型的供應商以作答；學校的模型無法作答時，則傳送至{fallbackProvider}。',
@@ -305,10 +317,19 @@ export default {
       hosted:
         '{name}由 AIshie 託管。為了作答，AIshie 的代理執行環境會把這段對話的訊息、訊息附帶的檔案，以及{name}在課程中讀取的內容傳送至它的 AI 模型。',
       school: '該模型是學校方案中{provider}的{model}。',
+      schoolProvider: '該模型來自學校方案中的{provider}。',
       schoolServer: '該模型是學校自己的模型伺服器{provider}上的{model}。',
+      schoolServerProvider: '該模型位於學校自己的模型伺服器{provider}。',
       schoolUnknownProvider: '該模型是學校方案中的{model}；這個頁面無法顯示其 AI 模型的供應商名稱。',
+      schoolUnknownProviderGeneric: '該模型來自學校方案；這個頁面無法顯示其 AI 模型的供應商名稱。',
       own: '該模型是{provider}的{model}，使用你自己的 API 金鑰。',
+      ownProvider: '該模型來自{provider}，使用其擁有者自己的 API 金鑰。',
+      ownUnknownProviderGeneric: '該模型使用其擁有者自己的 API 金鑰；這個頁面無法顯示其 AI 模型的供應商名稱。',
       fallback: '學校的模型無法作答時（今日額度已用完，或模型出錯），會改由你自己的模型作答：{provider}的{model}。',
+      publicFallback:
+        '學校的模型無法作答時（今日額度已用完，或模型出錯），會改由{name}擁有者自己的模型作答，供應商是{provider}。',
+      publicFallbackUnknownProvider:
+        '學校的模型無法作答時（今日額度已用完，或模型出錯），會改由{name}擁有者自己的模型作答；這個頁面無法顯示其 AI 模型的供應商名稱。',
       unknownModel:
         '該模型是為{name}選定的模型，來自學校方案或其擁有者自己的金鑰，所以內容會傳送至該模型的供應商。這個頁面無法顯示是哪一家供應商。',
       mcp: '{name}使用 MCP 存取：它由其擁有者自己的工具使用，這些工具會從 AIshie 讀取這段對話並作答。它們把讀到的內容傳送到哪裡，由擁有者決定，AIshie 無從得知。',

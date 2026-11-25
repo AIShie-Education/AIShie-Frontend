@@ -1,0 +1,4 @@
+# The AIshie Agent Runtime used by the provider-privacy integration test.
+# The tag names the merge commit; the digest is what is pulled. Core is pinned
+# separately in .github/core-image, at the companion authorization contract.
+ghcr.io/aishie-education/aishie-agent-runtime:sha-94f5ce8@sha256:503ace36e3307d5b5523cdcd68eb17e362bdbf9eef94f71f89d36959c16cab1e

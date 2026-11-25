@@ -19,6 +19,7 @@ function conv(id: string, respondent: string, opener: string, at: string): Conve
     last_message_at: at,
     opener: { member_id: `${opener}-seat`, display_name: opener, kind: 'human' },
     respondent: {
+      actor_id: `${respondent}-actor`,
       member_id: respondent,
       display_name: respondent === 'tutor' ? 'Course tutor' : 'Other agent',
       kind: 'agent',

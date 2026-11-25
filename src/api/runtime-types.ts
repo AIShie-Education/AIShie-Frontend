@@ -191,6 +191,29 @@ export interface HostedProblem {
   since: string
 }
 
+/** Safe primary-model facts disclosed to an authorized asker. */
+export interface AgentPrivacyModel {
+  plan: 'school' | 'own'
+  provider: string
+  /** A trusted provider display name; null means use generic wording, never a guessed label. */
+  provider_label: string | null
+  /** The school offer's real display name for its own model server. */
+  school_offer_label: string | null
+}
+
+export interface AgentPrivacyFallback {
+  provider: string
+  provider_label: string | null
+}
+
+/** The safe model-routing facts a person who may ask an agent can read. */
+export interface AgentPrivacyAnswer {
+  /** Core's agent UUID, not a runtime agt_ id. */
+  agent_id: string
+  primary: AgentPrivacyModel | null
+  fallback: AgentPrivacyFallback | null
+}
+
 /** An agent the school's runtime hosts. */
 export interface HostedAgent {
   /** agt_… */

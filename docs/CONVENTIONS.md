@@ -450,8 +450,9 @@ on this origin, through `@/api/runtime`; never `fetch` it yourself either.
   works out as it starts (`host_by_id`, `own_key`, `school_key`): offer what each names only
   while it is true.
 - **Calls**: the contract's own, `runtime.me()`, `.models()`, `.testKey(req)`, `.inspect(agentId)`,
-  `.host(agentId)`, `.list()`, `.get(id)`, `.update(id, version, patch)`, `.renewToken(id)`,
-  `.pause(id)`, `.resume(id)`, `.remove(id)`, each resolving `{ data, etag, status, replayed }`. Each goes as the person signed in, with an assertion Core makes for them; the client
+  `.host(agentId)`, `.list()`, `.get(id)`, `.privacy(agentId, courseId)`, `.update(id, version, patch)`,
+  `.renewToken(id)`, `.pause(id)`, `.resume(id)`, `.remove(id)`, each resolving `{ data, etag, status, replayed }`.
+  `privacy` takes Core's agent UUID, not a runtime `agt_…` id. Each goes as the person signed in, with an assertion Core makes for them; the client
   asks for it, keeps it in memory, and asks again as it needs. The runtime reads no idempotency key:
   the client sends again what the runtime answers once however often it is sent, and never a PATCH
   or a key test. `update` names the version it read; the other writes name none, but any of them may
@@ -1565,9 +1566,11 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   visible for the whole notice (`privacy.ts`, `ChatPrivacyNotice`), which the ⋯ menu's "Who can read
   this" opens too. The line's and the first-time point's reader names come from the same Core
   `visible_to` list as the notice, however narrow it is; a person's old conversation does not repeat
-  the dialog's reader heading. Where it goes follows how the agent is hosted, a provider named only
-  for the caller's own agent, whose model the runtime tells its owner (`useAnswerModels`), and its
-  fallback's provider too where it is another. On the school's plan an operator-hosted provider id
+  the dialog's reader heading. Where it goes follows how the agent is hosted. For the caller's own
+  agent the runtime's owner row gives the full model; for another agent `useAnswerModels` reads
+  the respondent's Core `actor_id` from the conversation itself and calls the asker-facing privacy
+  route, whose safe labels name the primary and every fallback. A missing route or label, an old
+  Core without `actor_id`, or a failed call keeps generic wording; it never falls back to `member.get`. On the school's plan an operator-hosted provider id
   (`openai_compatible`, `vllm`, `ollama`, `lmstudio`) is never shown as a company: the school offer's
   real label names its own model server, or the words stay generic where there is no label. Nothing
   is deleted: a withdrawn message is kept (its files listed in an export, never held there), and a

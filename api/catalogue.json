@@ -2085,6 +2085,52 @@
       "path": "/v1/services/agent_runtime/agents/{agent_id}"
     },
     {
+      "description": "For the site's agent runtime alone: whether a person signed in to it may ask an agent in a course now. The runtime knows the person by Core's assertion (its sub). Core applies conversation.ask's caller permission, course and seat liveness, agent kind, hosting and live-token, and addressing rules, without opening a conversation or writing a message. Every refusal, and every unknown actor, agent or course, returns may_ask false with no reason and no other information; in particular no model or provider is revealed. True means the question would be allowed, including one requiring confirmation.",
+      "input_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "description": "the person signed in to the runtime: the sub of the assertion Core made for them",
+            "format": "uuid",
+            "type": "string"
+          },
+          "agent_id": {
+            "description": "the agent they would ask, seated in the course",
+            "format": "uuid",
+            "type": "string"
+          },
+          "course_id": {
+            "description": "the course in which they would ask the agent",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "actor_id",
+          "agent_id",
+          "course_id"
+        ],
+        "type": "object"
+      },
+      "kind": "read",
+      "method": "GET",
+      "name": "agent_runtime.check_ask",
+      "output_schema": {
+        "additionalProperties": false,
+        "properties": {
+          "may_ask": {
+            "description": "whether that person may ask that agent in that course now, by exactly the rules of conversation.ask; false, and nothing more, for any refusal or unknown id",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "may_ask"
+        ],
+        "type": "object"
+      },
+      "path": "/v1/services/agent_runtime/actors/{actor_id}/courses/{course_id}/agents/{agent_id}/may-ask"
+    },
+    {
       "description": "For the site's agent runtime alone: whether a person owns an agent, before the runtime does anything about it for them — hosting it, changing its settings, stopping it. The runtime knows the person by Core's assertion (its sub); this says whether they own the agent, and, if they do, the agent as agent_runtime.agent says it, with whether the runtime may host it (hostable: an mcp agent is not_runtime_hosted). Of anyone else's agent, or an id that is no agent's, it says owns false and nothing else.",
       "input_schema": {
         "additionalProperties": false,
@@ -5490,6 +5536,11 @@
           "respondent": {
             "additionalProperties": false,
             "properties": {
+              "actor_id": {
+                "description": "the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation",
+                "format": "uuid",
+                "type": "string"
+              },
               "answer_level": {
                 "description": "its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now",
                 "type": "string"
@@ -5536,6 +5587,7 @@
               "member_id",
               "display_name",
               "kind",
+              "actor_id",
               "role",
               "seat_status",
               "is_delegate_of_opener",
@@ -5700,6 +5752,11 @@
                 "respondent": {
                   "additionalProperties": false,
                   "properties": {
+                    "actor_id": {
+                      "description": "the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation",
+                      "format": "uuid",
+                      "type": "string"
+                    },
                     "answer_level": {
                       "description": "its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now",
                       "type": "string"
@@ -5746,6 +5803,7 @@
                     "member_id",
                     "display_name",
                     "kind",
+                    "actor_id",
                     "role",
                     "seat_status",
                     "is_delegate_of_opener",
@@ -5932,6 +5990,11 @@
                 "respondent": {
                   "additionalProperties": false,
                   "properties": {
+                    "actor_id": {
+                      "description": "the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation",
+                      "format": "uuid",
+                      "type": "string"
+                    },
                     "answer_level": {
                       "description": "its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now",
                       "type": "string"
@@ -5978,6 +6041,7 @@
                     "member_id",
                     "display_name",
                     "kind",
+                    "actor_id",
                     "role",
                     "seat_status",
                     "is_delegate_of_opener",
@@ -6244,6 +6308,11 @@
               "respondent": {
                 "additionalProperties": false,
                 "properties": {
+                  "actor_id": {
+                    "description": "the agent asked, the same actor id me.conversations names; available to anyone who may read the conversation",
+                    "format": "uuid",
+                    "type": "string"
+                  },
                   "answer_level": {
                     "description": "its conversation_answer now: autonomous, its answers appear at once; pending_review, they appear and are reviewed after; confirm_required, each waits for a person's approval; denied, it answers nothing now",
                     "type": "string"
@@ -6290,6 +6359,7 @@
                   "member_id",
                   "display_name",
                   "kind",
+                  "actor_id",
                   "role",
                   "seat_status",
                   "is_delegate_of_opener",
@@ -6858,6 +6928,11 @@
             "items": {
               "additionalProperties": false,
               "properties": {
+                "actor_id": {
+                  "description": "the agent's actor id, for the runtime's agent endpoints; this list contains only agents you may address",
+                  "format": "uuid",
+                  "type": "string"
+                },
                 "answer_level": {
                   "description": "autonomous: answers appear at once; pending_review: they appear and are reviewed after; confirm_required: each waits for a person's approval",
                   "type": "string"
@@ -6906,6 +6981,7 @@
               },
               "required": [
                 "member_id",
+                "actor_id",
                 "display_name",
                 "kind",
                 "hosting",

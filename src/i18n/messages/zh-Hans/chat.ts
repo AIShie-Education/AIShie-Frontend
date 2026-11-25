@@ -276,12 +276,18 @@ export default {
       model: '{readers}可阅读这段对话；{name}会把内容发送给{provider}生成回答。',
       modelFallback:
         '{readers}可阅读这段对话；{name}会把内容发送给{provider}生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      modelUnknownFallback:
+        '{readers}可阅读这段对话；{name}会把内容发送给{provider}生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
+      runtimeUnknownFallback:
+        '{readers}可阅读这段对话；{name}会把内容发送给其 AI 模型的供应商生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
       runtime: '{readers}可阅读这段对话；{name}会把内容发送给其 AI 模型的供应商生成回答。',
       runtimeFallback:
         '{readers}可阅读这段对话；{name}会把内容发送给其 AI 模型的供应商生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
       schoolServer: '{readers}可阅读这段对话；{name}会把内容发送给学校自己的模型服务器{provider}生成回答。',
       schoolServerFallback:
         '{readers}可阅读这段对话；{name}会把内容发送给学校自己的模型服务器{provider}生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      schoolServerUnknownFallback:
+        '{readers}可阅读这段对话；{name}会把内容发送给学校自己的模型服务器{provider}生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
       mcp: '{readers}可阅读这段对话；{name}通过其拥有者自己的工具回答。',
       unknown: '{readers}可阅读这段对话；内容会发送给{name}的 AI 模型生成回答。',
     },
@@ -291,9 +297,15 @@ export default {
       model: '{name}会把你在这里写的内容发送给其 AI 模型的供应商{provider}来生成回答。',
       modelFallback:
         '{name}会把你在这里写的内容发送给其 AI 模型的供应商{provider}来生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      modelUnknownFallback:
+        '{name}会把你在这里写的内容发送给其 AI 模型的供应商{provider}来生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
+      runtimeUnknownFallback:
+        '{name}会把你在这里写的内容发送给其 AI 模型的供应商来生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
       schoolServer: '{name}会把你在这里写的内容发送给学校自己的模型服务器{provider}来生成回答。',
       schoolServerFallback:
         '{name}会把你在这里写的内容发送给学校自己的模型服务器{provider}来生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
+      schoolServerUnknownFallback:
+        '{name}会把你在这里写的内容发送给学校自己的模型服务器{provider}来生成回答；学校的模型无法回答时，则发送给其拥有者的 AI 模型供应商。',
       runtime: '{name}会把你在这里写的内容发送给其 AI 模型的供应商来生成回答。',
       runtimeFallback:
         '{name}会把你在这里写的内容发送给其 AI 模型的供应商来生成回答；学校的模型无法回答时，则发送给{fallbackProvider}。',
@@ -305,10 +317,19 @@ export default {
       hosted:
         '{name}由 AIshie 托管。为了生成回答，AIshie 的运行环境会把这段对话的消息、消息附带的文件，以及{name}在课程中读取的内容发送给它的 AI 模型。',
       school: '该模型是学校方案中{provider}的{model}。',
+      schoolProvider: '该模型来自学校方案中的{provider}。',
       schoolServer: '该模型是学校自己的模型服务器{provider}上的{model}。',
+      schoolServerProvider: '该模型位于学校自己的模型服务器{provider}。',
       schoolUnknownProvider: '该模型是学校方案中的{model}；此页面无法显示其 AI 模型的供应商名称。',
+      schoolUnknownProviderGeneric: '该模型来自学校方案；此页面无法显示其 AI 模型的供应商名称。',
       own: '该模型是{provider}的{model}，使用你自己的 API 密钥。',
+      ownProvider: '该模型来自{provider}，使用其拥有者自己的 API 密钥。',
+      ownUnknownProviderGeneric: '该模型使用其拥有者自己的 API 密钥；此页面无法显示其 AI 模型的供应商名称。',
       fallback: '学校的模型无法回答时（今天的额度已用完，或模型出错），会改由你自己的模型回答：{provider}的{model}。',
+      publicFallback:
+        '学校的模型无法回答时（今天的额度已用完，或模型出错），会改由{name}拥有者自己的模型回答，供应商是{provider}。',
+      publicFallbackUnknownProvider:
+        '学校的模型无法回答时（今天的额度已用完，或模型出错），会改由{name}拥有者自己的模型回答；此页面无法显示其 AI 模型的供应商名称。',
       unknownModel:
         '该模型是为{name}选定的模型，来自学校方案或其拥有者自己的密钥，因此内容会发送给该模型的供应商。此页面无法显示是哪一家供应商。',
       mcp: '{name}使用 MCP 访问：它由其拥有者自己的工具使用，这些工具会从 AIshie 读取这段对话并回答。它们把读到的内容发送到哪里，由拥有者决定，AIshie 无从得知。',
