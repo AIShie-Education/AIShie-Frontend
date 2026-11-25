@@ -97,7 +97,6 @@ function goReach() {
             :value="r"
             :disabled="r === current"
             class="role-dialog__role"
-            border
           >
             <span class="role-dialog__role-name">{{ t(`enums.role.${r}`) }}</span>
             <span v-if="r === current" class="role-dialog__role-note">{{ t('members.role.isCurrent') }}</span>
@@ -158,8 +157,11 @@ function goReach() {
 .role-dialog__roles {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 8px 24px;
 }
+/* A role is a plain radio, with no border, but as tall a row as it was with
+   one: 8 px above and below its words, and a finger's height on a touch
+   screen (styles/element.css). */
 .role-dialog__role {
   margin-right: 0;
   height: auto;

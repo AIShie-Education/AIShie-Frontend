@@ -92,7 +92,6 @@ export default {
     archived: '课程已归档',
     statusHelp: {
       draft: '草稿：讲师可在开课前指派成员、准备教材。开课时请将其启用。',
-      active: '进行中：课程开放使用。',
       archived: '已归档：课程拒绝一切更改，包括这里的设置。如需修改，请先重新开放。',
     },
     openCourse: '进入课程',

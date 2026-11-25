@@ -95,7 +95,6 @@ export default {
     statusHelp: {
       draft:
         'A draft: its instructor can seat members and prepare material before it opens. Activate it when it starts.',
-      active: 'Active: open for work.',
       archived: 'Archived: it refuses every write, these settings included. Reopen it to change anything.',
     },
     openCourse: 'Open course',

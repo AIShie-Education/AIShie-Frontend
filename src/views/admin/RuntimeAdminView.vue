@@ -26,6 +26,7 @@ import { runtime } from '@/api/runtime'
 import { useAsync } from '@/composables/useAsync'
 import { useRuntime } from '@/composables/useRuntime'
 import AppEmpty from '@/components/AppEmpty.vue'
+import AppResult from '@/components/AppResult.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import OperatorDetail from './components/OperatorDetail.vue'
 import AgentRuntimeCard from './runtime/AgentRuntimeCard.vue'
@@ -74,9 +75,9 @@ watch(
 
     <section v-if="!rt.checked.value" v-loading="true" class="app-card runtime-admin__checking" />
     <section v-else-if="!rt.available.value" class="app-card runtime-admin__none">
-      <el-result
+      <AppResult
         v-if="unreachable"
-        icon="warning"
+        kind="failed"
         :title="t('runtimeAdmin.state.unreachableTitle')"
         :sub-title="t('runtimeAdmin.state.unreachable')"
       >
@@ -85,7 +86,7 @@ watch(
             {{ t('common.actions.retry') }}
           </el-button>
         </template>
-      </el-result>
+      </AppResult>
       <!-- No agent service beside this server is not a fault: nothing to show here. -->
       <AppEmpty v-else page :title="t('runtimeAdmin.state.absentTitle')" :text="t('runtimeAdmin.state.absent')" />
     </section>
@@ -93,13 +94,13 @@ watch(
       <RuntimeAsync :loading="me.loading.value || !me.error.value" :error="me.error.value" @retry="me.reload" />
     </section>
     <section v-else-if="!me.data.value.is_admin" class="app-card runtime-admin__not-admin">
-      <el-result
-        icon="warning"
+      <AppResult
+        kind="forbidden"
         :title="t('runtimeAdmin.state.notAdminTitle')"
         :sub-title="t('runtimeAdmin.state.notAdmin')"
       >
         <template #extra><OperatorDetail :text="t('runtimeAdmin.flags.adminActorIds')" /></template>
-      </el-result>
+      </AppResult>
     </section>
     <el-tabs v-else v-model="tab" class="runtime-admin__tabs">
       <el-tab-pane v-for="x in TABS" :key="x.name" :name="x.name" :label="t(x.label)" lazy>

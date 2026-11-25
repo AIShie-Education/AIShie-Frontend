@@ -144,25 +144,25 @@ function linkTo(v: DocumentVersion) {
 .version-item__purged {
   color: var(--el-color-danger);
 }
+/* The versions as rows between rules; the one shown has the navy line at its
+   left, as a chosen row of the side bar has. */
 .version-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
 .version-item {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  padding: 10px 12px;
+  border-bottom: var(--app-rule);
+  padding: 10px 0 10px var(--app-space-md);
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 .version-item.is-shown {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-color-primary-light-9);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
 }
 .version-item__head {
   display: flex;
@@ -180,7 +180,7 @@ function linkTo(v: DocumentVersion) {
   gap: 4px;
   flex-wrap: wrap;
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
   min-width: 0;
 }
 .version-item__files {

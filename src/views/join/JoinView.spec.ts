@@ -8,7 +8,13 @@ import { ApiError, type JoinPreview } from '@/api/http'
 import type { Me } from '@/api/types'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
+import AppResult from '@/components/AppResult.vue'
 import JoinView from './JoinView.vue'
+
+// The page's style, as written: jsdom lays nothing out.
+const joinStyle = Object.values(
+  import.meta.glob<string>('./JoinView.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
 
 let preview: () => Promise<JoinPreview>
 const joinCourse = vi.fn()
@@ -94,7 +100,25 @@ describe('the join page', () => {
     }
     const { w } = await mountJoin()
     expect(w.text()).toContain('This link isn’t valid')
+    // As every result says what went wrong: a glyph on its title's line, at the column's left.
+    expect(w.getComponent(AppResult).props('kind')).toBe('missing')
+    expect(w.find('.app-result__title .app-result__glyph').exists()).toBe(true)
     w.unmount()
+  })
+
+  it('starts its column with the course’s title, its h1, and its code under it: no line over the title', async () => {
+    for (const p of [open, { ...open, joinable: false, reason: 'expired' as const, registration: false }]) {
+      preview = async () => p
+      const { w } = await mountJoin()
+      const column = w.get('main.app-auth-page__card').element
+      const first = column.firstElementChild!
+      expect(first.matches('section.join__course')).toBe(true)
+      expect([...first.children].map((el) => el.tagName)).toEqual(['H1', 'P'])
+      expect(first.children[0]!.textContent).toBe('Programming')
+      expect(first.children[1]!.textContent).toBe('CS101 · A')
+      expect(w.text()).not.toContain('You have been invited to join')
+      w.unmount()
+    }
   })
 
   it('says why a link cannot be joined through, and offers nothing to join', async () => {
@@ -117,6 +141,11 @@ describe('the join page', () => {
     // Signing in comes back here to join.
     expect(signIn.attributes('href')).toBe(`/login?next=/join/${TOKEN}?then=join`)
     const create = w.findAll('button').find((b) => b.text() === 'Create an account')!
+    // Words that start their line under the solid Sign in to join: their room at the left taken back.
+    expect(create.classes()).toEqual(expect.arrayContaining(['is-text', 'join__register']))
+    expect(joinStyle).toMatch(
+      /\.el-button\.join__register,\n\.el-button\.join__home \{\s*padding-inline: var\(--app-space-sm\);\s*margin-inline-start: calc\(-1 \* var\(--app-space-sm\)\);/,
+    )
     await create.trigger('click')
     await flushPromises()
     expect(w.find('input[name="email"]').exists()).toBe(true)
@@ -203,6 +232,13 @@ describe('the join page', () => {
     await flushPromises()
     expect(w.text()).toContain('An account with this email already exists')
     expect(w.findAll('a').some((a) => a.text().includes('Sign in instead'))).toBe(true)
+    // The indigo's words, never a second solid button over the form's Create account and join.
+    const instead = w.get('.join__instead')
+    expect(instead.classes()).toEqual(expect.arrayContaining(['el-button--primary', 'is-link']))
+    const solids = w
+      .findAll('button.el-button--primary')
+      .filter((b) => !['is-text', 'is-link'].some((c) => b.classes().includes(c)))
+    expect(solids.map((b) => b.text())).toEqual(['Create account and join'])
     w.unmount()
   })
 

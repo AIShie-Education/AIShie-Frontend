@@ -1,12 +1,13 @@
 <script setup lang="ts">
-// One agent, by its shape: a rounded square (a person is always a circle) on
-// the indigo tint, with its initials in indigo (agentInitials: two letters,
-// or one Chinese, Japanese or Korean character), and the brand's light, the
-// dot on the wordmark's i, at its top right corner. No hue of its own: the
-// shape tells an agent from a person, and the "AI" beside its name
-// (AiBadge) says it in words. It is decorative: the name goes beside it, and
-// the initials are drawn by CSS, so that they are not in the text a screen
-// reader reads, a selection copies or a test finds beside the name.
+// One agent, by its shape: a square with the app's 2 px corners (a person is
+// always a circle) on the indigo tint, with its initials in indigo
+// (agentInitials: two letters, or one Chinese, Japanese or Korean character).
+// No hue of its own and no mark of the brand's: the square tells an agent from
+// a person, and the "AI" beside its name (AiBadge) says it in words. The
+// amber light is the wordmark's alone (docs/CONVENTIONS.md, "An agent always
+// looks like one"). It is decorative: the name goes beside it, and the
+// initials are drawn by CSS, so that they are not in the text a screen reader
+// reads, a selection copies or a test finds beside the name.
 //
 // 28 px where an agent heads a row of a list of agents (the chat's list to
 // ask, the course's agents); `small` (20 px) inline in a line of text (the
@@ -29,21 +30,19 @@ const initials = computed(() => agentInitials(props.name))
   <span class="agent-avatar" :class="`is-${size}`" aria-hidden="true">
     <span v-if="initials" class="agent-avatar__initials" :data-initials="initials" />
     <AgentSeatIcon v-else class="agent-avatar__icon" />
-    <span class="agent-avatar__light" />
   </span>
 </template>
 
 <style scoped>
 .agent-avatar {
   --agent-avatar-size: 28px;
-  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   width: var(--agent-avatar-size);
   height: var(--agent-avatar-size);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
   background: var(--app-indigo-tint);
   color: var(--app-indigo);
   /* Plex in every language, so that the letters look alike; a Chinese character falls back to the language's font. */
@@ -59,12 +58,10 @@ const initials = computed(() => agentInitials(props.name))
 }
 .agent-avatar.is-small {
   --agent-avatar-size: 20px;
-  border-radius: 6px;
   font-size: calc(var(--agent-avatar-size) / 2);
 }
 .agent-avatar.is-large {
   --agent-avatar-size: 36px;
-  border-radius: 10px;
 }
 .agent-avatar__initials::before {
   content: attr(data-initials);
@@ -73,26 +70,5 @@ const initials = computed(() => agentInitials(props.name))
   font-size: 0.6em;
   width: 60%;
   height: 60%;
-}
-/* The light: 6 px (5 at the small size), ringed in what it stands on, so that it sits on the corner. */
-.agent-avatar__light {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--app-light);
-  box-shadow: 0 0 0 1.5px var(--agent-avatar-ring, var(--el-bg-color));
-}
-.agent-avatar.is-small .agent-avatar__light {
-  width: 5px;
-  height: 5px;
-  top: -1.5px;
-  right: -1.5px;
-}
-.agent-avatar.is-large .agent-avatar__light {
-  width: 7px;
-  height: 7px;
 }
 </style>

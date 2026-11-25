@@ -228,7 +228,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
                 <span class="peer-member__figure">{{ formatDecimal(m.grade.score) }}</span>
                 <AppTag
                   :tone="m.grade.state === 'posted' ? 'done' : 'wait'"
-                  :variant="m.grade.state === 'posted' ? 'quiet' : 'pill'"
+                  :variant="m.grade.state === 'posted' ? 'quiet' : 'state'"
                 >
                   {{ t(`peer.results.gradeState.${m.grade.state === 'posted' ? 'posted' : 'draft'}`) }}
                 </AppTag>
@@ -312,7 +312,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
 }
 .peer-member {
   padding: 10px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .peer-member__head {
   display: flex;
@@ -369,7 +369,7 @@ const flagTone = (f: string) => (f === 'missing' ? 'danger' : 'neutral')
 }
 .peer-sheet {
   padding: 8px 0;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
 }
 .peer-sheet:first-child {

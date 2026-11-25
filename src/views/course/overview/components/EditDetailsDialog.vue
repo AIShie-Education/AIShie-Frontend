@@ -150,12 +150,12 @@ async function submit() {
 </template>
 
 <style scoped>
+/* What only an administrator changes: a block between rules, not a grey box in the dialog. */
 .details__fixed {
   margin-top: 4px;
-  padding: 12px 14px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
-  border: 1px solid var(--el-border-color-lighter);
+  padding: var(--app-space-md) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .details__fixed-title {
   display: flex;

@@ -714,7 +714,7 @@ const backLink = computed(() => ({
 }
 .grade-view__files {
   margin-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   padding-top: 12px;
 }
 .grade-view__files-title {

@@ -7,15 +7,15 @@
 // steps of an answer in the making do (ChatDraftSteps).
 //
 // An answer that said it relied on no course material (an empty list) shows
-// a neutral pill instead, which says on hover, focus or a tap that the agent
-// said so. One that did not say (no sources: every answer from before Core
-// kept them, and an agent that does not say) shows nothing, which
+// a neutral state tag instead, which says on hover, focus or a tap that the
+// agent said so. One that did not say (no sources: every answer from before
+// Core kept them, and an agent that does not say) shows nothing, which
 // ChatMessage decides.
 //
 // A title with no spaces (one taken from a file's name,
 // "COMP1001_Lecture04_Lists_Tuples_and_Dictionaries") breaks wherever it
 // must, on the line and in the summary alike: nothing in the chat scrolls
-// sideways, on a phone or in the chat's window.
+// sideways, on a phone or in the chat's pane.
 import AppTag from '@/components/AppTag.vue'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -109,7 +109,7 @@ const summary = computed(() => {
   max-width: 100%;
   padding: 2px 6px 2px 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: inherit;
   font: inherit;

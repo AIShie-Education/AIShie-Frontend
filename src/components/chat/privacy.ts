@@ -34,7 +34,7 @@
 //
 // The words are the reader's language's (chat.privacy); this says which.
 import type { HostedAgent, ModelsAnswer } from '@/api/runtime-types'
-import { visibleToLines, type VisibleToLine } from './chat'
+import { visibleToLines, type VisibleToKey, type VisibleToLine } from './chat'
 
 /** How the agent answering is run, as far as the page knows: by AIshie's runtime, from its owner's tools (MCP), or not known. */
 export type AnswerHosting = 'runtime' | 'mcp' | null
@@ -43,6 +43,8 @@ export type AnswerHosting = 'runtime' | 'mcp' | null
 export interface AnswerModel {
   provider: string
   model: string
+  /** The school offer's display name, for an operator's own model server. */
+  offerLabel?: string
 }
 
 /** The models a hosted agent answers with, as the runtime tells its owner. */
@@ -67,7 +69,7 @@ export function answerModelsOf(agent: Pick<HostedAgent, 'model'>): AnswerModels 
   if (school?.offered && school.provider && school.model) {
     return {
       plan: 'school',
-      model: { provider: school.provider, model: school.model },
+      model: { provider: school.provider, model: school.model, offerLabel: school.label },
       fallback: school.fallback ? ownModel : null,
     }
   }
@@ -111,6 +113,8 @@ export interface PrivacyNotice {
   line: Said
   /** Who can read it, as the chat words Core's visible_to. */
   readers: VisibleToLine[]
+  /** The same readers as short names, joined in the reader's language for the line and points. */
+  readerSummary: Said[]
   /** Under the readers: where an agent among them sends what it reads; null where none may be. */
   readersNote: Said | null
   /** Where it goes to be answered: none where the respondent is a person (a conversation from before agents alone). */
@@ -137,11 +141,27 @@ export interface PrivacyFacts {
   providerName?: (provider: string) => string
 }
 
+const READER_SUMMARY_KEY: Record<VisibleToKey, string> = {
+  participants: 'reader.participants',
+  overseers: 'reader.overseers',
+  actionRecord: 'reader.actionRecord',
+  respondentAnswersOthers: 'reader.respondentAnswersOthers',
+  auditExport: 'reader.auditExport',
+}
+
+/** Provider ids for an endpoint operated by the school, never companies to name as if they were one. */
+const SCHOOL_SERVER_PROVIDERS = new Set(['openai_compatible', 'vllm', 'ollama', 'lmstudio'])
+
 /** The notice for a conversation with an agent: every sentence as a key and its parameters. */
 export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
   const name = f.name
   const label = f.providerName ?? ((p: string) => p)
   const readers = visibleToLines(f.visibleTo, { answersOthers: f.answersOthers })
+  const readerSummary: Said[] = readers.map((line): Said =>
+    'key' in line
+      ? { key: READER_SUMMARY_KEY[line.key], params: {} }
+      : { key: 'reader.other', params: { name: line.text } },
+  )
   const agent = f.agent ?? true
   const readersNote = readers.some((l) => 'key' in l && (l.key === 'overseers' || l.key === 'actionRecord'))
     ? { key: 'agentReaders', params: {} }
@@ -160,27 +180,47 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
   const kept: Said[] = [
     { key: 'kept.notDeleted', params: {} },
     { key: 'kept.withdrawn', params: {} },
+    { key: 'kept.unposted', params: {} },
   ]
   let line: Said
   let goes: Said
   switch (kind) {
     case 'model': {
       const m = f.models!
-      const provider = label(m.model.provider)
+      const schoolServer = m.plan === 'school' && SCHOOL_SERVER_PROVIDERS.has(m.model.provider)
+      const offerLabel = m.model.offerLabel?.trim() || null
+      // An internal endpoint id is not a company. Name the school's own server by its real offer
+      // label, or say only that an AI model's provider receives it where no label exists.
+      const provider = schoolServer ? (offerLabel ?? '') : label(m.model.provider)
       // The fallback's provider too, where it is another: it answers when the school's model cannot.
       const fallbackProvider = m.fallback ? label(m.fallback.provider) : null
-      if (fallbackProvider && m.fallback!.provider !== m.model.provider) {
-        line = { key: 'line.modelFallback', params: { name, provider, fallbackProvider } }
-        goes = { key: 'points.modelFallback', params: { name, provider, fallbackProvider } }
+      const hasOtherFallback = !!fallbackProvider && m.fallback!.provider !== m.model.provider
+      if (schoolServer && offerLabel) {
+        const suffix = hasOtherFallback ? 'schoolServerFallback' : 'schoolServer'
+        line = { key: `line.${suffix}`, params: { name, provider, ...(fallbackProvider ? { fallbackProvider } : {}) } }
+        goes = { key: `points.${suffix}`, params: { name, provider, ...(fallbackProvider ? { fallbackProvider } : {}) } }
+      } else if (schoolServer) {
+        const suffix = hasOtherFallback ? 'runtimeFallback' : 'runtime'
+        line = { key: `line.${suffix}`, params: { name, ...(fallbackProvider ? { fallbackProvider } : {}) } }
+        goes = { key: `points.${suffix}`, params: { name, ...(fallbackProvider ? { fallbackProvider } : {}) } }
+      } else if (hasOtherFallback) {
+        line = { key: 'line.modelFallback', params: { name, provider, fallbackProvider: fallbackProvider! } }
+        goes = { key: 'points.modelFallback', params: { name, provider, fallbackProvider: fallbackProvider! } }
       } else {
         line = { key: 'line.model', params: { name, provider } }
         goes = { key: 'points.model', params: { name, provider } }
       }
       route.push({ key: 'route.hosted', params: { name } })
-      route.push({
-        key: m.plan === 'school' ? 'route.school' : 'route.own',
-        params: { name, provider, model: m.model.model },
-      })
+      route.push(
+        schoolServer
+          ? offerLabel
+            ? { key: 'route.schoolServer', params: { provider, model: m.model.model } }
+            : { key: 'route.schoolUnknownProvider', params: { model: m.model.model } }
+          : {
+              key: m.plan === 'school' ? 'route.school' : 'route.own',
+              params: { name, provider, model: m.model.model },
+            },
+      )
       if (m.fallback)
         route.push({
           key: 'route.fallback',
@@ -215,10 +255,20 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
     kind,
     line,
     readers,
+    readerSummary,
     readersNote,
     route,
     kept,
-    points: [{ key: 'points.readers', params: {} }, goes, { key: 'points.kept', params: {} }],
+    points: [
+      {
+        key: readers.some((line) => 'key' in line && line.key === 'auditExport')
+          ? 'points.readersExport'
+          : 'points.readers',
+        params: {},
+      },
+      goes,
+      { key: 'points.kept', params: {} },
+    ],
   }
 }
 

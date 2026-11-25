@@ -201,44 +201,36 @@ function reloadAll() {
   font-size: var(--app-text-sm);
   color: var(--el-color-success);
 }
+/* Rows between rules, not boxes: what waits on the reader has the amber
+   line at its left and its figure in the amber of what waits. */
 .attention__rows {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
 .attention__row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid var(--el-border-color-lighter);
-  color: var(--el-text-color-primary);
+  gap: var(--app-space-md);
+  padding: var(--app-space-md) var(--app-space-sm) var(--app-space-md) var(--app-space-md);
+  border-bottom: var(--app-rule);
+  color: var(--app-ink);
   text-decoration: none;
   min-width: 0;
 }
 .attention__row:hover {
-  border-color: var(--el-color-primary-light-5);
-  background: var(--el-fill-color-lighter);
+  background: var(--el-fill-color-light);
 }
 .attention__row.is-waiting {
-  border-color: var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
+  box-shadow: inset 3px 0 0 var(--app-wait-fg);
 }
+/* The kind's glyph, at the text's size, in the third ink: it tells the rows
+   apart, it is no badge. */
 .attention__icon {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--el-fill-color-light);
-  color: var(--el-text-color-secondary);
-}
-.attention__row.is-waiting .attention__icon {
-  color: var(--el-color-warning);
-  background: var(--el-bg-color);
+  font-size: var(--app-text-lg);
+  color: var(--app-ink-3);
 }
 .attention__text {
   flex: 1;
@@ -253,10 +245,10 @@ function reloadAll() {
 }
 .attention__sub {
   font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 .attention__sub--error {
-  color: var(--el-color-danger);
+  color: var(--app-danger-fg);
 }
 .attention__count {
   font-size: var(--app-text-2xl);
@@ -266,7 +258,7 @@ function reloadAll() {
   text-align: right;
 }
 .attention__row.is-waiting .attention__count {
-  color: var(--el-color-warning-dark-2, var(--el-color-warning));
+  color: var(--app-wait-fg);
 }
 .attention__go {
   color: var(--el-text-color-placeholder);

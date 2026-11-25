@@ -57,7 +57,8 @@ function chip(f: DocumentFile) {
 </template>
 
 <style scoped>
-/* The files whose text version to read: one pressed at a time. */
+/* The files whose text version to read: one pressed at a time, chips as the
+   filters' are (rectangles with 2 px corners, not pills). */
 .text-files {
   display: flex;
   flex-wrap: wrap;
@@ -71,9 +72,9 @@ function chip(f: DocumentFile) {
   max-width: 100%;
   min-width: 0;
   padding: 5px 10px;
-  border: 1px solid var(--el-border-color);
-  border-radius: 999px;
-  background: var(--el-bg-color);
+  border: 1px solid var(--app-line-strong);
+  border-radius: var(--app-radius);
+  background: transparent;
   color: var(--app-ink-2);
   font: inherit;
   font-size: var(--app-text-sm);
@@ -84,9 +85,9 @@ function chip(f: DocumentFile) {
   background: var(--app-indigo-tint);
 }
 .text-file.is-on {
-  border-color: var(--el-color-primary);
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  border-color: var(--app-indigo-line);
+  background: var(--app-indigo-tint);
+  color: var(--app-indigo);
   font-weight: 500;
 }
 .text-file__n {

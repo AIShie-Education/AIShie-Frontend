@@ -65,7 +65,7 @@ const how = computed(() => (props.member.joined_how === 'signup' ? t('groups.car
   gap: var(--app-space-sm);
   min-height: 32px;
   padding: 2px var(--app-space-xs);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
 }
 .student-item.is-movable {
   cursor: grab;

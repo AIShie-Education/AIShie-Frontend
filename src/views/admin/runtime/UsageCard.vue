@@ -25,11 +25,11 @@ import { joinParts } from '@/utils/parts'
 
 const { t } = useI18n()
 // A phone's layout, an owner's model calls and cost under their name, where the
-// card is as narrow as on a phone: its title 542 px or less, the width it has
+// section is as narrow as on a phone: its title 592 px or less, the width it has
 // in a window of 640 px without the side bar. By the card's own width, not the
 // window's: the side bar takes from it.
 const cardTitle = useTemplateRef<HTMLElement>('cardTitle')
-const narrow = useContainerNarrow(cardTitle, 542)
+const narrow = useContainerNarrow(cardTitle, 592)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 
@@ -180,17 +180,24 @@ const schoolSpent = computed(() => {
   font-size: var(--app-text-sm);
   color: var(--el-text-color-secondary);
 }
+/* The totals: figures side by side, a rule between them and the section's
+   rules above and below, not three boxes. */
 .usage-card__totals {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
   margin: 0 0 8px;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .usage-card__total {
-  padding: 12px 16px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-md) var(--app-space-lg);
   min-width: 0;
+}
+.usage-card__total:first-child {
+  padding-left: 0;
+}
+.usage-card__total + .usage-card__total {
+  border-left: var(--app-rule);
 }
 .usage-card__total dt {
   font-size: var(--app-text-xs);
@@ -237,6 +244,13 @@ const schoolSpent = computed(() => {
 @container (max-width: 519px) {
   .usage-card__totals {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .usage-card__total {
+    padding-left: 0;
+  }
+  .usage-card__total + .usage-card__total {
+    border-left: none;
+    border-top: var(--app-rule);
   }
 }
 </style>

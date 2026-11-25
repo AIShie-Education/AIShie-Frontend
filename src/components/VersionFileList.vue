@@ -146,13 +146,14 @@ async function download(f: DocumentFile) {
 </template>
 
 <style scoped>
+/* A version's files are rows between rules, not a box each, nor boxes in the section they are in; each opens
+   in the viewer, hovered in the indigo's tint. */
 .version-files {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
   min-width: 0;
 }
 .version-file {
@@ -161,10 +162,11 @@ async function download(f: DocumentFile) {
   flex-wrap: wrap;
   gap: 4px 10px;
   min-width: 0;
-  padding: 2px;
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-lighter);
+  padding: 2px 0;
+  border-top: var(--app-rule);
+}
+.version-file:last-child {
+  border-bottom: var(--app-rule);
 }
 .version-file__open {
   flex: 1 1 220px;
@@ -174,7 +176,7 @@ async function download(f: DocumentFile) {
   min-width: 0;
   padding: 6px 8px;
   border: 0;
-  border-radius: calc(var(--app-radius-item) - 2px);
+  border-radius: var(--app-radius);
   background: none;
   color: inherit;
   font: inherit;
@@ -184,6 +186,7 @@ async function download(f: DocumentFile) {
 .version-file__open:hover {
   background: var(--app-indigo-tint);
 }
+/* What kind of file it is, by its icon's colour, on no ground of its own, which would be a box in the row. */
 .version-file__icon {
   flex-shrink: 0;
   display: inline-flex;
@@ -191,8 +194,6 @@ async function download(f: DocumentFile) {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: var(--el-bg-color);
   color: var(--app-ink-2);
   font-size: var(--app-text-xl);
 }
@@ -237,7 +238,7 @@ async function download(f: DocumentFile) {
   flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid var(--el-color-danger-light-5);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   color: var(--el-color-danger);
   font-size: var(--app-text-mark);
   font-weight: var(--app-weight-strong);
@@ -262,7 +263,7 @@ async function download(f: DocumentFile) {
   height: 36px;
   margin-right: 2px;
   border: 0;
-  border-radius: calc(var(--app-radius-item) - 2px);
+  border-radius: var(--app-radius);
   background: none;
   color: var(--app-ink-3);
   font-size: var(--app-text-lg);

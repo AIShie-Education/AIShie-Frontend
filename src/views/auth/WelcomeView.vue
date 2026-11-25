@@ -13,6 +13,7 @@ import { errorMessage } from '@/composables/useErrors'
 import { useSessionStore } from '@/stores/session'
 import { useUiStore } from '@/stores/ui'
 import { LOCALES } from '@/i18n'
+import AppResult from '@/components/AppResult.vue'
 import AppWordmark from '@/components/AppWordmark.vue'
 import { tokenFromHash } from '@/utils/invitation'
 import { passwordProblem } from '@/utils/password'
@@ -161,19 +162,23 @@ function proceed() {
 
 <template>
   <div class="app-auth-page welcome">
-    <div class="app-auth-page__lang">
-      <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-        <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
-      </el-select>
-    </div>
-    <div class="app-auth-page__card welcome__card">
-      <div class="welcome__brand">
+    <header class="app-auth-page__head">
+      <div class="app-auth-page__bar">
         <AppWordmark class="app-auth-page__wordmark" decorative />
-        <h1 class="welcome__title">{{ t('auth.invite.title') }}</h1>
-        <p class="welcome__tagline">{{ t('common.tagline') }}</p>
+        <div class="app-auth-page__lang">
+          <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+          </el-select>
+        </div>
+      </div>
+    </header>
+    <main class="app-auth-page__card welcome__card">
+      <div class="welcome__brand">
+        <h1 class="app-auth-page__title welcome__title">{{ t('auth.invite.title') }}</h1>
+        <p class="app-auth-page__sub welcome__tagline">{{ t('common.tagline') }}</p>
       </div>
 
-      <el-result v-if="done" icon="success" :title="t('auth.invite.doneTitle')" class="welcome__result">
+      <AppResult v-if="done" kind="done" :title="t('auth.invite.doneTitle')" class="welcome__result">
         <template #sub-title>
           <p class="welcome__done">{{ doneText }}</p>
         </template>
@@ -182,11 +187,11 @@ function proceed() {
             {{ t('auth.invite.continue') }}
           </el-button>
         </template>
-      </el-result>
+      </AppResult>
 
-      <el-result
+      <AppResult
         v-else-if="!token || invalid"
-        icon="warning"
+        kind="missing"
         :title="invalid ? t('auth.invite.invalidTitle') : t('auth.invite.incompleteTitle')"
         :sub-title="invalid ? t('auth.invite.invalid') : t('auth.invite.incomplete')"
         class="welcome__result"
@@ -199,7 +204,7 @@ function proceed() {
             <el-button type="primary">{{ t('auth.invite.signIn') }}</el-button>
           </router-link>
         </template>
-      </el-result>
+      </AppResult>
 
       <template v-else>
         <p class="welcome__intro">{{ t('auth.invite.intro') }}</p>
@@ -249,43 +254,25 @@ function proceed() {
           </el-button>
         </el-form>
       </template>
-    </div>
+    </main>
   </div>
 </template>
 
 <style scoped>
-.welcome__card {
-  max-width: 440px;
-}
 .welcome__brand {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
   margin-bottom: 20px;
-}
-.welcome__title {
-  margin: 0;
-  font-size: var(--app-text-2xl);
-  line-height: 1.3;
-}
-.welcome__tagline {
-  margin: 0;
-  font-size: var(--app-text-sm);
-  color: var(--el-text-color-secondary);
 }
 .welcome__intro {
   margin: 0 0 16px;
+  max-width: var(--app-measure);
   font-size: var(--app-text-md);
   line-height: var(--app-lh-text);
-  color: var(--el-text-color-regular);
+  color: var(--app-ink-2);
 }
 .welcome__alert {
   margin-bottom: 16px;
 }
-.welcome__submit {
-  width: 100%;
-}
+/* A result (done, or the link not whole): its words and its one button at the column's left, as the page's are. */
 .welcome__result {
   padding: 8px 0 0;
 }

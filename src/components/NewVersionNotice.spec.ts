@@ -67,6 +67,13 @@ describe('NewVersionNotice', () => {
     expect(notice.text()).toContain('已有新版本')
     expect(w.get('.new-version__reload').text()).toBe('重新載入')
     expect(w.get('.new-version__later').text()).toBe('稍後')
+    // A strip of words: Reload in the indigo and Later in the ink, both text buttons, neither solid, for the page
+    // under it may have its own one primary button.
+    expect(w.get('.new-version__reload').classes()).toEqual(
+      expect.arrayContaining(['el-button--primary', 'is-text']),
+    )
+    expect(w.get('.new-version__later').classes()).toContain('is-text')
+    expect(w.get('.new-version__later').classes()).not.toContain('el-button--primary')
     await vi.advanceTimersByTimeAsync(CHECK_MS * 3)
     expect(reload).not.toHaveBeenCalled()
     await w.get('.new-version__reload').trigger('click')

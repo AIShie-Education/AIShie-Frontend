@@ -10,11 +10,10 @@ export default {
     newTip: 'New conversation',
     history: 'History',
     close: 'Close the chat',
-    // The window's title bar: minimized, it opens again on what it showed; closed, on a new conversation.
+    // The pane's head row: minimized, it opens again on what it showed; closed, on a new conversation.
     minimize: 'Minimize the chat',
-    // Its left edge and its top, which resize it.
-    width: 'Width of the chat window',
-    height: 'Height of the chat window',
+    // Its left edge, which resizes it.
+    width: 'Width of the chat',
     backToHistory: 'Back to the history',
     backToAgents: 'Back to the agents',
     pickTitle: 'Ask an agent',
@@ -46,6 +45,7 @@ export default {
     empty: 'No agent here answers your questions yet.',
     offlineHint: 'Nothing seems to be running this agent now: an answer may take a while.',
     sharedHint: 'It answers other members too, holds what each one writes, and may repeat it to them.',
+    sharedHintAll: 'Course agents answer other members too, hold what each one writes, and may repeat it to them.',
   },
   between: '{opener} → {respondent}',
   messagesLabel: 'Messages',
@@ -274,24 +274,40 @@ export default {
     gotIt: 'Got it',
     agentReaders:
       'An agent that decides actions in the course can read this conversation too. Where it sends what it reads depends on how it is hosted: to its AI model through AIshie’s agent service, or to its owner’s own tools.',
+    reader: {
+      participants: 'The two taking part',
+      overseers: 'course staff',
+      actionRecord: 'people and agents that decide actions',
+      respondentAnswersOthers: 'other members it answers',
+      auditExport: 'site and department administrators',
+      other: '{name}',
+    },
     line: {
-      model:
-        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to {provider} to answer.',
+      model: '{readers} can read this; {name} sends it to {provider}.',
       modelFallback:
-        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to {provider} to answer, or to {fallbackProvider} when the school’s model cannot.',
-      runtime:
-        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} sends it to its AI model’s provider to answer.',
-      mcp: 'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. {name} answers from its owner’s own tools.',
-      unknown:
-        'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation, and it goes to {name}’s AI model to be answered.',
+        '{readers} can read this; {name} sends it to {provider}, or to {fallbackProvider} when the school’s model cannot.',
+      runtime: '{readers} can read this; {name} sends it to its AI model’s provider.',
+      runtimeFallback:
+        '{readers} can read this; {name} sends it to its AI model’s provider, or to {fallbackProvider} when the school’s model cannot.',
+      schoolServer: '{readers} can read this; {name} sends it to the school’s own model server, {provider}.',
+      schoolServerFallback:
+        '{readers} can read this; {name} sends it to the school’s own model server, {provider}, or to {fallbackProvider} when the school’s model cannot.',
+      mcp: '{readers} can read this; {name} answers from its owner’s own tools.',
+      unknown: '{readers} can read this; {name}’s AI model answers it.',
     },
     points: {
-      readers:
-        'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
+      readers: '{readers} can read this conversation.',
+      readersExport:
+        '{readers} can read this conversation; the site’s and the department’s administrators may export it for audit.',
       model: '{name} sends what you write here to {provider}, its AI model’s provider, to answer it.',
       modelFallback:
         '{name} sends what you write here to {provider}, its AI model’s provider, to answer it, or to {fallbackProvider} when the school’s model cannot.',
+      schoolServer: '{name} sends what you write here to the school’s own model server, {provider}, to answer it.',
+      schoolServerFallback:
+        '{name} sends what you write here to the school’s own model server, {provider}, to answer it, or to {fallbackProvider} when the school’s model cannot.',
       runtime: '{name} sends what you write here to its AI model’s provider to answer it.',
+      runtimeFallback:
+        '{name} sends what you write here to its AI model’s provider to answer it, or to {fallbackProvider} when the school’s model cannot.',
       mcp: '{name} is used from its owner’s own tools, which may send what you write to any AI service they use.',
       unknown: 'What you write here goes to {name}’s AI model to be answered.',
       kept: 'Nothing here is deleted: a message you withdraw is hidden, but kept.',
@@ -300,6 +316,9 @@ export default {
       hosted:
         '{name} is hosted on AIshie. To answer, AIshie’s agent service sends the messages of this conversation, the files attached to them, and what {name} reads in the course to its AI model.',
       school: 'That model is {model}, from {provider}, on the school’s plan.',
+      schoolServer: 'That model is {model}, on the school’s own model server, {provider}.',
+      schoolUnknownProvider:
+        'That model is {model}, on the school’s plan; this page cannot name its AI model’s provider.',
       own: 'That model is {model}, from {provider}, on your own API key.',
       fallback:
         'When the school’s model cannot answer (today’s allowance is used up, or it fails), your own model answers instead: {model}, from {provider}.',
@@ -313,6 +332,8 @@ export default {
       notDeleted: 'Conversations are never deleted. A closed one can still be read.',
       withdrawn:
         'A withdrawn message is hidden here, but kept: its text in the record of the action that wrote it and in exports for audit, and its files on the site, which exports list without their contents.',
+      unposted:
+        'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
       withdrawnModel:
         'Once a message is withdrawn, AIshie’s agent service no longer sends it to {name}’s model; what was sent before cannot be taken back.',
       ocr: 'Text that AIshie’s agent service reads from an attached image or scanned PDF is kept for up to 180 days, even after the message is withdrawn.',

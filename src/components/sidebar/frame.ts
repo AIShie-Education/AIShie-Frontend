@@ -7,6 +7,7 @@
 
 import { markRaw, type Component, type InjectionKey } from 'vue'
 import AgentSeatIcon from '@/components/AgentSeatIcon.vue'
+import { PAGE_MIN, PANEL_MIN } from '@/components/chat/panel'
 
 export type SideView = 'courses' | 'agents' | 'admin'
 
@@ -27,10 +28,21 @@ export const VIEW_META: Record<SideView, { icon: string | Component; label: stri
   admin: { icon: 'Setting', label: 'common.nav.admin' },
 }
 
+/** The activity bar's width, in pixels (ActivityBar.vue's own). */
+export const ACTIVITY_BAR_WIDTH = 48
 /** The side bar's width, in pixels: fixed, as the activity bar's is. */
 export const SIDEBAR_WIDTH = 260
 /** At this width and below there is no activity bar: the header's menu button opens the views in a drawer. */
 export const SIDEBAR_DRAWER_MAX_WIDTH = 899
+/**
+ * At this width and below (and above SIDEBAR_DRAWER_MAX_WIDTH), the side bar
+ * gives way to the chat docked beside the page: the activity bar, the side
+ * bar, the chat at its narrowest and the least the page is left beside it
+ * (48 + 260 + 320 + 420 = 1048 px) do not all fit, and the page would be left
+ * a strip of 272 px at 900. Without the side bar, the narrowest window the
+ * chat docks in leaves the page 432 px or more.
+ */
+export const SIDEBAR_GIVES_WAY_MAX_WIDTH = ACTIVITY_BAR_WIDTH + SIDEBAR_WIDTH + PANEL_MIN + PAGE_MIN - 1
 
 export interface SideCaller {
   /** 'human' or 'agent'; unknown until me.get has answered. */

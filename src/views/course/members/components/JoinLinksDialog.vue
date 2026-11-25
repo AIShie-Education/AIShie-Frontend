@@ -303,7 +303,7 @@ async function revoke(link: JoinLink) {
 <style scoped>
 .join-links__panel {
   padding-bottom: 20px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .join-links__list {
   padding-top: 16px;

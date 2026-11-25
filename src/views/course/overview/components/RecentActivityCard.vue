@@ -48,7 +48,6 @@ function moreLabel(i: number): string {
       <span>{{ t('overview.activity.title') }}</span>
       <router-link :to="{ name: 'course-activity', params: { courseId } }" class="recent__all">
         {{ t('overview.activity.all') }}
-        <el-icon><ArrowRight /></el-icon>
       </router-link>
     </h2>
     <AsyncState
@@ -69,9 +68,6 @@ function moreLabel(i: number): string {
 
 <style scoped>
 .recent__all {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
   font-size: var(--app-text-sm);
   font-weight: 500;
   text-decoration: none;
@@ -83,7 +79,11 @@ function moreLabel(i: number): string {
 .recent__more {
   font-size: var(--app-text-xs);
 }
-.recent__list > * + * {
-  border-top: 1px solid var(--el-border-color-lighter);
+/* Rows between rules, as the activity page's. */
+.recent__list {
+  border-top: var(--app-rule);
+}
+.recent__list > * {
+  border-bottom: var(--app-rule);
 }
 </style>

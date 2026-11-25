@@ -32,13 +32,12 @@ const { t } = useI18n()
 const router = useRouter()
 const session = useSessionStore()
 // Status and when go under the action, and who decided is left out (it is on
-// the action's page), where the page is narrower than 720 px (the card's help
-// 669 px or less), by its own width, not the window's: the side bar takes from
-// it.
+// the action's page), where the page is narrower than 720 px (the section's
+// help 719 px or less), by its own width, not the window's: the side bar takes
+// from it.
 const help = useTemplateRef<HTMLElement>('help')
-const narrow = useContainerNarrow(help, 669)
+const narrow = useContainerNarrow(help, 719)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
-useTableRelayout(tableRef, narrow)
 
 const PAGE = 200
 /** Pages loaded in one go before asking the person whether to go on. */
@@ -131,6 +130,21 @@ const filtered = computed(() => {
 })
 const shown = computed(() => filtered.value.slice((page.value - 1) * PER_PAGE, page.value * PER_PAGE))
 
+/**
+ * A column says something only where its rows do not all say the same
+ * (docs/CONVENTIONS.md, "Building a view"), read over every action the
+ * filters leave, not one page of them, so that it does not come and go from
+ * page to page. Status: while one of them is not simply done (Executed, the
+ * usual), or is held for review, as the members' Status shows while a seat
+ * is not active; every action done at once says so in the chips above,
+ * once. Decided: while someone decided one of them; an action done at once
+ * has nobody, and every row would say —.
+ */
+const statusShown = computed(() => filtered.value.some((a) => a.status !== 'executed' || a.review_state !== 'none'))
+const decidedShown = computed(() => filtered.value.some((a) => !!a.decided_at || !!a.decided_by_member_id))
+// The table is laid out again as its columns change: by its width, and as Status and Decided come and go.
+useTableRelayout(tableRef, [narrow, statusShown, decidedShown])
+
 /** A line saying why it did not happen, where it did not. */
 function outcomeNote(a: ActionRow): string | null {
   const e = storedError(a)
@@ -174,7 +188,7 @@ function open(row: ActionRow) {
           <el-option value="" :label="t('actions.mine.anyType')" />
           <el-option v-for="ty in types" :key="ty.value" :value="ty.value" :label="ty.label" />
         </el-select>
-        <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" border />
+        <el-checkbox v-model="showChat" :label="t('actions.mine.showChat')" />
         <span class="app-toolbar__spacer" />
         <el-radio-group v-model="order" size="default" :aria-label="t('actions.mine.sort.label')">
           <el-radio-button value="newest">{{ t('actions.mine.sort.newest') }}</el-radio-button>
@@ -220,14 +234,14 @@ function open(row: ActionRow) {
                   {{ outcomeNote(row) }}
                 </p>
                 <div v-if="narrow" class="my-actions__stack">
-                  <StatusTag vocab="actionStatus" :value="row.status" />
+                  <StatusTag v-if="statusShown" vocab="actionStatus" :value="row.status" />
                   <StatusTag v-if="row.review_state !== 'none'" vocab="reviewState" :value="row.review_state" />
                   <span class="my-actions__muted"><TimeText :value="row.created_at" relative /></span>
                 </div>
               </div>
             </template>
           </el-table-column>
-          <el-table-column v-if="!narrow" :label="t('actions.mine.columns.status')" min-width="150">
+          <el-table-column v-if="!narrow && statusShown" :label="t('actions.mine.columns.status')" min-width="150">
             <template #default="{ row }">
               <div class="my-actions__tags">
                 <StatusTag vocab="actionStatus" :value="row.status" />
@@ -240,7 +254,7 @@ function open(row: ActionRow) {
               <TimeText :value="row.created_at" relative />
             </template>
           </el-table-column>
-          <el-table-column v-if="!narrow" :label="t('actions.mine.columns.decided')" min-width="170">
+          <el-table-column v-if="!narrow && decidedShown" :label="t('actions.mine.columns.decided')" min-width="170">
             <template #default="{ row }">
               <div v-if="row.decided_at || row.decided_by_member_id" class="my-actions__decided">
                 <ActionActor v-if="row.decided_by_member_id" :member-id="row.decided_by_member_id" />

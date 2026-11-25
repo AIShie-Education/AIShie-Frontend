@@ -19,8 +19,9 @@ import {
 // with the view chosen. A button shows its view, or collapses the side bar
 // when its view is the one shown; the view follows the page, without opening
 // a side bar that was collapsed; and this browser remembers the view, the
-// width and whether it is open. On a phone the header's menu shows the views
-// as tabs instead.
+// width and whether it is open. The view shown is marked by a navy rule, never
+// a tint; the side bar's headings are in the case they are written. On a phone
+// the header's menu shows the views as tabs instead.
 
 const STAMP = Date.now().toString(36)
 
@@ -99,13 +100,33 @@ test.describe('the activity bar and the side bar', () => {
     const course = bar.locator(`a.side-course[href="${coursePath()}"]`)
     await expect(course).toContainText('CS101·A')
     await expect(course).toContainText('Introduction to Programming')
-    await expect(course).toContainText('Instructor')
+    // Its role only where the caller's roles differ among their courses: the usual says nothing.
+    const seats = (await call(d.actors.instructor.token, 'GET', '/v1/me/memberships')).body.result?.memberships ?? []
+    const roles = new Set(
+      (seats as { role: string; status: string }[]).filter((m) => m.status !== 'removed').map((m) => m.role),
+    )
+    if (roles.size > 1) await expect(course).toContainText('Instructor')
+    else await expect(course).not.toContainText('Instructor')
+    // The view's title in the case it is written, never upper-cased nor tracked.
+    const title = bar.getByRole('heading', { name: 'Courses', exact: true })
+    expect(
+      await title.evaluate((el) => [getComputedStyle(el).textTransform, getComputedStyle(el).letterSpacing]),
+    ).toEqual(['none', 'normal'])
     await expect(course).not.toHaveAttribute('aria-current', 'page')
     await course.click()
     await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
     await expect(page.locator('.course-head__title')).toHaveText('Introduction to Programming')
     await expect(course).toHaveAttribute('aria-current', 'page')
     await expect(course).toHaveClass(/is-active/)
+    // Marked as aishie.app's contents mark the page shown: a 2 px navy rule at its left, its words in the navy, no tint.
+    await page.mouse.move(900, 600)
+    const mark = await course.evaluate((el) => {
+      const cs = getComputedStyle(el)
+      return { shadow: cs.boxShadow, ground: cs.backgroundColor, radius: cs.borderTopLeftRadius }
+    })
+    expect(mark.shadow).toMatch(/inset 2px 0px 0px 0px$|^rgb\([^)]*\) 2px 0px 0px 0px inset$/)
+    expect(mark.ground).toMatch(/rgba\(0, 0, 0, 0\)|transparent/)
+    expect(mark.radius).toBe('0px')
     // Still the course's, on its other pages.
     await page.goto(coursePath('materials'))
     await expect(course).toHaveClass(/is-active/)

@@ -393,9 +393,6 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 </template>
 
 <style scoped>
-.activity__card {
-  padding-top: 14px;
-}
 .activity__status {
   display: flex;
   align-items: center;
@@ -411,9 +408,9 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   background: var(--el-text-color-placeholder);
   flex-shrink: 0;
 }
+/* Live: the dot in green, round (a mark), without a halo. */
 .activity__dot.is-live {
   background: var(--el-color-success);
-  box-shadow: 0 0 0 3px var(--el-color-success-light-8);
 }
 .activity__dot.is-error {
   background: var(--el-color-danger);
@@ -429,7 +426,6 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   flex-wrap: wrap;
   gap: 8px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 .activity__chip {
   display: inline-flex;
@@ -451,43 +447,52 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
   font-weight: 400;
   margin-left: 2px;
 }
+/* What is new since the reader last looked: the indigo line at its left, as
+   each new row has, not a tinted box. */
 .activity__fresh {
   display: flex;
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
-  padding: 8px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-color-primary-light-9);
-  color: var(--el-color-primary);
+  margin-top: 4px;
+  padding: var(--app-space-xs) var(--app-space-md);
+  box-shadow: inset 3px 0 0 var(--app-indigo);
+  color: var(--app-indigo);
   font-size: var(--app-text-sm);
 }
 .activity__day {
-  margin-top: 8px;
+  margin-top: var(--app-space-lg);
 }
+/* A day's heading: a plain sub-heading in the second ink, in the case it is
+   written in, held at the top while its day scrolls, on the page's surface. */
 .activity__day-title {
   position: sticky;
   top: 0;
   z-index: 1;
-  margin: 8px 0 2px;
-  padding: 6px 0;
-  font-size: var(--app-text-xs);
+  margin: 0;
+  padding: var(--app-space-sm) 0;
+  font-size: var(--app-text-md);
   font-weight: var(--app-weight-strong);
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  color: var(--el-text-color-secondary);
-  background: var(--el-bg-color);
+  line-height: var(--app-lh-heading);
+  color: var(--app-ink-2);
+  background: var(--app-page);
 }
+/* The day's events, rows between rules. */
+.activity__day > .event-item {
+  border-top: var(--app-rule);
+}
+.activity__day > :last-child {
+  border-bottom: var(--app-rule);
+}
+/* Under its first event's words: past the glyph's 16 px, its 12 px gap and the row's 12 px. */
 .activity__run {
-  margin: -6px 0 6px 54px;
+  margin: -6px 0 6px 40px;
 }
 .activity__run-since {
   margin-left: 4px;
   font-weight: normal;
 }
 .activity__end {
-  text-align: center;
   font-size: var(--app-text-sm);
   margin: 16px 0 4px;
 }

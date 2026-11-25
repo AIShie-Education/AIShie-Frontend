@@ -81,9 +81,9 @@ const lookups = useGradeLookups(() => props.courseId)
 void course.ensureMembers()
 
 // A phone's layout where the toolbar is as narrow as in a window of 640 px
-// without the side bar: by the card's own width, not the window's.
+// without the side bar, 592 px: by the section's own width, not the window's.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const measuredNarrow = useContainerNarrow(toolbar, 542)
+const measuredNarrow = useContainerNarrow(toolbar, 592)
 
 /** Whether the page is shown: GradebookView keeps it alive, out of the page, while a student's gradebook is open. */
 const active = ref(true)

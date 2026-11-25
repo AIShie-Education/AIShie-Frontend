@@ -59,12 +59,12 @@ function answer() {
   })
 }
 
-async function home(n: number) {
+async function home(n: number, extra: (i: number) => Record<string, unknown> = () => ({})) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const session = useSessionStore()
   session.$patch({ me: { id: 'actor-mei', kind: 'human', display_name: 'Mei' } } as never)
-  const seats = Array.from({ length: n }, (_, i) => seat(i + 1))
+  const seats = Array.from({ length: n }, (_, i) => seat(i + 1, extra(i + 1)))
   session.memberships = seats as never
   vi.spyOn(session, 'loadMemberships').mockResolvedValue(undefined as never)
   const router = createRouter({
@@ -129,6 +129,27 @@ describe('HomeView', () => {
     expect(second!.find('.course-card__waiting').exists()).toBe(false)
     // The queue is read as the overview reads it.
     expect(read).toHaveBeenCalledWith('action.list_proposed', { course_id: 'c1', limit: 200 })
+  })
+
+  it('says the reader’s role on each card only where their roles differ among their courses', async () => {
+    const role = (w: Awaited<ReturnType<typeof home>>) =>
+      w.findAll('.course-card').map((c) =>
+        c
+          .find('.course-card__meta')
+          .findAll('.app-tag')
+          .map((t) => t.text()),
+      )
+    // A student in all three: no card says so.
+    const same = await home(3)
+    expect(role(same)).toEqual([[], [], []])
+    same.unmount()
+    // A student in two, teaching the third: every card says which.
+    const differ = await home(3, (i) => (i === 3 ? { role: 'instructor' } : {}))
+    expect(role(differ)).toEqual([['Student'], ['Student'], ['Instructor']])
+    differ.unmount()
+    // A seat removed is not among the courses, nor among the roles that differ.
+    const removed = await home(2, (i) => (i === 2 ? { role: 'instructor', status: 'removed' } : {}))
+    expect(role(removed)).toEqual([[]])
   })
 
   it('says it in the reader’s language', async () => {

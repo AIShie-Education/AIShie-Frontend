@@ -53,7 +53,7 @@ const tab = ref<'write' | 'preview'>('write')
 }
 .md-editor__preview {
   border: 1px solid var(--el-border-color);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   padding: 8px 12px;
   overflow: auto;
 }

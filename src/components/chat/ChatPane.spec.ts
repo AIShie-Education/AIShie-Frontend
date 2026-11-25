@@ -10,6 +10,8 @@ let server: {
   messages: ConversationMessage[]
   view: ConversationView
   respondents: Respondent[]
+  /** Core's actual visibility codes for this conversation. */
+  visibleTo: string[]
   /** The answer being written, as a Core with drafts sends it; left out by one without. */
   draft?: unknown
 }
@@ -21,7 +23,7 @@ vi.mock('@/api/http', async (orig) => {
   return {
     ...real,
     read: vi.fn(async (tool: string) => {
-      if (tool === 'conversation.get') return { ...server.view, visible_to: ['participants'] }
+      if (tool === 'conversation.get') return { ...server.view, visible_to: server.visibleTo }
       if (tool === 'conversation.messages')
         return {
           messages: server.messages,
@@ -302,6 +304,7 @@ beforeEach(() => {
     ],
     view: view(),
     respondents: [tutorOffered],
+    visibleTo: ['participants', 'overseers', 'action_record', 'respondent_answers_others', 'audit_export'],
   }
   writeAnswer = () => executed({ message_id: 'm4' })
   document.querySelectorAll('.el-notification, .el-message').forEach((n) => n.remove())
@@ -493,6 +496,13 @@ describe('ChatPane', () => {
       'Give me a few practice questions',
     ])
     expect(w.get('.chat-pane__suggestions').attributes('role')).toBe('group')
+    // Each ends in an operable row's ›, which alone says on a touch screen that it can be pressed; not read out.
+    for (const c of chips) {
+      const go = c.get('.chat-pane__suggestion-go')
+      expect(go.attributes('aria-hidden')).toBe('true')
+      expect(go.find('svg').exists()).toBe(true)
+      expect(c.element.lastElementChild).toBe(go.element)
+    }
     await chips[1]!.trigger('click')
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('Check my reasoning')
     expect(writes).toHaveLength(0)
@@ -999,19 +1009,34 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
 })
 
 describe('ChatPane: who reads it, and where it goes', () => {
+  const READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format([
+    'The two taking part',
+    'course staff',
+    'people and agents that decide actions',
+    'other members it answers',
+    'site and department administrators',
+  ])
+  const ZH_READERS = new Intl.ListFormat('zh-Hant', { type: 'conjunction' }).format([
+    '對話雙方',
+    '課程教職員',
+    '負責審批操作的人及代理',
+    '它回答的其他成員',
+    '網站及部門管理員',
+  ])
   /** The one asking, signed in as p1: the first time is remembered for them. */
   function signedIn() {
     useSessionStore().me = { id: 'p1', kind: 'human', display_name: 'Chan Tai Man' } as never
   }
 
-  it('says under the composer who else reads it and where the agent sends it, and More opens the whole notice', async () => {
+  it('says under the composer only the readers Core names, and More opens the whole notice once', async () => {
     seat('student')
     signedIn()
+    server.visibleTo = ['participants']
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const line = w.find('.chat-pane__privacy')
     expect(line.find('.chat-pane__privacy-text').text()).toBe(
-      'Course staff, agents that decide actions in the course, and site and department administrators can read this conversation. Course tutor sends it to its AI model’s provider to answer.',
+      'The two taking part can read this; Course tutor sends it to its AI model’s provider.',
     )
     expect(line.find('button').text()).toBe('More')
     // It follows the composer, and nobody else's agent is asked of the runtime.
@@ -1032,7 +1057,13 @@ describe('ChatPane: who reads it, and where it goes', () => {
     // Core says only the two read this one: no agent deciding actions is spoken of.
     expect(text).not.toContain('An agent that decides actions')
     expect(text).toContain('A withdrawn message is hidden here, but kept')
+    expect(text).toContain('A question or answer that waited for approval and was not posted is also kept, with its text')
     expect(text).toContain('kept for up to 180 days')
+    expect(
+      Array.from(notice.querySelectorAll('.el-dialog__title, .chat-privacy__heading')).filter(
+        (el) => el.textContent === 'Who can read this conversation',
+      ),
+    ).toHaveLength(1)
   })
 
   it('names the provider of the caller’s own agent, as the runtime tells its owner', async () => {
@@ -1056,7 +1087,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(runtimeCalls).toEqual(['list', 'models'])
-    expect(w.find('.chat-pane__privacy').text()).toContain('My helper sends it to Anthropic to answer.')
+    expect(w.find('.chat-pane__privacy').text()).toContain('My helper sends it to Anthropic.')
     // Where it goes is said as everywhere: the shield, here before the one line.
     expect(w.find('.chat-pane__privacy .data-flow.is-compact .data-flow__icon').exists()).toBe(true)
     await w.find('.chat-pane__privacy-more').trigger('click')
@@ -1089,7 +1120,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     expect(first.find('.data-flow:not(.is-compact) .data-flow__icon').exists()).toBe(true)
     expect(first.attributes('aria-labelledby')).toBe(first.find('h3').attributes('id'))
     expect(first.findAll('li').map((l) => l.text())).toEqual([
-      'Course staff and agents that decide actions in the course can read this conversation, and the site’s and the department’s administrators can export it for audit.',
+      `${READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
       'Course tutor sends what you write here to its AI model’s provider to answer it.',
       'Nothing here is deleted: a message you withdraw is hidden, but kept.',
     ])
@@ -1122,6 +1153,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
   it('says nothing of a model of a conversation with a person, from before', async () => {
     seat('student')
     signedIn()
+    server.visibleTo = ['participants', 'audit_export']
     server.view = view({
       status: 'closed',
       state: 'closed',
@@ -1135,6 +1167,11 @@ describe('ChatPane: who reads it, and where it goes', () => {
     const notice = document.body.querySelector('.chat-pane__readers')!
     expect(notice.querySelector('.el-dialog__title')?.textContent).toBe('Who can read this conversation')
     expect(notice.querySelector('.chat-privacy__route')).toBeNull()
+    expect(
+      Array.from(notice.querySelectorAll('.el-dialog__title, .chat-privacy__heading')).filter(
+        (el) => el.textContent === 'Who can read this conversation',
+      ),
+    ).toHaveLength(1)
     const text = notice.textContent ?? ''
     expect(text).toContain('The two taking part')
     expect(text).toContain('Conversations are never deleted.')
@@ -1150,7 +1187,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     const line = w.find('.chat-pane__privacy')
     expect(line.find('.chat-pane__privacy-text').text()).toBe(
-      '課程教職員、課程中負責審批操作的代理，以及網站和部門管理員，都可閱讀這段對話。Course tutor會把內容傳送至其 AI 模型的供應商以作答。',
+      `${ZH_READERS}可閱讀這段對話；Course tutor會把內容傳送至其 AI 模型的供應商作答。`,
     )
     expect(line.find('button').text()).toBe('詳情')
   })

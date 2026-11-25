@@ -28,11 +28,11 @@ import { joinParts } from '@/utils/parts'
 
 const { t, te, n } = useI18n()
 // A phone's layout, a job's pages, cost and time under its document, where the
-// list is as narrow as on a phone: its head 542 px or less, the width it has in
+// list is as narrow as on a phone: its head 592 px or less, the width it has in
 // a window of 640 px without the side bar. By its own width, not the window's:
 // the side bar takes from it.
 const head = useTemplateRef<HTMLElement>('head')
-const narrow = useContainerNarrow(head, 542)
+const narrow = useContainerNarrow(head, 592)
 const tableRef = useTemplateRef<{ doLayout: () => void }>('tableRef')
 useTableRelayout(tableRef, narrow)
 
@@ -218,7 +218,7 @@ const empty = computed(() => loaded.value && !jobs.value.length)
 
 <style scoped>
 .transcription-jobs {
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .transcription-jobs__head {
   display: flex;

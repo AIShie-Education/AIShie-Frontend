@@ -88,7 +88,7 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
             v-if="canRevoke && status === 'live'"
             size="small"
             type="danger"
-            plain
+            text
             :loading="revoking === l.id"
             @click="emit('revoke', l)"
           >
@@ -156,12 +156,12 @@ function stopped(l: JoinLink, s: JoinLinkStatus): string | null {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  border-top: var(--app-rule);
 }
+/* A link a row between rules, not a box each. */
 .join-link {
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-card, 8px);
-  padding: 10px 12px;
+  border-bottom: var(--app-rule);
+  padding: 10px 0;
 }
 .join-link.is-ended {
   opacity: 0.72;

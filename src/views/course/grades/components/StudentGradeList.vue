@@ -191,7 +191,6 @@ const bodyId = (id: string) => `sgl-body-${id}`
           class="sgl__book"
         >
           {{ t('classbook.openGradebook', { name: nameOf(r.student) }) }}
-          <el-icon aria-hidden="true"><ArrowRight /></el-icon>
         </router-link>
       </div>
     </li>
@@ -205,7 +204,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   padding: 0;
 }
 .sgl__item {
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .sgl__head {
   display: flex;
@@ -223,7 +222,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__head:focus-visible {
   outline: 2px solid var(--el-color-primary);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
 }
 .sgl__who {
   flex: 1;
@@ -240,7 +239,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
   display: inline-block;
   margin-left: 6px;
   padding: 0 4px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   font-weight: 400;
   line-height: 16px;
@@ -367,7 +366,7 @@ const bodyId = (id: string) => `sgl-body-${id}`
 .sgl__flag {
   display: inline-block;
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   font-size: var(--app-text-xs);
   line-height: 17px;
   font-weight: 400;
@@ -392,10 +391,9 @@ const bodyId = (id: string) => `sgl-body-${id}`
   color: var(--el-text-color-placeholder);
   font-size: var(--app-text-xs);
 }
+/* A text link, its words alone: no › after them (docs/CONVENTIONS.md, "Building a view"). */
 .sgl__book {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  display: inline-block;
   margin-top: 8px;
   font-size: var(--app-text-sm);
 }

@@ -48,18 +48,18 @@ const line = computed(() =>
 </template>
 
 <style scoped>
+/* What was deleted for good: a red line at its left, as a note's is indigo,
+   no box and no ground. */
 .tombstone {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 12px 14px;
+  padding: var(--app-space-xs) 0 var(--app-space-xs) var(--app-space-md);
   margin-bottom: 12px;
-  border-radius: var(--app-radius-item);
-  border: 1px dashed var(--el-color-danger-light-5);
-  background: var(--el-color-danger-light-9);
+  border-left: 3px solid var(--app-danger-fg);
 }
 .tombstone__icon {
-  color: var(--el-color-danger);
+  color: var(--app-danger-fg);
   margin-top: 3px;
   flex-shrink: 0;
 }
@@ -83,6 +83,6 @@ const line = computed(() =>
 .tombstone__gone {
   margin: 4px 0 0;
   font-size: var(--app-text-sm);
-  color: var(--el-text-color-secondary);
+  color: var(--app-ink-3);
 }
 </style>
