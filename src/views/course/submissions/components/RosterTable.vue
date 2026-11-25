@@ -144,7 +144,7 @@ async function markMissing(row: RosterEntry) {
   // one after each 。.
   const message = h(
     'div',
-    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: 1.55' }, line)),
+    lines.map((line) => h('p', { style: 'margin: 0 0 8px; line-height: var(--app-lh-text)' }, line)),
   )
   try {
     await ElMessageBox.confirm(message, t('submissions.roster.confirm.title', { name }), {

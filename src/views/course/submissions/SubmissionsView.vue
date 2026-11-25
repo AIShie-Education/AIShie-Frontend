@@ -218,10 +218,13 @@ function open(row: SubmissionSummary) {
       <RefreshButton :loading="active.loading.value" @click="active.reload" />
     </div>
 
-    <p v-if="!isStudent && !list.error.value?.isForbidden && (!assignment || !hasRoster)" class="submissions-hint">
-      <el-icon><InfoFilled /></el-icon>
-      <span>{{ assignment ? t('submissions.roster.unavailable') : t('submissions.hint.pickAssignment') }}</span>
-    </p>
+    <AppNote
+      v-if="!isStudent && !list.error.value?.isForbidden && (!assignment || !hasRoster)"
+      plain
+      class="submissions-hint"
+    >
+      {{ assignment ? t('submissions.roster.unavailable') : t('submissions.hint.pickAssignment') }}
+    </AppNote>
 
     <section v-if="rosterMode && assignment" class="app-card submissions-card">
       <GroupRoster

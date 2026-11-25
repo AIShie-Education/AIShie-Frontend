@@ -15,6 +15,7 @@ import { useI18n } from 'vue-i18n'
 import { workOf, type SubmissionState, type SubmissionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import AsyncState from '@/components/AsyncState.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { allSubmissions } from './useAssignmentData'
 
@@ -76,7 +77,7 @@ defineExpose({ reload: state.reload })
 
 <template>
   <AsyncState :loading="state.loading.value" :error="state.error.value" @retry="state.reload">
-    <p v-if="!summary.rows" class="app-muted work-summary__empty">{{ t('assignments.detail.summary.empty') }}</p>
+    <AppEmpty v-if="!summary.rows" :text="t('assignments.detail.summary.empty')" />
     <template v-else>
       <div class="work-summary">
         <div class="work-summary__tile">
@@ -148,9 +149,5 @@ defineExpose({ reload: state.reload })
 .work-summary__count {
   font-variant-numeric: tabular-nums;
   font-weight: 500;
-}
-.work-summary__empty {
-  margin: 0 0 8px;
-  font-size: var(--app-text-md);
 }
 </style>

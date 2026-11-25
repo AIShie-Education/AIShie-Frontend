@@ -114,6 +114,8 @@ describe('a course’s administration', () => {
     await flushPromises()
     expect(cellsInRow()).toBe(2)
     expect(w.find('.course-admin__desc').text()).not.toContain(COURSE)
+    // No description is an AppEmpty in the type scale, not a hand-written muted paragraph.
+    expect(w.get('.course-admin__description.app-empty').text()).toBe('No description.')
     // Active, the usual state, is said in the facts alone, not again beside the title.
     expect(w.find('.course-admin__desc').text()).toContain('Active')
     expect(w.find('.page-header__title').text()).not.toContain('Active')

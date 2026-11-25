@@ -162,6 +162,7 @@ export default {
     network: '无法连接到服务器，请检查网络后再试。',
     unauthenticated: '登录已过期，请重新登录。',
     forbidden: '你没有权限查看此内容。',
+    forbiddenDetail: '你当前的席位无法查看这个页面或区块。',
     forbiddenAction: '你没有权限执行此操作。',
     notFound: '找不到。它可能已被移除，或不在你可查看的范围内。',
     rateLimited: '请求过于频繁，请稍候再试。',

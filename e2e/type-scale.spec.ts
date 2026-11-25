@@ -1,6 +1,6 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
-import { coursePath, demo, inTraditionalChinese, signIn } from './support'
+import { call, coursePath, demo, inTraditionalChinese, signIn } from './support'
 
 // The type scale (styles/tokens.css, docs/CONVENTIONS.md "Type"): in
 // Chinese, the two smallest sizes are a step larger (13 and 14 px, not 12
@@ -130,6 +130,42 @@ test('Chinese takes the two smallest sizes a step larger and strong text at 500;
   const tag = page.locator('.app-main .el-tag:visible').first()
   await expect(tag).toBeVisible()
   expect(await tag.evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px')
+  // Latin marks are Plex 600 in Chinese too, though Chinese strong text is 500.
+  const agent = page.locator('.members__agent').first()
+  await expect(agent).toBeVisible()
+  expect(await agent.locator('.ai-badge').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
+  expect(await agent.locator('.agent-avatar').evaluate((el) => getComputedStyle(el).fontWeight)).toBe('600')
+})
+
+test('grade facts, account prose and an MCP agent’s empty tokens stay at the interface’s 14 px', async ({ page }) => {
+  const d = demo()
+  const made = await call(d.actors.instructor.token, 'POST', '/v1/me/agents', {
+    display_name: `Type scale MCP ${Date.now().toString(36)}`,
+    hosting: 'mcp',
+  })
+  expect(made.body.status, JSON.stringify(made.body)).toBe('executed')
+  const agentId = made.body.result.actor_id as string
+  await signIn(page, d.actors.instructor)
+
+  await page.goto(coursePath(`grades/${d.course.midterm_draft_grade}`))
+  const fact = page.locator('.grade-view__facts dd').first()
+  await expect(fact).toBeVisible()
+  expect(await fact.evaluate((el) => getComputedStyle(el).fontSize)).toBe('14px')
+
+  await page.goto('/account')
+  const sentence = page.locator('.password-card__text p').first()
+  await expect(sentence).toBeVisible()
+  expect(await sentence.evaluate((el) => getComputedStyle(el).fontSize)).toBe('14px')
+
+  await page.goto(`/account/agents/${agentId}`)
+  const empty = page.locator('.tokens-card .app-empty')
+  await expect(empty).toBeVisible()
+  expect(await empty.evaluate((el) => getComputedStyle(el).fontSize)).toBe('14px')
+  await inTraditionalChinese(page)
+  await page.reload()
+  await expect(empty).toBeVisible()
+  expect(await empty.evaluate((el) => getComputedStyle(el).fontSize)).toBe('14px')
+  await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${agentId}/suspend`, {})
 })
 
 test('strong text with no rule of its own takes the strong weight, not the browser’s bold', async ({ page }) => {

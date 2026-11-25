@@ -207,10 +207,9 @@ defineExpose({ reload: () => list.reload() })
 </script>
 
 <template>
-  <p v-if="credentialListMissing" class="app-form-hint creds-missing">
-    <el-icon class="creds-missing__icon"><InfoFilled /></el-icon>
-    <span>{{ t('admin.credentials.missing') }}</span>
-  </p>
+  <AppNote v-if="credentialListMissing" plain class="creds-missing">
+    {{ t('admin.credentials.missing') }}
+  </AppNote>
   <section v-else class="app-card creds">
     <h2 ref="title" class="app-card__title creds__title">
       <span>{{ t('admin.credentials.title') }}</span>

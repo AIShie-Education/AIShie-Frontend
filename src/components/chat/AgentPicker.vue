@@ -61,6 +61,7 @@ defineExpose({ refresh })
     :error="list.error.value"
     :empty="list.loaded.value && !list.items.value.length"
     :empty-text="t('chat.respondents.empty')"
+    empty-page
     @retry="list.reload()"
   >
     <p v-if="sharedOnce" class="resp-shared">{{ t('chat.respondents.sharedHintAll') }}</p>
@@ -92,9 +93,15 @@ defineExpose({ refresh })
                 no-ai
                 :hint-id="`resp-${r.member_id}-whose`"
               />
-              <StatusTag v-if="showPurpose" vocab="seatPurpose" :value="agentPurpose(r)" />
+              <StatusTag
+                v-if="showPurpose && r.answer_level === 'autonomous'"
+                vocab="seatPurpose"
+                :value="agentPurpose(r)"
+              />
             </span>
             <span v-if="r.answer_level !== 'autonomous'" class="resp-row__line resp-row__facts">
+              <!-- With an answer level, the purpose is words on this line rather than a third chip. -->
+              <span v-if="showPurpose" class="resp-row__purpose">{{ t(`enums.seatPurpose.${agentPurpose(r)}`) }}</span>
               <StatusTag vocab="answerLevel" :value="r.answer_level" />
             </span>
             <span v-if="!sharedOnce && agentPurpose(r) === 'course'" class="resp-row__note">{{
@@ -171,6 +178,10 @@ defineExpose({ refresh })
 .resp-row__name {
   font-weight: var(--app-weight-strong);
   overflow-wrap: anywhere;
+}
+.resp-row__purpose {
+  color: var(--app-ink-2);
+  font-size: var(--app-text-sm);
 }
 /* A row's notes in the size, the leading and the ink of the note said once over the list: the same sentence
    (that a course agent may repeat what is written) looks the same whether one agent is listed or several. Not

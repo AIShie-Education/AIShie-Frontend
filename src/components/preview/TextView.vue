@@ -7,6 +7,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MarkdownView from '@/components/MarkdownView.vue'
+import AppEmpty from '@/components/AppEmpty.vue'
 import { codeAsMarkdown, CSV_MAX_ROWS, HIGHLIGHT_MAX_BYTES, parseCsv, type PreviewKind } from '@/utils/preview'
 
 const props = defineProps<{
@@ -45,7 +46,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
         <template v-if="table.truncatedRows">{{ t('preview.csv.rowsCut', { n: n(CSV_MAX_ROWS) }) }}</template>
         <template v-if="table.truncatedColumns"> {{ t('preview.csv.columnsCut', { n: n(table.columns) }) }}</template>
       </p>
-      <div class="text-view__table-wrap" tabindex="0" data-arrows :aria-label="t('preview.csv.table', { name })">
+      <div v-if="table.rows.length" class="text-view__table-wrap" tabindex="0" data-arrows :aria-label="t('preview.csv.table', { name })">
         <table class="text-view__table">
           <thead v-if="head.length">
             <tr>
@@ -61,7 +62,7 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
           </tbody>
         </table>
       </div>
-      <p v-if="!table.rows.length" class="text-view__empty">{{ t('preview.text.empty') }}</p>
+      <AppEmpty v-if="!table.rows.length" :text="t('preview.text.empty')" />
     </template>
     <pre v-else class="text-view__pre">{{ text }}</pre>
   </div>
@@ -169,10 +170,6 @@ const columns = computed(() => Array.from({ length: table.value?.columns ?? 0 },
   text-align: right !important;
   background: var(--el-fill-color-lighter);
   user-select: none;
-}
-.text-view__empty {
-  margin: 0;
-  color: var(--el-text-color-secondary);
 }
 @media (max-width: 640px) {
   .text-view {

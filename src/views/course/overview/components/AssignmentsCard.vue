@@ -128,7 +128,7 @@ const groups = computed(() => [
             :key="r.a.id"
             :to="{ name: 'course-assignment', params: { courseId, assignmentId: r.a.id } }"
             class="assignments__row"
-            :class="{ 'is-urgent': r.urgent }"
+            :class="{ 'is-urgent': r.urgent, 'app-row-unpublished': !r.a.published_at }"
           >
             <span class="assignments__body">
               <span class="assignments__main">

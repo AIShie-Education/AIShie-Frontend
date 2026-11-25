@@ -162,6 +162,7 @@ export default {
     network: 'Cannot reach the server. Check your connection and try again.',
     unauthenticated: 'Your session has ended. Please sign in again.',
     forbidden: 'You do not have permission to see this.',
+    forbiddenDetail: 'This page or section is outside what your current seat may read.',
     forbiddenAction: 'You do not have permission to do this.',
     notFound: 'Not found. It may have been removed, or it is outside what you can see.',
     rateLimited: 'Too many requests. Wait a moment and try again.',

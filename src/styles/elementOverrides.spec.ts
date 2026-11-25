@@ -117,6 +117,12 @@ describe('an icon alone on a button', () => {
   })
 })
 
+describe('a confirmation', () => {
+  it('has no Element Plus status icon: the words and its final button carry the outcome', () => {
+    expect(rule('.el-message-box__status')).toMatch(/display: none;/)
+  })
+})
+
 describe('a result (AppResult)', () => {
   it('lies at the left of where it is, its title close under nothing, with no large icon over it', () => {
     const result = rule('.el-result')

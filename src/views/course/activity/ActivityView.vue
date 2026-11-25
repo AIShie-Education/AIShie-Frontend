@@ -293,10 +293,12 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
           <span v-else-if="checkError" class="activity__status-error">{{ t('activity.checkFailed') }}</span>
           <span v-else-if="!visible" class="app-muted">{{ t('activity.paused') }}</span>
           <span v-else class="app-muted">{{ t('activity.live', { n: POLL_MS / 1000 }) }}</span>
-          <span v-if="lastChecked" class="activity__checked app-muted">
-            {{ t('activity.lastChecked') }} <TimeText :value="lastChecked" relative />
+          <span class="activity__refresh">
+            <span v-if="lastChecked" class="activity__checked app-muted">
+              {{ t('activity.lastChecked') }} <TimeText :value="lastChecked" relative />
+            </span>
+            <RefreshButton :loading="checking || (loading && !loaded)" @click="refresh" />
           </span>
-          <RefreshButton :loading="checking || (loading && !loaded)" @click="refresh" />
         </div>
 
         <div class="activity__chips" role="group" :aria-label="t('activity.filterLabel')">
@@ -418,8 +420,14 @@ const days = computed<(Day & { runs: Run[] })[]>(() => {
 .activity__status-error {
   color: var(--el-color-danger);
 }
-.activity__checked {
+.activity__refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--app-space-sm);
   margin-left: auto;
+}
+.activity__checked {
+  margin: 0;
 }
 .activity__chips {
   display: flex;

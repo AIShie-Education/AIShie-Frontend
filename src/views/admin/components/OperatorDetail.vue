@@ -3,6 +3,7 @@
 // what the page says), kept out of the sentence people read: an ⓘ beside it
 // whose tooltip names it (docs/CONVENTIONS.md, Text).
 import { useI18n } from 'vue-i18n'
+import InfoIcon from '@/components/InfoIcon.vue'
 
 defineProps<{ text: string }>()
 const { t } = useI18n()
@@ -11,7 +12,7 @@ const { t } = useI18n()
 <template>
   <el-tooltip :content="t('common.operatorDetail', { detail: text })" placement="top">
     <button type="button" class="operator-detail" :aria-label="t('common.operatorDetail', { detail: text })">
-      <el-icon aria-hidden="true"><InfoFilled /></el-icon>
+      <el-icon aria-hidden="true"><InfoIcon /></el-icon>
     </button>
   </el-tooltip>
 </template>
