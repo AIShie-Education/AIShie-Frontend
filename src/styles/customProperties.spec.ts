@@ -32,10 +32,21 @@ const sources = [
  * or with `setProperty('--app-x', …)`. A name built in a script
  * (`var(--app-${tone}-bg)`) is not read here: the text has its stem alone.
  */
-function unsetTokens(texts: readonly string[]): string[] {
+type SourceText = string | readonly [path: string, text: string]
+function commentMode(path: string, source: string): 'source' | 'css' {
+  if (path.endsWith('.css')) return 'css'
+  if (path) return 'source'
+  // String probes have no filename: recognize the plain-CSS forms used here;
+  // application sources always take the explicit path-based branch above.
+  const css = /^(?:[.#:@]|\/\*)/.test(source.trimStart()) && !/\b(?:const|let|function|import|export|return)\b|=>|\.style\b/.test(source)
+  return css ? 'css' : 'source'
+}
+function unsetTokens(inputs: readonly SourceText[]): string[] {
   const set = new Set<string>()
   const read = new Set<string>()
-  for (const text of texts.map(withoutComments)) {
+  for (const input of inputs) {
+    const [path, source] = typeof input === 'string' ? ['', input] : input
+    const text = withoutComments(source, commentMode(path, source))
     for (const m of text.matchAll(/(?<![\w-])['"]?(--app-[\w-]+)['"]?\s*:/g)) set.add(m[1]!)
     for (const m of text.matchAll(/setProperty\(\s*['"`](--app-[\w-]+)/g)) set.add(m[1]!)
     for (const m of text.matchAll(/var\(\s*(--app-[\w-]+)/g)) {
@@ -47,7 +58,7 @@ function unsetTokens(texts: readonly string[]): string[] {
 
 describe('the app’s custom properties', () => {
   it('reads none that no style sets', () => {
-    expect(unsetTokens(sources.map(([, text]) => text))).toEqual([])
+    expect(unsetTokens(sources)).toEqual([])
   })
 
   it('finds one read and never set, however it is written', () => {
@@ -87,6 +98,12 @@ describe('the app’s custom properties', () => {
         unsetTokens([`<style>.a { src: url("${url}/font.woff2"); } .b { color: var(--app-gone); }</style>`]),
       ).toEqual(['--app-gone'])
     }
+    expect(
+      unsetTokens([
+        'const x = url(/* var(--app-gone) */ value)',
+        'const y = api.url(/* var(--app-other) */ value)',
+      ]),
+    ).toEqual([])
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })

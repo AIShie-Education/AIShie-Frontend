@@ -417,6 +417,8 @@ describe('punctuation between values', () => {
     expect(vue('', 'const style = { transform: `translateX(${n}%)` }')).toEqual([])
     expect(vue('', 'el.style.setProperty("--share", `${n}%`)')).toEqual([])
     expect(vue('', 'el.style.width = `${n}%`')).toEqual([])
+    expect(vue('', 'const label = url(/* `${n}%` */ value)')).toEqual([])
+    expect(vue('', 'const label = api.url(/* `${n}%` */ value)')).toEqual([])
     expect(vue('', 'const color = `rgb(${r}, ${g}, ${b})`')).toEqual([])
     expect(vue('', 'const fill = `var(${name})`')).toEqual([])
     expect(vue('', "const fill = 'rgba(' + c + ')'")).toEqual([])

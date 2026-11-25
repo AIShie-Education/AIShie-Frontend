@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 /** Blank comments outside strings, regular expressions and template literals, preserving every line and column. */
-export function withoutComments(text: string): string {
+export function withoutComments(text: string, mode: 'source' | 'css' = 'source'): string {
   const out = text.split('')
   const blank = (from: number, to: number) => {
     for (let i = from; i < to; i++) if (text[i] !== '\n') out[i] = ' '
@@ -53,6 +53,30 @@ export function withoutComments(text: string): string {
       else if (c === ')') return i + 1
     }
     return text.length
+  }
+
+  function css(from: number, inStyle = false): number {
+    for (let i = from; i < text.length; i++) {
+      const c = text[i]!
+      if (inStyle && c === '<' && /^<\/style\s*>/i.test(text.slice(i, i + 9))) return htmlTag(i)
+      if (c === '/' && text[i + 1] === '*') {
+        const close = text.indexOf('*/', i + 2)
+        const end = close < 0 ? text.length : close + 2
+        blank(i, end)
+        i = end - 1
+        continue
+      }
+      if (c === "'" || c === '"') {
+        i = quoted(i, c) - 1
+        continue
+      }
+      if (/^url\(/i.test(text.slice(i, i + 4)) && !/[\w-]/.test(text[i - 1] ?? '')) i = cssUrl(i) - 1
+    }
+    return text.length
+  }
+
+  function style(from: number): number {
+    return css(htmlTag(from), true)
   }
 
   function htmlTag(from: number): number {
@@ -108,6 +132,10 @@ export function withoutComments(text: string): string {
         i = html(i) - 1
         continue
       }
+      if (!inTemplate && c === '<' && /^<style(?:\s|>)/i.test(text.slice(i, i + 7))) {
+        i = style(i) - 1
+        continue
+      }
       if (text.startsWith('<!--', i)) {
         const close = text.indexOf('-->', i + 4)
         const end = close < 0 ? text.length : close + 3
@@ -136,11 +164,6 @@ export function withoutComments(text: string): string {
       if (c === '}' && inTemplate && braces === 0) return i
       if (c === '{') braces++
       else if (c === '}' && braces > 0) braces--
-      if (/^url\(/i.test(text.slice(i, i + 4)) && !/[\w-]/.test(text[i - 1] ?? '')) {
-        i = cssUrl(i) - 1
-        previous = 'operand'
-        continue
-      }
       if (/[A-Za-z0-9_$]/.test(c)) {
         let end = i + 1
         while (/[\w$]/.test(text[end] ?? '')) end++
@@ -159,7 +182,8 @@ export function withoutComments(text: string): string {
     return text.length
   }
 
-  code(0)
+  if (mode === 'css') css(0)
+  else code(0)
   return out.join('')
 }
 
@@ -190,12 +214,23 @@ describe('the source comment lexer used by the guards', () => {
     },
   )
 
+  it('strips comments inside JavaScript url() and api.url() calls', () => {
+    for (const [source, comment] of [
+      ['const label = url(/* `${n}%` */ value)', '${n}%'],
+      ['const x = api.url(/* var(--app-gone) */ value)', 'var(--app-gone)'],
+    ]) {
+      const out = withoutComments(source)
+      expect(out).not.toContain(comment)
+      expect(out).toContain('value')
+    }
+  })
+
   it.each(['https://example.com', 'http://example.com', '//example.com'])(
     'does not read CSS url(%s), quoted or unquoted, as a JavaScript comment',
     (url) => {
       for (const value of [url, `"${url}"`]) {
         const source = `.a { src: url(${value}); } /* gone */ .b { color: red; }`
-        const out = withoutComments(source)
+        const out = withoutComments(source, 'css')
         expect(out).toContain(url)
         expect(out).not.toContain('gone')
         expect(out).toContain('.b { color: red; }')
@@ -213,12 +248,18 @@ describe('the source comment lexer used by the guards', () => {
 })
 
 describe('the comment-rule context matrix', () => {
-  const cases = [
+  const cases: { name: string; source: string; keep: string[]; drop: string[]; mode?: 'source' | 'css' }[] = [
     {
       name: 'JS string and line comment',
       source: 'const url = "https://example.com"; // gone\nconst n = 1',
       keep: ['https://example.com', 'const n = 1'],
       drop: ['gone'],
+    },
+    {
+      name: 'JS url and api.url calls',
+      source: 'const a = url(/* gone */ value); const b = api.url(/* alsoGone */ value)',
+      keep: ['value'],
+      drop: ['gone', 'alsoGone'],
     },
     {
       name: 'JS regex and nested template literal',
@@ -240,6 +281,7 @@ describe('the comment-rule context matrix', () => {
     },
     {
       name: 'CSS URL and block comment',
+      mode: 'css',
       source: '.a { src: url(https://example.com); } /* gone */ .b { color: red; }',
       keep: ['https://example.com', '.b { color: red; }'],
       drop: ['gone'],
@@ -251,8 +293,8 @@ describe('the comment-rule context matrix', () => {
       drop: ['gone'],
     },
   ]
-  it.each(cases)('$name', ({ source, keep, drop }) => {
-    const out = withoutComments(source)
+  it.each(cases)('$name', ({ source, keep, drop, mode }) => {
+    const out = withoutComments(source, mode)
     for (const text of keep) expect(out).toContain(text)
     for (const text of drop) expect(out).not.toContain(text)
   })
