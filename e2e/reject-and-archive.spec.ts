@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 import {
   call,
   coursePath,
@@ -11,6 +11,13 @@ import {
   signIn,
   signInAsRoot,
 } from './support'
+
+/** An action's status, said once on its page: under Status in its facts, not beside its title. */
+const statusFact = (page: Page) =>
+  page
+    .locator('.action-view__facts > div')
+    .filter({ has: page.locator('dt', { hasText: /^Status$/ }) })
+    .locator('dd')
 
 const STAMP = Date.now().toString(36)
 const FEEDBACK = `Second opinion (${STAMP}): the testing is thin.`
@@ -85,7 +92,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath(`actions/${proposalId}`))
     await expect(page.locator('.page-header')).toContainText('Enter a grade')
-    await expect(page.locator('.page-header')).toContainText('Rejected')
+    await expect(statusFact(page)).toContainText('Rejected')
     await expect(page.locator('.action-timeline')).toContainText('Rejected by')
     await expect(page.getByText(`Why: ${REASON}`)).toBeVisible()
   })
@@ -126,7 +133,7 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
 
     await row.getByRole('link', { name: 'Enter a grade' }).click()
     await expect(page).toHaveURL(new RegExp(`/actions/${piaProposal}$`))
-    await expect(page.locator('.page-header')).toContainText('Rejected')
+    await expect(statusFact(page)).toContainText('Rejected')
     await expect(page.locator('.action-timeline')).toContainText('Rejected by')
     await expect(page.getByText(`Why: ${PIA_REASON}`)).toBeVisible()
 
@@ -143,7 +150,9 @@ test.describe.serial('rejecting a proposal, then archiving the course', () => {
     await page.goto(`/admin/courses/${d.course.id}`)
     const header = page.locator('.page-header')
     await expect(header).toContainText('Introduction to Programming')
-    await expect(header).toContainText('Active')
+    // Active, the usual state, is said in the facts alone; beside the title, only a state that departs from it.
+    await expect(page.locator('.course-admin__desc')).toContainText('Active')
+    await expect(header).not.toContainText('Active')
     await header.getByRole('button', { name: 'Archive' }).click()
     const box = page.getByRole('dialog', { name: 'Archive CS101 · A?' })
     await box.getByRole('button', { name: 'Archive' }).click()

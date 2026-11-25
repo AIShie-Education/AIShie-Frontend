@@ -1,11 +1,13 @@
 <script setup lang="ts">
 // A note that explains (docs/CONVENTIONS.md, "Notes and alerts"): what a page,
-// a card or a dialog does, what will happen, what waits for approval. It is
-// quieter than what it explains: no icon, a 3 px indigo line at its left, the
-// indigo's tint at half strength under it (`plain`: no ground, in a dense
-// place), and its words in the second ink. A title, where it has one, is in
-// the ink above them. What goes wrong or needs care is an el-alert, a warning
-// or an error, never this.
+// a section or a dialog does, what will happen, what waits for approval. It
+// is quieter than what it explains, as the site's notes are: no icon, no
+// ground and no corners, a 2 px rule in the indigo's line at its left, and
+// its words in the second ink, at a paragraph's leading, stopping at the
+// measure. A title, where it has one, is in the ink above them. `plain` was
+// a note without its ground; every note is one now, and it is kept for the
+// places that ask for it. What goes wrong or needs care is an el-alert, a
+// warning or an error, never this.
 import { useI18n } from 'vue-i18n'
 import { Close } from '@element-plus/icons-vue'
 
@@ -39,18 +41,12 @@ const { t } = useI18n()
 <style scoped>
 .app-note {
   position: relative;
-  padding: 10px 14px;
-  border-left: 3px solid var(--app-indigo-line);
-  border-radius: 0 var(--app-radius-control) var(--app-radius-control) 0;
-  background: color-mix(in srgb, var(--app-indigo-tint) 50%, transparent);
+  max-width: var(--app-measure);
+  padding: 2px 0 2px var(--app-space-lg);
+  border-left: 2px solid var(--app-indigo-line);
   color: var(--app-ink-2);
   font-size: var(--app-text-md);
   line-height: var(--app-lh-text);
-}
-.app-note.is-plain {
-  background: transparent;
-  padding-top: 2px;
-  padding-bottom: 2px;
 }
 .app-note.is-closable {
   padding-right: 40px;
@@ -69,10 +65,11 @@ const { t } = useI18n()
 .app-note__body > :deep(:last-child) {
   margin-bottom: 0;
 }
+/* A square of 28 px at its top right, 44 px on a touch screen, which does not push its words down. */
 .app-note__close {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 0;
+  right: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +77,7 @@ const { t } = useI18n()
   height: 28px;
   padding: 0;
   border: 0;
-  border-radius: var(--app-radius-control);
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   cursor: pointer;
@@ -94,8 +91,7 @@ const { t } = useI18n()
     padding-right: 52px;
   }
   .app-note__close {
-    top: 0;
-    right: 0;
+    top: -8px;
     width: 44px;
     height: 44px;
   }

@@ -44,11 +44,11 @@ describe('AnswerSources', () => {
     ['en', 'No course material cited'],
     ['zh-Hant', '未引用課程教材'],
     ['zh-Hans', '未引用课程教材'],
-  ] as const)('shows a neutral pill where it relied on none (%s)', (locale, text) => {
+  ] as const)('shows a neutral state tag where it relied on none (%s)', (locale, text) => {
     setLocale(locale)
-    const pill = render({ body: 'x', sources: [] }).get('.answer-sources')
-    expect(pill.classes()).toContain('el-tag--info')
-    expect(pill.text()).toBe(text)
+    const none = render({ body: 'x', sources: [] }).get('.answer-sources')
+    expect(none.classes()).toContain('el-tag--info')
+    expect(none.text()).toBe(text)
   })
 
   it.each([

@@ -46,9 +46,10 @@ test.describe('an administrator and a course they have no seat in', () => {
     await expect(page).toHaveURL(new RegExp(`/courses/${courseId}$`))
     await expect(page.locator('.course-head__title')).toHaveText(title)
 
-    // …and home now has it among the courses one is seated in, not apart.
+    // …and home now has it among the courses one is seated in, not apart (a role tag only where one's roles
+    // differ among one's courses).
     await page.goto('/')
     await expect(page.locator('section.home-unseated')).not.toContainText(title)
-    await expect(page.locator('.course-card', { hasText: title })).toContainText('Instructor')
+    await expect(page.locator('.course-card:not(.course-card--unseated)', { hasText: title })).toBeVisible()
   })
 })

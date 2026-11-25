@@ -33,6 +33,7 @@ async function copy() {
 </template>
 
 <style scoped>
+/* What to copy, set as the site sets a listing: between rules, no box and no ground. */
 .copy-block__label {
   margin: 0 0 6px;
   font-size: var(--app-text-sm);
@@ -42,10 +43,9 @@ async function copy() {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding: 8px 8px 8px 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .copy-block__text {
   flex: 1;

@@ -226,7 +226,7 @@ watch(
       </template>
       <div v-if="!(agent.seats ?? []).length" class="hosting-offer__course">
         <span>{{ t('agents.connect.courseTodo') }}</span>
-        <el-button type="primary" plain size="small" :disabled="!active" @click="emit('bring')">
+        <el-button type="primary" text size="small" :disabled="!active" @click="emit('bring')">
           {{ t('agents.bring.open') }}
         </el-button>
       </div>
@@ -287,7 +287,7 @@ watch(
   gap: 8px 12px;
   margin-top: 16px;
   padding-top: 12px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
   font-size: var(--app-text-sm);
   color: var(--el-text-color-regular);
 }

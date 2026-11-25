@@ -253,8 +253,13 @@ async function go() {
 </template>
 
 <style scoped>
-.host-dialog__steps {
+/* Where the dialog is among its two steps, in words over a rule: not on a grey rounded band. */
+.host-dialog__steps.el-steps--simple {
   margin-bottom: 16px;
+  padding: 0 0 var(--app-space-sm);
+  border-radius: 0;
+  border-bottom: var(--app-rule);
+  background: transparent;
 }
 .host-dialog__body {
   margin: 0 0 12px;

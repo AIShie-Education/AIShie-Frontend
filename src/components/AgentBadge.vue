@@ -2,8 +2,8 @@
 // Marks an agent beside its name: "AI" (AiBadge), and whose it is, "Your
 // agent" or "Yuki's agent", for one a person owns (which acts only as that
 // person's delegate, never with more than their seat; the tooltip says so).
-// Whose it is is said quietly, in ink on an outline: an attribute, not a
-// link or a state. Given a kind other than agent, it shows nothing, so it
+// Whose it is is said quietly, in ink on an outline with the app's 2 px
+// corners, as an identity's tag is: an attribute, not a link or a state. Given a kind other than agent, it shows nothing, so it
 // can sit beside any actor or member. Where the name beside it already
 // carries the "AI" (MemberName with show-kind), `no-ai` leaves it out.
 import { computed } from 'vue'
@@ -64,7 +64,7 @@ const hint = computed(() => {
   min-width: 0;
   padding: 0 7px;
   border: 1px solid var(--app-line-strong);
-  border-radius: 4px;
+  border-radius: var(--app-radius);
   color: var(--app-ink-2);
   /* In a page's title too, as the tags beside it are (main.css). */
   font-family: var(--app-font-sans);

@@ -238,7 +238,7 @@ async function chooseChat(v: string | number | boolean) {
 .student-policy__item--sep {
   margin-top: 16px;
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: var(--app-rule);
 }
 .student-policy__text {
   flex: 1 1 280px;

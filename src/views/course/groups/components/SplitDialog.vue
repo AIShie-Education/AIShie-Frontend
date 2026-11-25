@@ -352,7 +352,7 @@ async function split() {
 }
 .split-dialog__group {
   border: 1px solid var(--app-line);
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   padding: var(--app-space-sm);
   min-width: 0;
 }

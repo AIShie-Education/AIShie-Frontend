@@ -139,8 +139,7 @@ export async function openCourseTab(page: Page, name: string) {
 
 /**
  * The chat's button, named with how many answers are unread ("Chat with
- * agents: 1 unread"): from 900 px up at the header's right end, always there;
- * on a phone floating at the bottom right while the chat's sheet is closed.
+ * agents: 1 unread"): at the header's right end, at every width, always there.
  */
 export function chatButton(page: Page) {
   return page.locator('.app-chat-entry').getByRole('button', { name: /^Chat with agents/ })
@@ -151,7 +150,7 @@ export function chatBadge(page: Page) {
   return page.locator('.app-chat-entry .el-badge__content')
 }
 
-/** The chat: a window floating over the page (on a phone, a sheet over the whole screen). */
+/** The chat: a pane docked beside the page (on a phone, a sheet over the whole screen). */
 export function chatWindow(page: Page) {
   return page.locator('#chat-panel')
 }
@@ -164,7 +163,31 @@ export async function openChat(page: Page) {
   return panel
 }
 
-/** Minimizes the chat's window from its title bar (in the language shown): it opens again on what it showed. */
+/**
+ * An agent the course seated, as the chat's list of agents to ask shows it (in English), however many other tests
+ * of the run have seated: called a course agent where the rows differ in what they are (where every one is the
+ * course's, no row says so), never a personal agent; and that it answers others too said under it where it is the
+ * one course agent listed, or else once over the list.
+ */
+export async function expectCourseAgentRow(panel: Locator, row: Locator) {
+  await expect(row).toBeVisible()
+  await expect(row).not.toContainText('Personal agent')
+  if (!(await row.textContent())!.includes('Course agent')) {
+    await expect(panel.locator('.resp-row').filter({ hasText: 'Personal agent' })).toHaveCount(0)
+  }
+  const once = panel.locator('.resp-shared')
+  if (await once.count()) {
+    await expect(once).toHaveText(
+      'Course agents answer other members too, hold what each one writes, and may repeat it to them.',
+    )
+    expect(await panel.locator('.resp-row').count()).toBeGreaterThan(1)
+    await expect(row).not.toContainText('It answers other members too')
+  } else {
+    await expect(row).toContainText('It answers other members too')
+  }
+}
+
+/** Minimizes the chat from its head row: it opens again on what it showed. */
 export async function minimizeChat(page: Page) {
   await chatWindow(page).locator('.chat-panel__minimize').click()
   await expect(chatWindow(page)).toHaveCount(0)

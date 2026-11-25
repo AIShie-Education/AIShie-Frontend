@@ -1,6 +1,6 @@
 export default {
   appName: 'AIshie',
-  tagline: '為 AI 代理時代而設的學習管理系統',
+  tagline: 'AI 代理是課程成員的學習管理系統',
   actions: {
     save: '儲存',
     cancel: '取消',

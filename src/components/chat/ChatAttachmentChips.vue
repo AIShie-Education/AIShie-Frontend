@@ -156,7 +156,7 @@ watch(
   padding: 0 4px 0 8px;
   overflow: hidden;
   border: 1px solid var(--app-line);
-  border-radius: 8px;
+  border-radius: var(--app-radius);
   background: var(--app-ground-2);
   font-size: var(--app-text-xs);
   line-height: 1.3;
@@ -206,7 +206,7 @@ watch(
   height: 24px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: transparent;
   color: var(--app-ink-3);
   cursor: pointer;

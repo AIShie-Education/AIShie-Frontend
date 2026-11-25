@@ -521,12 +521,12 @@ describe('each table, by its card’s width', () => {
     expect(me.find('.tenant-cell__reset').exists()).toBe(true)
   })
 
-  it('lays the costs out as on a phone where the card is as narrow as one’s, 542 px', async () => {
-    const sizes = fakeContainerWidths({ '.costs-card .app-card__title': 543 })
+  it('lays the costs out as on a phone where the section is as narrow as one’s, 592 px', async () => {
+    const sizes = fakeContainerWidths({ '.costs-card .app-card__title': 593 })
     const w = await panel()
     expect(heads(w, '.costs-card')).toEqual(['Day', 'Model calls', 'Tokens', 'Cost'])
 
-    await sizes.resize('.costs-card .app-card__title', 542)
+    await sizes.resize('.costs-card .app-card__title', 592)
     await flushPromises()
     expect(heads(w, '.costs-card')).toEqual(['Day', 'Cost'])
     expect(w.find('.cost-cell .cost-cell__meta').text()).toBe('Model calls: 120')

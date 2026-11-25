@@ -435,7 +435,7 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
           size="small"
         />
         <el-dropdown v-if="!archived" trigger="click" placement="bottom-end" @command="archiveSet(true)">
-          <el-button class="set-view__more" :aria-label="t('groups.set.more', { name: set.name })">
+          <el-button class="set-view__more app-icon-button" :aria-label="t('groups.set.more', { name: set.name })">
             <el-icon aria-hidden="true"><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
@@ -560,7 +560,6 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
                 v-if="archivedList.length"
                 v-model="showArchivedGroups"
                 :label="t('groups.set.showArchived', { n: archivedList.length }, archivedList.length)"
-                border
               />
               <el-button v-if="readsMembers" @click="historyOpen = true">
                 <el-icon aria-hidden="true"><Clock /></el-icon>
@@ -693,10 +692,6 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
   white-space: pre-line;
   overflow-wrap: anywhere;
 }
-.set-view__more {
-  padding-left: 9px;
-  padding-right: 9px;
-}
 .set-view__note {
   margin-bottom: 16px;
 }
@@ -733,9 +728,11 @@ const lastLoad = computed(() => state.loading.value && !!set.value)
   color: var(--app-ink-2);
   font-size: var(--app-text-sm);
 }
+/* The students in no group: a place to drop a student, so a box (dashed,
+   2 px corners), as a group is. */
 .set-view__none {
-  border: 1px dashed var(--app-line);
-  border-radius: var(--app-radius-card);
+  border: 1px dashed var(--app-line-strong);
+  border-radius: var(--app-radius);
   padding: var(--app-space-md);
   margin-bottom: var(--app-space-md);
 }

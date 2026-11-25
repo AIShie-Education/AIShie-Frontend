@@ -133,8 +133,10 @@ async function submit() {
           </div>
         </el-form-item>
         <p class="app-form-hint">{{ t('admin.sso.once') }}</p>
+        <!-- Indigo words, not a solid button: on a person's page the invitation beside it (InviteCard) has the
+             page's one solid primary, the way most people are given their password. -->
         <div class="sso__actions">
-          <el-button type="primary" native-type="submit" :loading="pending">
+          <el-button type="primary" text native-type="submit" :loading="pending">
             <el-icon><Link /></el-icon>
             <span>{{ t('admin.sso.submit') }}</span>
           </el-button>

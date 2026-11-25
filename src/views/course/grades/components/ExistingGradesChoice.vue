@@ -78,7 +78,6 @@ function blockText(o: ExistingGrades): string | null {
         :key="o"
         :value="o"
         :disabled="!!plan[o].blocked"
-        border
         class="existing-grades__option"
         :data-choice="o"
       >
@@ -96,12 +95,13 @@ function blockText(o: ExistingGrades): string | null {
 </template>
 
 <style scoped>
+/* What becomes of grades already given when the points change: a warning,
+   told by the amber line at its left and its icon, not an amber box; its
+   choices are plain radios on rows between rules, not boxes in it. */
 .existing-grades {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: var(--app-radius-item);
-  border: 1px solid var(--el-color-warning-light-5);
-  background: var(--el-color-warning-light-9);
+  padding: 2px 0 2px var(--app-space-md);
+  border-left: 3px solid var(--app-wait-fg);
 }
 .existing-grades__head {
   display: flex;
@@ -110,7 +110,7 @@ function blockText(o: ExistingGrades): string | null {
   margin-bottom: 10px;
 }
 .existing-grades__icon {
-  color: var(--el-color-warning);
+  color: var(--app-wait-fg);
   margin-top: 3px;
   flex-shrink: 0;
 }
@@ -127,16 +127,16 @@ function blockText(o: ExistingGrades): string | null {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 8px;
   width: 100%;
+  border-top: var(--app-rule);
 }
 .existing-grades__option {
   height: auto;
   margin-right: 0;
-  padding: 10px 12px;
+  padding: var(--app-space-sm) 0;
   align-items: flex-start;
   white-space: normal;
-  background: var(--el-bg-color);
+  border-bottom: var(--app-rule);
 }
 .existing-grades__option :deep(.el-radio__input) {
   margin-top: 3px;

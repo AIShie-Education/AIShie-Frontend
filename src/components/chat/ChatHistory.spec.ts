@@ -166,7 +166,11 @@ describe('ChatHistory', () => {
     expect(where(w)).toEqual(['CS101 · Lab helper', 'CS101 · Course tutor'])
     const rows = w.findAll('.hist-row')
     expect(rows[0]!.find('.hist-row__title').text()).toBe('About c3')
-    expect(rows[1]!.text()).toContain('Answered')
+    // Answered, the usual: no tag says so, on any row.
+    for (const row of rows) {
+      expect(row.text()).not.toContain('Answered')
+      expect(row.find('.app-tag').exists()).toBe(false)
+    }
     expect(w.text()).not.toContain('Ms Wong')
   })
 
@@ -198,7 +202,9 @@ describe('ChatHistory', () => {
       'CS101 · Course tutor',
       'PH110 · Physics tutor',
     ])
+    // What departs from the usual is said: still awaiting an answer.
     expect(w.findAll('.hist-row')[1]!.text()).toContain('Awaiting an answer')
+    expect(w.findAll('.hist-row').map((r) => r.text().includes('Answered'))).toEqual([false, false, false, false])
 
     chat.historyScope = 'course'
     await flushPromises()

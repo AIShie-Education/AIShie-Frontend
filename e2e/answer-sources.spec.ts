@@ -150,7 +150,7 @@ async function perms(memberId: string, levels: Record<string, string>) {
   )
 }
 
-/** The student's conversation, open in the chat's window over the course. */
+/** The student's conversation, open in the chat's pane beside the course. */
 async function openConversation(page: Page) {
   await page.goto(coursePath(`conversations/${w.conversationId}`))
   const panel = page.locator('#chat-panel')

@@ -217,6 +217,25 @@ describe('an actor’s page', () => {
     }
   })
 
+  it('says a person and active in the facts alone, and beside the name only a standing that departs from it', async () => {
+    credentials = [session()]
+    const w = await open(PERSON)
+    const tags = () => w.find('.page-header__title').text().replace('Chan Tai Man', '')
+    expect(tags()).not.toContain('Person')
+    expect(tags()).not.toContain('Active')
+    expect(w.find('.actor__desc').text()).toContain('Person')
+    expect(w.find('.actor__desc').text()).toContain('Active')
+    w.unmount()
+    actors[PERSON] = { ...actors[PERSON]!, status: 'suspended' }
+    try {
+      const v = await open(PERSON)
+      expect(v.find('.page-header__title').text()).toContain('Suspended')
+      v.unmount()
+    } finally {
+      actors[PERSON] = { ...actors[PERSON]!, status: 'active' }
+    }
+  })
+
   it('offers none on one’s own page either', async () => {
     const w = await open(ROOT)
     expect(headings(w)).not.toContain('API token')

@@ -10,11 +10,11 @@ import { formatScore, plainDecimal, type BreakdownItem } from './grading'
 const props = defineProps<{ items: BreakdownItem[]; score?: Decimal | null }>()
 const { t } = useI18n()
 // A block per criterion, the comment beneath it, where the table is as narrow
-// as on a phone: 542 px or less, the width it has in a window of 640 px
-// without the side bar, its total's 518 or less (less the total's padding). By
+// as on a phone: 592 px or less, the width it has in a window of 640 px
+// without the side bar, its total's 568 or less (less the total's padding). By
 // its own width, not the window's: the side bar takes from it.
 const total = useTemplateRef<HTMLElement>('total')
-const narrow = useContainerNarrow(total, 518)
+const narrow = useContainerNarrow(total, 568)
 
 const sum = (vs: Decimal[]) => sumDecimals(vs.map((v) => plainDecimal(v) ?? String(v)))
 const totalPoints = computed(() => sum(props.items.map((b) => b.points)))
@@ -95,7 +95,7 @@ const differs = computed(
 }
 .bd-list__item {
   padding: 8px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
 }
 .bd-list__head {
   display: flex;

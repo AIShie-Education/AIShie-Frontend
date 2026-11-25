@@ -39,10 +39,9 @@ async function copy() {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 6px 6px 12px;
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color-lighter);
-  border-radius: var(--app-radius-control);
+  padding: 6px 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .redirect-uri__value {
   flex: 1;

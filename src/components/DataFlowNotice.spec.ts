@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { mount } from '@vue/test-utils'
 import DataFlowNotice from './DataFlowNotice.vue'
 
+// Its style as written, and one rule of it by its selector.
+const style = Object.values(
+  import.meta.glob<string>('./DataFlowNotice.vue', { query: '?raw', import: 'default', eager: true }),
+)[0]!.replace(/^[\s\S]*<style scoped>/, '')
+const rule = (selector: string) => {
+  const at = style.indexOf(`${selector} {`)
+  expect(at, selector).toBeGreaterThanOrEqual(0)
+  return style.slice(at, style.indexOf('}', at))
+}
+
 // Every template, as written, to find where it says data leaves the site.
 const templates = import.meta.glob<string>('/src/**/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -47,6 +57,17 @@ describe('DataFlowNotice', () => {
     expect(w.find('.data-flow__body').text()).toBe('Keep them.')
     expect(w.find('.el-alert').exists()).toBe(false)
     expect(w.classes()).not.toContain('is-compact')
+  })
+
+  it('has no box around it: a rule at its left as a note’s, no outline, no ground, no corners', () => {
+    const notice = rule('.data-flow')
+    expect(notice).toMatch(/border-left:\s*2px solid var\(--app-indigo-line\);/)
+    expect(notice).toMatch(/max-width:\s*var\(--app-measure\);/)
+    expect(notice).not.toMatch(/border:|border-radius|background/)
+    // The line under the chat's composer has no rule either, and runs as long as the line it is.
+    const compact = rule('.data-flow.is-compact')
+    expect(compact).toMatch(/border:\s*0;/)
+    expect(compact).toMatch(/max-width:\s*none;/)
   })
 
   it('heads a part of a dialog or a page with a title of the level given, which can name it', () => {

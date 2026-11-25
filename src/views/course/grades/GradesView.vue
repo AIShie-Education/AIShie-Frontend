@@ -46,12 +46,12 @@ const route = useRoute()
 const router = useRouter()
 const course = useCourseStore()
 const lookups = useGradeLookups(() => props.courseId)
-// A card per grade, with its own checkbox, where the card is as narrow as on a
-// phone: its toolbar 542 px or less, the width it has in a window of 640 px
-// without the side bar. By the card's own width, not the window's: the side bar
+// A card per grade, with its own checkbox, where the section is as narrow as on
+// a phone: its toolbar 592 px or less, the width it has in a window of 640 px
+// without the side bar (a section has no padding of its own). By the card's own width, not the window's: the side bar
 // takes from it.
 const toolbar = useTemplateRef<HTMLElement>('toolbar')
-const narrow = useContainerNarrow(toolbar, 542)
+const narrow = useContainerNarrow(toolbar, 592)
 
 /** A student sees their own posted grades: "My grades". */
 const mine = computed(() => course.role === 'student')
@@ -345,13 +345,16 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
       </p>
     </el-alert>
 
-    <!-- A seat that enters grades without reading them: its grades are on each submission and in My actions. -->
+    <!-- A seat that enters grades without reading them: its grades are on each submission and in My actions. Said
+         as every empty page is, its title over its words at the page's left, and its ways on after them, the first
+         (Submissions, a button of words) under those words (AppEmpty's slot). -->
     <section v-if="!readsGrades" class="app-card">
-      <AppEmpty :text="t('grades.noRead.title')" page>
-        <p v-if="course.can('grade_submit')" class="app-form-hint grades-view__no-read">
-          {{ t('grades.noRead.submit') }}
-        </p>
-        <div v-if="course.can('grade_submit') || course.can('grade_post')" class="grades-view__no-read-links">
+      <AppEmpty
+        page
+        :title="course.can('grade_submit') ? t('grades.noRead.title') : undefined"
+        :text="course.can('grade_submit') ? t('grades.noRead.submit') : t('grades.noRead.title')"
+      >
+        <template v-if="course.can('grade_submit') || course.can('grade_post')" #default>
           <router-link v-if="course.can('submission_read')" :to="{ name: 'course-submissions', params: { courseId } }">
             <el-button>
               <el-icon><Files /></el-icon>
@@ -364,7 +367,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
               <span>{{ t('grades.noRead.toActions') }}</span>
             </el-button>
           </router-link>
-        </div>
+        </template>
       </AppEmpty>
     </section>
 
@@ -419,7 +422,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
         </span>
         <!-- What cannot be taken back is not beside posting: it is in the toolbar's menu, at its far end. -->
         <el-dropdown trigger="click" placement="bottom-end" @command="undoVisible = true">
-          <el-button class="grades-view__more" :aria-label="t('grades.post.more')">
+          <el-button class="grades-view__more app-icon-button" :aria-label="t('grades.post.more')">
             <el-icon><MoreFilled /></el-icon>
           </el-button>
           <template #dropdown>
@@ -643,18 +646,12 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   gap: 8px;
   flex-wrap: wrap;
   margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-item);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .grades-view__post .el-button + .el-button {
   margin-left: 0;
-}
-/* On a phone, the chat's round button floats at the screen's bottom right,
-   where the toolbar's ⋯ would be under it when the page opens: the toolbar
-   keeps clear of that column (the button's size and its 16 px inset). */
-.has-chat-fab .grades-view__post {
-  padding-right: calc(var(--app-fab-size, 48px) + 16px);
 }
 .grades-view__post-hint {
   margin: 0;
@@ -686,19 +683,6 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
 .grades-view__origin {
   margin-left: 6px;
 }
-.grades-view__no-read {
-  max-width: 460px;
-  margin: 0 auto 16px;
-}
-.grades-view__no-read-links {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.grades-view__no-read-links .el-button + .el-button {
-  margin-left: 0;
-}
 .grades-list {
   list-style: none;
   margin: 0;
@@ -709,7 +693,7 @@ async function onEntered(out: WriteOutcome<ToolOut<'grade.submit'>>) {
   align-items: flex-start;
   gap: 10px;
   padding: 12px 0;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+  border-bottom: var(--app-rule);
   cursor: pointer;
 }
 .grades-list__item.is-superseded {

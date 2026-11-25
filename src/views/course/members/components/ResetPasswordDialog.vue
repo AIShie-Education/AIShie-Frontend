@@ -156,9 +156,8 @@ async function copy() {
   font-size: var(--app-text-xl);
   letter-spacing: 0.04em;
   padding: 6px 10px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-light);
-  border: 1px solid var(--el-border-color);
+  border-radius: var(--app-radius);
+  border: 1px solid var(--app-line-strong);
   word-break: break-all;
   user-select: all;
 }

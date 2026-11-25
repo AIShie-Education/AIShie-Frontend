@@ -137,13 +137,13 @@ describe('UsageCard', () => {
 })
 
 describe('UsageCard, by its own width', () => {
-  it('puts an owner’s model calls and cost under their name where the card is as narrow as on a phone, 542 px', async () => {
+  it('puts an owner’s model calls and cost under their name where the section is as narrow as on a phone, 592 px', async () => {
     // The window is wide (matchMedia says nothing matches): the card decides, measured by its title.
-    const sizes = fakeContainerWidths({ '.usage-card .app-card__title': 543 })
+    const sizes = fakeContainerWidths({ '.usage-card .app-card__title': 593 })
     const w = await card()
     expect(rows(w)[0]).toEqual(['Ada Admin', '150 / 150 Used up for today', '380', 'US$1.02'])
 
-    await sizes.resize('.usage-card .app-card__title', 542)
+    await sizes.resize('.usage-card .app-card__title', 592)
     await flushPromises()
     expect(rows(w)[0]).toEqual(['Ada Admin Model calls: 380 · US$1.02', '150 / 150 Used up for today'])
   })

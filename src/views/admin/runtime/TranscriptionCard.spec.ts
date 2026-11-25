@@ -288,14 +288,14 @@ describe('TranscriptionCard', () => {
 })
 
 describe('the jobs, by their own width', () => {
-  it('put a job’s pages, cost and time under its document where they are as narrow as on a phone, 542 px', async () => {
+  it('put a job’s pages, cost and time under its document where they are as narrow as on a phone, 592 px', async () => {
     // The window is wide (matchMedia says nothing matches): the list decides, measured by its head.
-    const sizes = fakeContainerWidths({ '.transcription-jobs__head': 543 })
+    const sizes = fakeContainerWidths({ '.transcription-jobs__head': 593 })
     const w = await card()
     const heads = () => w.findAll('.transcription-jobs__table thead th').map((th) => th.text())
     expect(heads()).toEqual(['Document', 'Pages', 'Cost', 'Finished'])
 
-    await sizes.resize('.transcription-jobs__head', 542)
+    await sizes.resize('.transcription-jobs__head', 592)
     await flushPromises()
     expect(heads()).toEqual(['Document'])
     const meta = w.findAll('.job-cell')[0].findAll('.job-cell__meta').at(-1)!

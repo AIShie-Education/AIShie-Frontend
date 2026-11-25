@@ -230,6 +230,18 @@ test.describe.serial('the chat, as an agent chat', () => {
     const list = panel.getByRole('listbox', { name: '指令' })
     await expect(list.getByRole('option')).toHaveText([/\/new\s*新對話/, /\/history\s*對話紀錄/])
     await expect(composer).toHaveAttribute('aria-expanded', 'true')
+    // Over the pane's ivory, on a ground of the same ivory, it is framed in a control's edge as every menu is, never
+    // in the line (1.39:1, 1.16:1 dark): its edge alone tells it from the page.
+    const edges = await list.evaluate((el) => {
+      const probe = document.createElement('span')
+      probe.style.color = 'var(--app-control-border)'
+      document.body.append(probe)
+      const edge = getComputedStyle(probe).color
+      probe.remove()
+      const cs = getComputedStyle(el)
+      return { edge, sides: [cs.borderTopColor, cs.borderRightColor, cs.borderBottomColor, cs.borderLeftColor] }
+    })
+    expect(edges.sides).toEqual([edges.edge, edges.edge, edges.edge, edges.edge])
     await page.mouse.move(900, 200)
     await photograph(page, 'slash-menu')
     await page.keyboard.type('h')

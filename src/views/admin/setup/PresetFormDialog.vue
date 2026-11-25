@@ -316,9 +316,9 @@ async function save() {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--app-radius-control);
-  background: var(--el-fill-color-light);
+  padding: var(--app-space-sm) 0;
+  border-top: var(--app-rule);
+  border-bottom: var(--app-rule);
 }
 .preset-form__fixed-k {
   font-size: var(--app-text-xs);

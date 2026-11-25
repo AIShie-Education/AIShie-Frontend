@@ -162,7 +162,7 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
   justify-content: center;
   gap: 2px;
   padding: 4px 12px;
-  border-bottom: 1px solid var(--app-line);
+  border-bottom: var(--app-rule);
   background: var(--el-bg-color);
   font-size: var(--app-text-sm);
 }
@@ -173,7 +173,7 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
   min-width: 4.2em;
   padding: 2px 4px;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--app-radius);
   background: none;
   color: var(--app-ink-2);
   font: inherit;
@@ -216,7 +216,8 @@ defineExpose({ zoomIn, zoomOut, toFit, actualSize, fit, zoom })
   max-width: none;
   /* In the middle while it is smaller than the window, from its top left once it is larger (and scrolls). */
   margin: auto;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 14%);
+  /* A 1 px line round it, no shadow. */
+  outline: 1px solid var(--app-line);
 }
 .image-view__stage {
   display: flex;

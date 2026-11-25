@@ -2,11 +2,14 @@
 // A filter over a list, as chips (docs/CONVENTIONS.md, "Filters"): "All N"
 // first, then each choice with how many it holds, one chosen at a time;
 // choosing the chosen one again goes back to all. They are Element Plus's
-// check tags, pills in the neutral ground, the chosen one on the indigo's
-// tint, one with nothing in it outlined; and, as Element Plus's are not,
-// radios to the keyboard and a screen reader (Enter or Space chooses). A
-// segmented control is for a view's mode (newest first, by owner), never a
-// filter.
+// check tags, rectangles with the app's 2 px corners (styles/element.css):
+// each on no ground, its words in the ink inside a control's edge (3:1, so
+// that it reads as pressed, never as a tag's faint outline), the chosen one
+// in the indigo's words on its tint with a 2 px bar in the indigo at its
+// foot, as a course's chosen tab has, and one with nothing in it as the
+// others, its count in the third ink; and, as Element Plus's are not, radios
+// to the keyboard and a screen reader (Enter or Space chooses). A segmented
+// control is for a view's mode (newest first, by owner), never a filter.
 import type { Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -81,14 +84,13 @@ function choose(v: V | '') {
   gap: 4px;
   font-weight: 500;
 }
-/* A choice with nothing in it: outlined, not filled, its words as legible as the others'. */
-.filter-chip.is-zero:not(.is-checked) {
-  background-color: transparent;
-  box-shadow: inset 0 0 0 1px var(--app-line-strong);
-}
 /* Set apart from the words by weight alone: a count is read as they are, in the chip's own ink. */
 .filter-chip__count {
   margin-left: 2px;
   font-weight: normal;
+}
+/* A choice with nothing in it: drawn as the others are, its words as legible, its count of none in the third ink. */
+.filter-chip.is-zero:not(.is-checked) .filter-chip__count {
+  color: var(--app-ink-3);
 }
 </style>
