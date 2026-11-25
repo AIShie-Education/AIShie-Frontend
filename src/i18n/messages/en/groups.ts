@@ -193,7 +193,7 @@ export default {
     // deals is worked out over all of it, so a deal worked out here would be another.
     unseen:
       'What it deals cannot be shown before it is made: it is dealt over every student and every group’s work for this set’s assignments, and you are not shown all of them. A group with work for an assignment of the set keeps its members and takes nobody, whether you are shown that work or not.',
-    unseenAfter: 'Once it is made, this page says whom it placed, the groups it made and those it left alone.',
+    unseenAfter: 'Once it is made, this page lists the groups it made and those it left alone.',
     preview: 'What it will do',
     nBad: 'Give a number from 1 to 500.',
     seedBad: 'A seed is 1 to 64 characters: letters, figures, spaces and punctuation of the keyboard’s.',

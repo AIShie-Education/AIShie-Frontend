@@ -383,8 +383,9 @@ names: `<el-icon><Edit /></el-icon>`), dayjs, markdown-it + DOMPurify.
   its members now and, where they differ, whom its work is for; the students in no group under the
   groups (`WorkStateTag`, amber, never missing); a group with someone in it and no work recorded
   missing for its members now less those another group's work names already (`missingFor`,
-  `inOtherWork`, from the rows, as Core records it), named so in its confirmation, and not offered
-  on a group with nobody left to record it for, saying why; offered only to a seat
+  `inOtherWork`, from the rows, as Core records it), named so in its confirmation. The roster loads
+  every cursor page before offering it, since a moved student's row may be after the first 200; it
+  is not offered on a group with nobody left to record it for, saying why, and is offered only to a seat
   that reaches every one of them, as Core requires: a seat listed to some students is shown only those
   of each group's members, and the group's size from its set (`group_set.get`) says how many more
   there are, and whether that is all of them (`reachesWholeGroup`). By student, each row
