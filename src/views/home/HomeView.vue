@@ -11,8 +11,12 @@ import PageHeader from '@/components/PageHeader.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import TimeText from '@/components/TimeText.vue'
 import { useCourseFacts } from './courseFacts'
+import { weekSummary } from './week'
+import { useNow } from '@/composables/useNow'
+import { formatList } from '@/utils/format'
+import { readerTimeZone, schoolTimeZone } from '@/utils/schoolTime'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const session = useSessionStore()
 const filter = ref('')
 const showArchived = ref(false)
@@ -37,6 +41,22 @@ const hasArchived = computed(() => session.liveMemberships.some((m) => m.course_
 const rolesVary = computed(() => new Set(session.liveMemberships.map((m) => m.role)).size > 1)
 // Each card's term, next deadline and what waits there, read after the page is shown.
 const facts = useCourseFacts(courses)
+const now = useNow()
+const homeTimeZone = computed(() => schoolTimeZone.value || readerTimeZone())
+/** The meaningful week summary appears only once every active course has answered. */
+const week = computed(() => weekSummary(courses.value, facts, now.value, homeTimeZone.value))
+const weekRange = computed(() => {
+  if (!week.value) return ''
+  try {
+    return new Intl.DateTimeFormat(locale.value, {
+      month: 'short',
+      day: 'numeric',
+      timeZone: homeTimeZone.value,
+    }).formatRange(week.value.bounds.from, week.value.bounds.to)
+  } catch {
+    return ''
+  }
+})
 
 // An administrator creates courses without joining them, and neither a
 // platform role nor a department's appointment opens a course: what anyone
@@ -117,6 +137,25 @@ watch(offersFilter, (on) => {
           <el-button type="primary">{{ t('home.goAdmin') }}</el-button>
         </router-link>
       </template>
+      <!-- A useful summary above the grid: the week's work, decisions and next cut-off. -->
+      <section v-if="week" class="home-week" aria-labelledby="home-week-title">
+        <div class="home-week__head">
+          <h2 id="home-week-title" class="home-week__title">{{ t('home.week.title') }}</h2>
+          <span v-if="weekRange" class="home-week__range">{{ weekRange }}</span>
+        </div>
+        <div class="home-week__facts">
+          <span>{{ t('home.week.due', week.due) }}</span>
+          <span>{{ week.waitingMore ? t('home.week.waitingAtLeast', { n: week.waiting }, week.waiting) : t('home.week.waiting', week.waiting) }}</span>
+        </div>
+        <p v-if="week.next" class="home-week__next">
+          <i18n-t keypath="home.week.next" tag="span" scope="global">
+            <template #title>{{ week.next.title }}</template>
+            <template #course>{{ week.next.course }}</template>
+            <template #when><TimeText :value="week.next.dueAt" relative cutoff /></template>
+          </i18n-t>
+        </p>
+        <p v-if="week.partial" class="home-week__partial">{{ t('home.week.partial') }}</p>
+      </section>
       <!-- With courses to show below, "no seat yet" is a line, not a whole page. -->
       <AppEmpty v-if="!courses.length" :text="t('home.noCourses')" class="home-none" />
       <div v-else class="app-grid">
@@ -139,6 +178,13 @@ watch(offersFilter, (on) => {
           <div class="course-card__meta">
             <StatusTag v-if="rolesVary" vocab="role" :value="m.role" />
             <span v-if="facts.get(m.course_id)?.term" class="app-muted">{{ facts.get(m.course_id)?.term }}</span>
+            <span v-if="facts.get(m.course_id)?.instructors?.length" class="app-muted course-card__instructors">
+              {{ formatList(facts.get(m.course_id)!.instructors!) }}
+            </span>
+            <span v-else-if="facts.get(m.course_id)?.instructors" class="app-muted">{{ t('home.noInstructor') }}</span>
+            <span v-else-if="facts.get(m.course_id)?.instructorsUnavailable" class="app-muted">
+              {{ t('home.instructorsUnavailable') }}
+            </span>
             <span v-if="m.expires_at" class="app-muted">
               {{ t('home.expires', { t: '' }) }}<TimeText :value="m.expires_at" relative cutoff />
             </span>
@@ -209,6 +255,40 @@ watch(offersFilter, (on) => {
 </template>
 
 <style scoped>
+/* The week's summary is a section of the page, not another course card. */
+.home-week {
+  margin-bottom: var(--app-space-2xl);
+  border-top: var(--app-rule);
+  padding-top: var(--app-space-lg);
+}
+.home-week__head,
+.home-week__facts {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--app-space-xs) var(--app-space-lg);
+}
+.home-week__title {
+  margin: 0;
+  font-size: var(--app-text-xl);
+}
+.home-week__range,
+.home-week__partial {
+  color: var(--app-ink-3);
+  font-size: var(--app-text-sm);
+}
+.home-week__facts {
+  margin-top: var(--app-space-sm);
+  color: var(--app-ink-2);
+}
+.home-week__next {
+  margin: var(--app-space-xs) 0 0;
+  color: var(--app-ink-2);
+  font-size: var(--app-text-sm);
+}
+.home-week__partial {
+  margin: var(--app-space-xs) 0 0;
+}
 .home-unseated {
   margin-top: 32px;
 }

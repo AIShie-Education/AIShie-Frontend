@@ -60,7 +60,12 @@ describe('the next assignment due', () => {
 describe('a course’s facts on its card', () => {
   it('are its term, its next deadline and the caller’s agents’ proposals waiting, counted as its overview counts them', async () => {
     read.mockImplementation(async (tool: string) => {
-      if (tool === 'course.get') return { id: 'c1', term_id: 't1' }
+      if (tool === 'course.get')
+        return {
+          id: 'c1',
+          term_id: 't1',
+          instructors: [{ display_name: 'Ada Lovelace' }, { display_name: 'Grace Hopper' }],
+        }
       if (tool === 'assignment.list')
         return { assignments: [{ id: 'a3', title: 'HW3', due_at: iso(NOW + 2 * day), published_at: iso(NOW - day) }] }
       if (tool === 'action.list_proposed')
@@ -74,10 +79,15 @@ describe('a course’s facts on its card', () => {
       throw new Error(tool)
     })
     expect(await readCourseFacts(seat(STUDENT), terms, NOW)).toEqual({
+      courseRead: true,
+      instructors: ['Ada Lovelace', 'Grace Hopper'],
       term: '2026/27 Term 1',
       next: { id: 'a3', title: 'HW3', dueAt: iso(NOW + 2 * day) },
+      assignments: [{ id: 'a3', title: 'HW3', due_at: iso(NOW + 2 * day), published_at: iso(NOW - day) }],
       waiting: { n: 2, more: false, agentsOnly: true },
     })
+    // Instructor names come from course.get, never a member-list permission.
+    expect(read.mock.calls.map(([tool]) => tool)).not.toContain('member.list')
   })
 
   it('leave out what the seat may not read, and ask nothing waiting of an archived course', async () => {
@@ -86,10 +96,58 @@ describe('a course’s facts on its card', () => {
       if (tool === 'action.list_proposed') throw new ApiError({ status: 403, code: 'forbidden', message: 'no' })
       throw new Error(tool)
     })
-    expect(await readCourseFacts(seat({ document_read: 'denied' }), terms, NOW)).toEqual({})
+    expect(await readCourseFacts(seat({ document_read: 'denied' }), terms, NOW)).toEqual({
+      courseRead: true,
+      instructorsUnavailable: true,
+    })
     expect(read.mock.calls.map(([tool]) => tool)).toEqual(['course.get', 'action.list_proposed'])
     read.mockClear()
     await readCourseFacts(seat(STUDENT, { course_status: 'archived' }), terms, NOW)
     expect(read.mock.calls.map(([tool]) => tool)).not.toContain('action.list_proposed')
+  })
+
+  it('distinguishes a real empty instructor list from an unavailable one', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'course.get') return { id: 'c1', term_id: 't1', instructors: [] }
+      if (tool === 'assignment.list') return { assignments: [] }
+      if (tool === 'action.list_proposed') return { actions: [] }
+      throw new Error(tool)
+    })
+    const out = await readCourseFacts(seat(STUDENT), terms, NOW)
+    expect(out.instructors).toEqual([])
+    expect(out.instructorsUnavailable).toBeUndefined()
+    expect(read.mock.calls.map(([tool]) => tool)).not.toContain('member.list')
+  })
+
+  it('marks a failed course read unavailable rather than claiming there is no instructor', async () => {
+    read.mockImplementation(async (tool: string) => {
+      if (tool === 'course.get') throw new ApiError({ status: 500, code: 'internal', message: 'failed' })
+      if (tool === 'assignment.list') return { assignments: [] }
+      if (tool === 'action.list_proposed') return { actions: [] }
+      throw new Error(tool)
+    })
+    expect(await readCourseFacts(seat(STUDENT), terms, NOW)).toMatchObject({
+      courseRead: false,
+      instructorsUnavailable: true,
+    })
+    expect(read.mock.calls.map(([tool]) => tool)).not.toContain('member.list')
+  })
+
+  it('reads every assignment page before offering a complete week summary', async () => {
+    read.mockImplementation(async (tool: string, args: { after?: string }) => {
+      if (tool === 'course.get') return { id: 'c1', term_id: 't1', instructors: [] }
+      if (tool === 'assignment.list')
+        return args.after
+          ? { assignments: [{ id: 'a2', title: 'Second', due_at: iso(NOW + day), published_at: iso(NOW - day) }] }
+          : {
+              assignments: [{ id: 'a1', title: 'First', due_at: iso(NOW + 2 * day), published_at: iso(NOW - day) }],
+              next: 'page-2',
+            }
+      if (tool === 'action.list_proposed') return { actions: [] }
+      throw new Error(tool)
+    })
+    const out = await readCourseFacts(seat(STUDENT), terms, NOW)
+    expect(out.assignments?.map((a) => a.id)).toEqual(['a1', 'a2'])
+    expect(out.next?.id).toBe('a2')
   })
 })

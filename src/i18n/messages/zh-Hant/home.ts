@@ -3,6 +3,16 @@ export default {
   subtitle: '你本學期的課程',
   // The next published assignment due in a course, on its card: its title, and when (relative).
   nextDue: '下一個截止：{title}，{when}',
+  noInstructor: '未列出講師',
+  instructorsUnavailable: '講師資料無法顯示',
+  week: {
+    title: '本週',
+    due: '本週沒有作業截止 | 本週有{n}項作業截止 | 本週有{n}項作業截止',
+    waiting: '目前沒有待你決定的事項 | 有{n}項提案待你決定 | 有{n}項提案待你決定',
+    waitingAtLeast: '至少有{n}項提案待你決定',
+    next: '下一個截止：{title} · {course}，{when}',
+    partial: '部分課程資料無法顯示。',
+  },
   noCourses: '你尚未加入任何課程。',
   noCoursesAdmin: '你尚未加入任何課程。作為管理員，你可以建立課程並指派講師。',
   goAdmin: '前往管理頁面',
