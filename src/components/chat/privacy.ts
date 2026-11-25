@@ -25,15 +25,14 @@
 //   fallback answers too when the school's model cannot (§5.3), so the line
 //   names both providers where they differ. The text the runtime reads by
 //   OCR from an attached image or scan it keeps 180 days, withdrawn or not
-//   (§4, OCR; §8). Which model that is the
-//   runtime tells the agent's owner alone (GET /agents), so a provider is
-//   named only to the owner; anyone else is told that a model's provider
-//   receives it, never which.
+//   (§4, OCR; §8). The owner's full model comes from GET /agents. For another
+//   agent, GET /agents/{core id}/privacy gives only safe provider labels and
+//   its fallback; a missing label, route, or old Core keeps generic wording.
 // - An agent with MCP access is used from its owner's own tools; where they
 //   send what they read is nothing the site knows.
 //
 // The words are the reader's language's (chat.privacy); this says which.
-import type { HostedAgent, ModelsAnswer } from '@/api/runtime-types'
+import type { AgentPrivacyAnswer, HostedAgent, ModelsAnswer } from '@/api/runtime-types'
 import { visibleToLines, type VisibleToKey, type VisibleToLine } from './chat'
 
 /** How the agent answering is run, as far as the page knows: by AIshie's runtime, from its owner's tools (MCP), or not known. */
@@ -42,13 +41,18 @@ export type AnswerHosting = 'runtime' | 'mcp' | null
 /** A model a hosted agent answers with: who provides it, and its name. */
 export interface AnswerModel {
   provider: string
+  /** Empty when the asker-facing route discloses the provider but not the model's name. */
   model: string
   /** The school offer's display name, for an operator's own model server. */
-  offerLabel?: string
+  offerLabel?: string | null
+  /** A trusted provider label from the asker-facing privacy route; null means generic wording. */
+  providerLabel?: string | null
 }
 
 /** The models a hosted agent answers with, as the runtime tells its owner. */
 export interface AnswerModels {
+  /** asker: safe fields only, from the privacy route; absent: the caller's own full runtime row. */
+  disclosure?: 'asker'
   /** school: the school's plan, the school's key; own: the owner's own key. */
   plan: 'school' | 'own'
   model: AnswerModel
@@ -74,6 +78,29 @@ export function answerModelsOf(agent: Pick<HostedAgent, 'model'>): AnswerModels 
     }
   }
   return ownModel ? { plan: 'own', model: ownModel, fallback: null } : null
+}
+
+/** Safe provider facts for someone who may ask an agent, never an owner-only model name or key detail. */
+export function answerModelsFromPrivacy(answer: AgentPrivacyAnswer): AnswerModels | null {
+  const primary = answer.primary
+  if (!primary?.provider) return null
+  return {
+    disclosure: 'asker',
+    plan: primary.plan,
+    model: {
+      provider: primary.provider,
+      model: '',
+      providerLabel: primary.provider_label,
+      offerLabel: primary.school_offer_label,
+    },
+    fallback: answer.fallback
+      ? {
+          provider: answer.fallback.provider,
+          model: '',
+          providerLabel: answer.fallback.provider_label,
+        }
+      : null,
+  }
 }
 
 /**
@@ -187,45 +214,91 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
   switch (kind) {
     case 'model': {
       const m = f.models!
+      const asker = m.disclosure === 'asker'
       const schoolServer = m.plan === 'school' && SCHOOL_SERVER_PROVIDERS.has(m.model.provider)
       const offerLabel = m.model.offerLabel?.trim() || null
-      // An internal endpoint id is not a company. Name the school's own server by its real offer
-      // label, or say only that an AI model's provider receives it where no label exists.
-      const provider = schoolServer ? (offerLabel ?? '') : label(m.model.provider)
-      // The fallback's provider too, where it is another: it answers when the school's model cannot.
-      const fallbackProvider = m.fallback ? label(m.fallback.provider) : null
-      const hasOtherFallback = !!fallbackProvider && m.fallback!.provider !== m.model.provider
-      if (schoolServer && offerLabel) {
-        const suffix = hasOtherFallback ? 'schoolServerFallback' : 'schoolServer'
-        line = { key: `line.${suffix}`, params: { name, provider, ...(fallbackProvider ? { fallbackProvider } : {}) } }
-        goes = { key: `points.${suffix}`, params: { name, provider, ...(fallbackProvider ? { fallbackProvider } : {}) } }
-      } else if (schoolServer) {
-        const suffix = hasOtherFallback ? 'runtimeFallback' : 'runtime'
-        line = { key: `line.${suffix}`, params: { name, ...(fallbackProvider ? { fallbackProvider } : {}) } }
-        goes = { key: `points.${suffix}`, params: { name, ...(fallbackProvider ? { fallbackProvider } : {}) } }
-      } else if (hasOtherFallback) {
-        line = { key: 'line.modelFallback', params: { name, provider, fallbackProvider: fallbackProvider! } }
-        goes = { key: 'points.modelFallback', params: { name, provider, fallbackProvider: fallbackProvider! } }
+      // The privacy route's labels are authoritative. Where it gives none, an internal id is never
+      // shown as a company: only the owner's older, full row falls back to a raw provider id.
+      const trustedProvider = asker ? m.model.providerLabel?.trim() || null : label(m.model.provider)
+      const provider = schoolServer ? (offerLabel ?? '') : (trustedProvider ?? '')
+      const fallbackProvider = m.fallback
+        ? asker
+          ? m.fallback.providerLabel?.trim() || null
+          : label(m.fallback.provider)
+        : null
+      // Every fallback disclosed by the privacy route is a possible destination. The owner's older
+      // path needs to name another provider in the short line only when it differs.
+      const hasFallback = asker
+        ? !!m.fallback
+        : !!fallbackProvider && m.fallback!.provider !== m.model.provider
+      const genericFallback = asker && !!m.fallback && !fallbackProvider
+      let suffix: string
+      if (schoolServer) {
+        suffix = offerLabel
+          ? hasFallback
+            ? fallbackProvider
+              ? 'schoolServerFallback'
+              : 'schoolServerUnknownFallback'
+            : 'schoolServer'
+          : fallbackProvider && hasFallback
+            ? 'runtimeFallback'
+            : genericFallback
+              ? 'runtimeUnknownFallback'
+              : 'runtime'
+      } else if (provider) {
+        suffix = hasFallback ? (fallbackProvider ? 'modelFallback' : 'modelUnknownFallback') : 'model'
       } else {
-        line = { key: 'line.model', params: { name, provider } }
-        goes = { key: 'points.model', params: { name, provider } }
+        suffix =
+          fallbackProvider && hasFallback ? 'runtimeFallback' : genericFallback ? 'runtimeUnknownFallback' : 'runtime'
       }
+      const params = {
+        name,
+        ...(provider ? { provider } : {}),
+        ...(fallbackProvider && hasFallback ? { fallbackProvider } : {}),
+      }
+      line = { key: `line.${suffix}`, params }
+      goes = { key: `points.${suffix}`, params }
       route.push({ key: 'route.hosted', params: { name } })
-      route.push(
-        schoolServer
-          ? offerLabel
-            ? { key: 'route.schoolServer', params: { provider, model: m.model.model } }
-            : { key: 'route.schoolUnknownProvider', params: { model: m.model.model } }
-          : {
-              key: m.plan === 'school' ? 'route.school' : 'route.own',
-              params: { name, provider, model: m.model.model },
-            },
-      )
-      if (m.fallback)
+      if (schoolServer) {
+        route.push(
+          offerLabel
+            ? {
+                key: m.model.model ? 'route.schoolServer' : 'route.schoolServerProvider',
+                params: { provider, model: m.model.model },
+              }
+            : {
+                key: m.model.model ? 'route.schoolUnknownProvider' : 'route.schoolUnknownProviderGeneric',
+                params: { model: m.model.model },
+              },
+        )
+      } else if (provider) {
+        route.push(
+          m.model.model
+            ? {
+                key: m.plan === 'school' ? 'route.school' : 'route.own',
+                params: { name, provider, model: m.model.model },
+              }
+            : { key: m.plan === 'school' ? 'route.schoolProvider' : 'route.ownProvider', params: { provider } },
+        )
+      } else {
         route.push({
-          key: 'route.fallback',
-          params: { name, provider: label(m.fallback.provider), model: m.fallback.model },
+          key: m.plan === 'school' ? 'route.schoolUnknownProviderGeneric' : 'route.ownUnknownProviderGeneric',
+          params: {},
         })
+      }
+      if (m.fallback) {
+        route.push(
+          asker
+            ? {
+                key: fallbackProvider ? 'route.publicFallback' : 'route.publicFallbackUnknownProvider',
+                params: { name, ...(fallbackProvider ? { provider: fallbackProvider } : {}) },
+              }
+            : {
+                key: 'route.fallback',
+                params: { name, provider: label(m.fallback.provider), model: m.fallback.model },
+              },
+        )
+      }
       break
     }
     case 'runtime':

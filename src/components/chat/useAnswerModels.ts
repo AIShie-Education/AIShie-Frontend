@@ -1,9 +1,8 @@
-// The models the caller's own agent answers with, as the runtime tells its
-// owner (GET /agents, and GET /models for the providers' names), for the
-// chat's privacy notice (privacy.ts) to name its provider. Asked only of the
-// caller's own agent, only where there is a runtime, and once for the pane;
-// an answer that does not come leaves the notice saying that a model's
-// provider receives it, never which.
+// Provider facts for the chat's privacy notice. The caller's own agent keeps
+// its owner-only model detail (GET /agents, GET /models). For another person's
+// agent, member.get gives its Core agent id and the asker-facing privacy route
+// gives safe provider labels alone. A missing route, an old Core, or any
+// failure leaves the notice generic; nothing is guessed.
 import {
   effectScope,
   getCurrentScope,
@@ -14,10 +13,18 @@ import {
   type MaybeRefOrGetter,
   type ShallowRef,
 } from 'vue'
+import { read } from '@/api/http'
 import { runtime } from '@/api/runtime'
 import type { ModelsAnswer } from '@/api/runtime-types'
 import { useRuntime } from '@/composables/useRuntime'
-import { answerModelsOf, ownHostedIn, providerName, type AnswerModels } from './privacy'
+import {
+  answerModelsFromPrivacy,
+  answerModelsOf,
+  ownHostedIn,
+  providerName,
+  type AnswerHosting,
+  type AnswerModels,
+} from './privacy'
 
 export interface UseAnswerModels {
   /** Its models, once the runtime has said; null otherwise. */
@@ -30,7 +37,11 @@ export function useAnswerModels(opts: {
   courseId: string
   /** The agent's name, as the conversation shows it. */
   name: MaybeRefOrGetter<string | null | undefined>
-  /** It is the caller's own agent: only then does the runtime say. */
+  /** Its Core course-member id; member.get resolves the agent's actor id. */
+  memberId: MaybeRefOrGetter<string | null | undefined>
+  /** How it is hosted; only runtime agents have a privacy route. */
+  hosting: MaybeRefOrGetter<AnswerHosting>
+  /** It is the caller's own agent: its full owner-only row may be read. */
   mine: MaybeRefOrGetter<boolean>
 }): UseAnswerModels {
   const models = shallowRef<AnswerModels | null>(null)
@@ -39,33 +50,41 @@ export function useAnswerModels(opts: {
   let loading = false
   let gone = false
 
-  async function load(name: string) {
+  async function load(name: string, memberId: string, mine: boolean) {
     try {
-      const listed = await runtime.list()
+      if (mine) {
+        const listed = await runtime.list()
+        if (gone) return
+        const agent = ownHostedIn(listed.data.agents, opts.courseId, name)
+        models.value = agent ? answerModelsOf(agent) : null
+        if (!models.value) return
+        // The providers' names; the ids are said where they do not come.
+        runtime.models().then(
+          (r) => {
+            if (!gone) offers.value = r.data
+          },
+          () => undefined,
+        )
+        return
+      }
+      const member = await read('member.get', { course_id: opts.courseId, member_id: memberId })
       if (gone) return
-      const agent = ownHostedIn(listed.data.agents, opts.courseId, name)
-      models.value = agent ? answerModelsOf(agent) : null
-      if (!models.value) return
-      // The providers' names; the ids are said where they do not come.
-      runtime.models().then(
-        (r) => {
-          if (!gone) offers.value = r.data
-        },
-        () => undefined,
-      )
+      const answer = await runtime.privacy(member.actor_id, opts.courseId)
+      if (!gone) models.value = answerModelsFromPrivacy(answer.data)
     } catch {
+      // 404, 422 core_too_old, 503 and every other failure: keep generic wording.
       models.value = null
     }
   }
 
-  // Whether there is a runtime is asked only once it is the caller's own
-  // agent (one GET /info a page load, shared): nobody else's is told.
+  // Whether there is a runtime is asked once for this agent (one GET /info a
+  // page load, shared). The owner and asker routes are never mixed.
   const scope = effectScope()
   if (getCurrentScope()) onScopeDispose(() => ((gone = true), scope.stop()))
   watch(
-    () => [toValue(opts.mine), toValue(opts.name)] as const,
-    ([mine, name]) => {
-      if (asked || !mine || !name) return
+    () => [toValue(opts.mine), toValue(opts.name), toValue(opts.memberId), toValue(opts.hosting)] as const,
+    ([mine, name, memberId, hosting]) => {
+      if (asked || !name || !memberId || hosting !== 'runtime') return
       asked = true
       scope.run(() => {
         const rt = useRuntime()
@@ -74,7 +93,7 @@ export function useAnswerModels(opts: {
           (available) => {
             if (!available || loading) return
             loading = true
-            void load(name)
+            void load(name, memberId, mine)
           },
           { immediate: true },
         )

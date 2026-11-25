@@ -286,12 +286,18 @@ export default {
       model: '{readers} can read this; {name} sends it to {provider}.',
       modelFallback:
         '{readers} can read this; {name} sends it to {provider}, or to {fallbackProvider} when the school’s model cannot.',
+      modelUnknownFallback:
+        '{readers} can read this; {name} sends it to {provider}, or to its owner’s AI model’s provider when the school’s model cannot.',
+      runtimeUnknownFallback:
+        '{readers} can read this; {name} sends it to its AI model’s provider, or to its owner’s AI model’s provider when the school’s model cannot.',
       runtime: '{readers} can read this; {name} sends it to its AI model’s provider.',
       runtimeFallback:
         '{readers} can read this; {name} sends it to its AI model’s provider, or to {fallbackProvider} when the school’s model cannot.',
       schoolServer: '{readers} can read this; {name} sends it to the school’s own model server, {provider}.',
       schoolServerFallback:
         '{readers} can read this; {name} sends it to the school’s own model server, {provider}, or to {fallbackProvider} when the school’s model cannot.',
+      schoolServerUnknownFallback:
+        '{readers} can read this; {name} sends it to the school’s own model server, {provider}, or to its owner’s AI model’s provider when the school’s model cannot.',
       mcp: '{readers} can read this; {name} answers from its owner’s own tools.',
       unknown: '{readers} can read this; {name}’s AI model answers it.',
     },
@@ -302,9 +308,15 @@ export default {
       model: '{name} sends what you write here to {provider}, its AI model’s provider, to answer it.',
       modelFallback:
         '{name} sends what you write here to {provider}, its AI model’s provider, to answer it, or to {fallbackProvider} when the school’s model cannot.',
+      modelUnknownFallback:
+        '{name} sends what you write here to {provider}, its AI model’s provider, to answer it, or to its owner’s AI model’s provider when the school’s model cannot.',
+      runtimeUnknownFallback:
+        '{name} sends what you write here to its AI model’s provider to answer it, or to its owner’s AI model’s provider when the school’s model cannot.',
       schoolServer: '{name} sends what you write here to the school’s own model server, {provider}, to answer it.',
       schoolServerFallback:
         '{name} sends what you write here to the school’s own model server, {provider}, to answer it, or to {fallbackProvider} when the school’s model cannot.',
+      schoolServerUnknownFallback:
+        '{name} sends what you write here to the school’s own model server, {provider}, to answer it, or to its owner’s AI model’s provider when the school’s model cannot.',
       runtime: '{name} sends what you write here to its AI model’s provider to answer it.',
       runtimeFallback:
         '{name} sends what you write here to its AI model’s provider to answer it, or to {fallbackProvider} when the school’s model cannot.',
@@ -316,12 +328,23 @@ export default {
       hosted:
         '{name} is hosted on AIshie. To answer, AIshie’s agent service sends the messages of this conversation, the files attached to them, and what {name} reads in the course to its AI model.',
       school: 'That model is {model}, from {provider}, on the school’s plan.',
+      schoolProvider: 'That model is from {provider}, on the school’s plan.',
       schoolServer: 'That model is {model}, on the school’s own model server, {provider}.',
+      schoolServerProvider: 'That model is on the school’s own model server, {provider}.',
       schoolUnknownProvider:
         'That model is {model}, on the school’s plan; this page cannot name its AI model’s provider.',
+      schoolUnknownProviderGeneric:
+        'That model is on the school’s plan; this page cannot name its AI model’s provider.',
       own: 'That model is {model}, from {provider}, on your own API key.',
+      ownProvider: 'That model is from {provider}, on its owner’s own API key.',
+      ownUnknownProviderGeneric:
+        'That model is on its owner’s own API key; this page cannot name its AI model’s provider.',
       fallback:
         'When the school’s model cannot answer (today’s allowance is used up, or it fails), your own model answers instead: {model}, from {provider}.',
+      publicFallback:
+        'When the school’s model cannot answer (today’s allowance is used up, or it fails), {name}’s owner’s own model answers instead, from {provider}.',
+      publicFallbackUnknownProvider:
+        'When the school’s model cannot answer (today’s allowance is used up, or it fails), {name}’s owner’s own model answers instead; this page cannot name its AI model’s provider.',
       unknownModel:
         'That is the model chosen for {name}, on the school’s plan or its owner’s own key, so it goes to that model’s provider. This page cannot show you which provider it is.',
       mcp: '{name} has MCP access: it is used from its owner’s own tools, which read this conversation from AIshie and answer it. Where they send what they read is up to its owner, and AIshie cannot tell.',

@@ -222,6 +222,7 @@ const isDraft = computed(() => !props.conversationId)
 interface Party {
   name: string
   kind: string
+  memberId: string
   ownerName?: string | null
   mine?: boolean
   lastSeenAt?: string | null
@@ -236,6 +237,7 @@ const other = computed<Party | null>(() => {
       ? {
           name: r.display_name,
           kind: r.kind,
+          memberId: r.member_id,
           ownerName: r.owner_name,
           mine: r.is_my_delegate,
           lastSeenAt: r.last_seen_at,
@@ -249,6 +251,7 @@ const other = computed<Party | null>(() => {
   return {
     name: r.display_name,
     kind: r.kind,
+    memberId: r.member_id,
     ownerName: r.owner_name,
     mine: role.value === 'opener' && r.is_delegate_of_opener,
     lastSeenAt: r.last_seen_at,
@@ -299,10 +302,12 @@ const hosting = computed<AnswerHosting>(() => {
   if (notAskableWhy.value === 'agent_not_hosted') return 'runtime'
   return null
 })
-/** The caller's own agent: the runtime tells its owner which model it answers with. */
+/** The caller's own model detail, or another agent's safe asker-facing provider facts. */
 const answer = useAnswerModels({
   courseId: props.courseId,
   name: () => (other.value?.kind === 'agent' ? other.value.name : null),
+  memberId: () => (other.value?.kind === 'agent' ? other.value.memberId : null),
+  hosting,
   mine: () => role.value === 'opener' && !!other.value?.mine && hosting.value === 'runtime',
 })
 const privacy = computed(() =>

@@ -32,6 +32,7 @@ vi.mock('@/api/http', async (orig) => {
           ...(server.draft !== undefined ? { draft: server.draft } : {}),
         }
       if (tool === 'conversation.respondents') return { respondents: server.respondents }
+      if (tool === 'member.get') return { actor_id: 'core-agent-1' }
       throw new Error(`no answer for ${tool}`)
     }),
     write: vi.fn(async (tool: string, args: Record<string, unknown>) => {
@@ -52,6 +53,8 @@ vi.mock('@/api/http', async (orig) => {
 
 // The runtime, as it answers the owner of an agent it hosts: its model, for the privacy notice to name.
 let hostedAgents: unknown[] = []
+let agentPrivacy: { agent_id: string; primary: unknown; fallback: unknown }
+let privacyError: unknown = null
 const runtimeCalls: string[] = []
 vi.mock('@/composables/useRuntime', async () => {
   const { computed } = await import('vue')
@@ -74,6 +77,11 @@ vi.mock('@/api/runtime', async (orig) => {
       list: vi.fn(async () => {
         runtimeCalls.push('list')
         return { data: { agents: hostedAgents }, status: 200, etag: null, replayed: false }
+      }),
+      privacy: vi.fn(async (agentId: string, courseId: string) => {
+        runtimeCalls.push(`privacy:${agentId}:${courseId}`)
+        if (privacyError) throw privacyError
+        return { data: agentPrivacy, status: 200, etag: null, replayed: false }
       }),
       models: vi.fn(async () => {
         runtimeCalls.push('models')
@@ -295,6 +303,8 @@ beforeEach(() => {
   forgetPrivacySeen()
   localStorage.clear()
   hostedAgents = []
+  agentPrivacy = { agent_id: 'core-agent-1', primary: null, fallback: null }
+  privacyError = null
   runtimeCalls.length = 0
   server = {
     messages: [
@@ -1039,9 +1049,9 @@ describe('ChatPane: who reads it, and where it goes', () => {
       'The two taking part can read this; Course tutor sends it to its AI model’s provider.',
     )
     expect(line.find('button').text()).toBe('More')
-    // It follows the composer, and nobody else's agent is asked of the runtime.
+    // It follows the composer; another agent uses only the safe privacy route.
     expect(w.find('.chat-pane__foot').element.lastElementChild).toBe(line.element)
-    expect(runtimeCalls).toEqual([])
+    expect(runtimeCalls).toEqual(['privacy:core-agent-1:k1'])
     const more = w.find('.chat-pane__privacy-more')
     expect(more.attributes('aria-label')).toBe('More: who reads this conversation, and where it goes')
     await more.trigger('click')
@@ -1064,6 +1074,50 @@ describe('ChatPane: who reads it, and where it goes', () => {
         (el) => el.textContent === 'Who can read this conversation',
       ),
     ).toHaveLength(1)
+  })
+
+  it('names another agent’s providers from the asker-facing privacy route, including its fallback', async () => {
+    seat('student')
+    signedIn()
+    agentPrivacy = {
+      agent_id: 'core-agent-1',
+      primary: {
+        plan: 'school',
+        provider: 'deepseek',
+        provider_label: 'DeepSeek',
+        school_offer_label: 'School AI',
+      },
+      fallback: { provider: 'openai', provider_label: 'OpenAI' },
+    }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(runtimeCalls).toEqual(['privacy:core-agent-1:k1'])
+    expect(w.find('.chat-pane__privacy').text()).toContain(
+      'Course tutor sends it to DeepSeek, or to OpenAI when the school’s model cannot.',
+    )
+    await w.find('.chat-pane__privacy-more').trigger('click')
+    await flushPromises()
+    const text = document.body.querySelector('.chat-pane__readers')?.textContent ?? ''
+    expect(text).toContain('That model is from DeepSeek, on the school’s plan.')
+    expect(text).toContain('Course tutor’s owner’s own model answers instead, from OpenAI.')
+  })
+
+  it.each([404, 422, 503])('keeps generic provider wording when the privacy route answers %i', async (status) => {
+    seat('student')
+    signedIn()
+    privacyError = new ApiError({
+      status,
+      code: 'failed_precondition',
+      message: 'provider privacy is unavailable',
+      details: { reason: status === 422 ? 'core_too_old' : 'unavailable' },
+    })
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(runtimeCalls).toEqual(['privacy:core-agent-1:k1'])
+    expect(w.find('.chat-pane__privacy-text').text()).toContain(
+      'Course tutor sends it to its AI model’s provider.',
+    )
+    expect(w.find('.chat-pane__privacy-text').text()).not.toContain('core_too_old')
   })
 
   it('names the provider of the caller’s own agent, as the runtime tells its owner', async () => {

@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { HostedAgent } from '@/api/runtime-types'
 import { i18n } from '@/i18n'
 import {
+  answerModelsFromPrivacy,
   answerModelsOf,
   forgetPrivacySeen,
   notePrivacySeen,
@@ -293,6 +294,86 @@ describe('answerModelsOf', () => {
     })
     expect(answerModelsOf(hosted({ model: { own: null, school: { ...school, offered: false } } }))).toBeNull()
     expect(answerModelsOf(hosted({}))).toBeNull()
+  })
+})
+
+describe('answerModelsFromPrivacy: another agent’s safe provider facts', () => {
+  it('names official providers and every disclosed fallback without inventing a model name', () => {
+    const models = answerModelsFromPrivacy({
+      agent_id: 'agent-1',
+      primary: {
+        plan: 'school',
+        provider: 'deepseek',
+        provider_label: 'DeepSeek',
+        school_offer_label: 'School AI',
+      },
+      fallback: { provider: 'openai', provider_label: 'OpenAI' },
+    })
+    expect(models).toMatchObject({ disclosure: 'asker', plan: 'school', model: { model: '' } })
+    const w = words(privacyNotice({ name: 'Course tutor', hosting: 'runtime', models }))
+    expect(w.line).toBe(
+      `${READERS} can read this; Course tutor sends it to DeepSeek, or to OpenAI when the school’s model cannot.`,
+    )
+    expect(w.route).toContain('That model is from DeepSeek, on the school’s plan.')
+    expect(w.route).toContain('Course tutor’s owner’s own model answers instead, from OpenAI.')
+    expect(w.route).not.toContain('deepseek-chat')
+  })
+
+  it('uses the real school offer label and generic wording for an unnamed fallback', () => {
+    const models = answerModelsFromPrivacy({
+      agent_id: 'agent-1',
+      primary: {
+        plan: 'school',
+        provider: 'openai_compatible',
+        provider_label: null,
+        school_offer_label: 'CS GPU server',
+      },
+      fallback: { provider: 'ollama', provider_label: null },
+    })
+    const w = words(privacyNotice({ name: 'CS tutor', hosting: 'runtime', models }))
+    expect(w.line).toBe(
+      `${READERS} can read this; CS tutor sends it to the school’s own model server, CS GPU server, or to its owner’s AI model’s provider when the school’s model cannot.`,
+    )
+    expect(w.route).toContain('That model is on the school’s own model server, CS GPU server.')
+    expect(w.route).toContain('CS tutor’s owner’s own model answers instead; this page cannot name its AI model’s provider.')
+    expect(`${w.line} ${w.route}`).not.toContain('openai_compatible')
+    expect(`${w.line} ${w.route}`).not.toContain('ollama')
+  })
+
+  it('keeps generic wording when an official provider has no label, never showing its raw id', () => {
+    const models = answerModelsFromPrivacy({
+      agent_id: 'agent-1',
+      primary: {
+        plan: 'own',
+        provider: 'anthropic',
+        provider_label: null,
+        school_offer_label: null,
+      },
+      fallback: null,
+    })
+    const w = words(privacyNotice({ name: 'Course tutor', hosting: 'runtime', models }))
+    expect(w.line).toBe(`${READERS} can read this; Course tutor sends it to its AI model’s provider.`)
+    expect(w.route).toContain('That model is on its owner’s own API key; this page cannot name its AI model’s provider.')
+    expect(`${w.line} ${w.route}`).not.toContain('anthropic')
+  })
+
+  it('keeps the generic route for primary:null, and mentions a fallback even from the same provider', () => {
+    expect(
+      answerModelsFromPrivacy({ agent_id: 'agent-1', primary: null, fallback: null }),
+    ).toBeNull()
+    const models = answerModelsFromPrivacy({
+      agent_id: 'agent-1',
+      primary: {
+        plan: 'school',
+        provider: 'deepseek',
+        provider_label: 'DeepSeek',
+        school_offer_label: 'School AI',
+      },
+      fallback: { provider: 'deepseek', provider_label: 'DeepSeek' },
+    })
+    const notice = privacyNotice({ name: 'Course tutor', hosting: 'runtime', models })
+    expect(notice.line.key).toBe('line.modelFallback')
+    expect(words(notice).line).toContain('or to DeepSeek when the school’s model cannot')
   })
 })
 

@@ -6,8 +6,8 @@ import { call, coursePath, demo, hostOnRuntime, photograph, signIn, type CoreRep
 // they start a conversation, its points on the new conversation, until they
 // say they have seen them; after that, a line under the composer; and "More"
 // opens the whole notice, in their language. Told through Ken and a course
-// agent made for this run, hosted as the site's runtime hosts it (the run has
-// no runtime: nobody's model is named, as for anyone not its owner).
+// agent made for this run, hosted as the site's runtime hosts it. The run has
+// no privacy-capable runtime, so the route's failure keeps the generic provider words.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Privacy tutor ${STAMP}`

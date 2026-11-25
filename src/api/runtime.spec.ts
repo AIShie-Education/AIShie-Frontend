@@ -760,6 +760,13 @@ describe('the contract’s calls', () => {
     ['models', () => rt.runtime.models(), 'GET', '/runtime/api/v1/models', undefined],
     ['list', () => rt.runtime.list(), 'GET', '/runtime/api/v1/agents', undefined],
     ['get', () => rt.runtime.get('agt_1'), 'GET', '/runtime/api/v1/agents/agt_1', undefined],
+    [
+      'privacy',
+      () => rt.runtime.privacy('core-agent-1', 'course-1'),
+      'GET',
+      '/runtime/api/v1/agents/core-agent-1/privacy?course_id=course-1',
+      undefined,
+    ],
     ['inspect', () => rt.runtime.inspect('a-1'), 'POST', '/runtime/api/v1/agents/inspect', { agent_id: 'a-1' }],
     ['host', () => rt.runtime.host('a-1'), 'POST', '/runtime/api/v1/agents', { agent_id: 'a-1' }],
     [
