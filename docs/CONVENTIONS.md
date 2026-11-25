@@ -855,9 +855,13 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   so that a row of chips over a list of role tags reads as controls over labels; the chosen one in the
   indigo's words on its tint, with a 2 px bar in the indigo at its foot, as a course's chosen tab has;
   one with nothing in it as the others are, its count in the third ink; "All N" first, then each choice with its
-  count (a lower bound, "12+", while there is more to load), one at a time, radios to the keyboard and a
-  screen reader; counts a list shows by state are these chips too, never a row of tags that cannot be
-  pressed. A chip counts the rows it filters, no others: where a select has already narrowed the list to
+  count (a lower bound, "12+", while there is more to load; a scoped list may name the first choice for its
+  default, such as This course, instead of All). They are one radio group to the keyboard and a screen reader:
+  only the chosen chip is a tab stop, Left/Right and Up/Down choose and focus the previous/next chip (wrapping
+  at the ends), Home/End choose the first/last, and Enter or Space chooses without clearing the chosen radio.
+  Counts a list shows by state are these chips too, never a row of tags that cannot be pressed; My actions'
+  awaiting-review count is one and filters to those rows. A chip that disappears after a reload cannot stay
+  chosen invisibly: its filter returns to All. A chip counts the rows it filters, no others: where a select has already narrowed the list to
   one (a student on the submissions page), there is nothing left to filter and there are no chips. A
   count is in the chip's own ink, set apart by its weight, never faded below the contrast text keeps. A
   choice of many (an assignment, a student, a type) stays a select. A segmented control (`el-radio-group`
@@ -1197,8 +1201,18 @@ guessed from the built-in preset for the role, or unknown (`permsSource`). There
   control of the app's own that is pressed often is at least 40 px there: a course's tabs (44), the
   grades' own tabs (40), the links of the phone's menu (44), a filter's chips (40, every
   `el-check-tag`: FilterChips and the activity's families), a page's way back (`PageHeader`'s, 40)
-  and the top bar's way up (`CourseCrumbs`' links, 44) among them. Never set `maximum-scale` or
-  `user-scalable` in the viewport: zooming is the reader's.
+  and the top bar's way up (`CourseCrumbs`' links, 44) among them. A segmented control's radio buttons are
+  44 px tall there (40 small), with their text centred; a pager's previous/next buttons and numbers are at
+  least 40 × 40; and every select's dropdown options are at least 44 px tall. None of these touch-only rules
+  changes what a mouse sees. Never set `maximum-scale` or `user-scalable` in the viewport: zooming is the reader's.
+- **Motion follows the reader's system preference.** `styles/main.css` has a global
+  `@media (prefers-reduced-motion: reduce)` block that removes delays and repeating animation and shortens
+  transitions, animations and smooth CSS scrolling to an imperceptible duration everywhere, Element Plus and
+  overlays included. A component that starts motion by script checks the same query: use `scrollBehavior()`
+  (`@/utils/motion`) for every requested smooth scroll, and `useMediaQuery(REDUCED_MOTION_QUERY)` for ongoing
+  script animation such as `ChatSpinner`, responding if the preference changes while it is shown. Never write
+  another unconditional `behavior: 'smooth'`. Reduced motion leaves the state or progress the motion conveyed
+  visible in a still form; it does not hide content or stop reading and writing.
 - Back closes what is laid over the page, as a phone's back gesture or button is expected to:
   `useBackCloses(open, close, { when })` from `@/composables/useBackCloses`, once in the overlay's
   component. Opening adds an entry to history at the page's own address, back closes the overlay

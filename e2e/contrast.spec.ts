@@ -71,6 +71,13 @@ for (const theme of ['light', 'dark'] as const) {
         await look(`${sub || 'overview'}, a row hovered`)
         await page.mouse.move(0, 0)
       }
+      if (sub === 'members') {
+        // A selected chip keeps its AA label on its hover ground too (a tap
+        // can leave that hover stuck on a touch screen).
+        await page.locator('.filter-chips .el-check-tag.is-checked').hover()
+        await look('members, the chosen chip hovered')
+        await page.mouse.move(0, 0)
+      }
     }
     // A seat's permissions being edited, one changed: its row lies on the waiting pill's ground, the
     // permission's key with it. Cancelled: the seat keeps what it has.

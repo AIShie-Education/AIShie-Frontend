@@ -2,18 +2,28 @@
 // The small glyph that turns while an agent works, as an agent chat's
 // spinner: out through a few stars and back, in the third ink (the amber is
 // the brand's dot alone). Still where motion is reduced.
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
+import { REDUCED_MOTION_QUERY } from '@/utils/motion'
 
 /** The glyph's turns, out and back. */
 const FRAMES = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢']
 const FRAME_MS = 130
 
-const reduced = typeof window !== 'undefined' && !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-const frame = ref(reduced ? 4 : 0)
+const reduced = useMediaQuery(REDUCED_MOTION_QUERY)
+const frame = ref(reduced.value ? 4 : 0)
 let spin: ReturnType<typeof setInterval> | undefined
-onMounted(() => {
-  if (!reduced) spin = setInterval(() => (frame.value = (frame.value + 1) % FRAMES.length), FRAME_MS)
-})
+function syncMotion(reduce: boolean) {
+  clearInterval(spin)
+  spin = undefined
+  if (reduce) {
+    frame.value = 4
+    return
+  }
+  spin = setInterval(() => (frame.value = (frame.value + 1) % FRAMES.length), FRAME_MS)
+}
+onMounted(() => syncMotion(reduced.value))
+watch(reduced, syncMotion)
 onBeforeUnmount(() => clearInterval(spin))
 const glyph = computed(() => FRAMES[frame.value])
 </script>

@@ -108,6 +108,24 @@ summary:focus-visible,
   outline-offset: 2px;
 }
 
+/* Respect the reader's system preference everywhere, including Element Plus,
+   overlays and components loaded later. A near-zero duration still fires the
+   transition/animation events their show/hide logic may await, but leaves no
+   perceptible motion; delays and repeating decorative animation go too.
+   Script-requested smooth scrolling checks utils/motion.ts at call time. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* The pages before the app (signing in, an invitation, a join link, a password of one's own), set as
    aishie.app sets its pages: a header of one row, the wordmark at its left and the language at its right, ruled
    under (56 px with its rule); and under it one column, at most 400 px, left-aligned at the wordmark's edge, on the

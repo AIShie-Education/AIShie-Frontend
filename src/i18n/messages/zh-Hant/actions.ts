@@ -62,7 +62,7 @@ export default {
     capped: '目前顯示你最早的{n}項操作。清單按時間由舊到新排列，較新的操作尚未載入。',
     loadRest: '載入較新的操作',
     showChat: '包括對話訊息',
-    awaitingReview: '{n}項等待覆核',
+    awaitingReview: '等待覆核',
     columns: {
       action: '操作',
       status: '狀態',

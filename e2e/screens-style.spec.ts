@@ -469,13 +469,16 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     await page.unroute((url) => url.pathname.endsWith('/v1/actors'))
   })
 
-  test('a text button keyboard-focused has the app’s ring: the focus colour, 2 px, 2 px clear of it', async ({ page }) => {
+  test('a keyboard-focused text button or filter chip has the app’s ring: the focus colour, 2 px, 2 px clear of it', async ({ page }) => {
     await signIn(page, d().actors.instructor)
     /** The ring on a button reached by the keyboard, and what it is drawn against. */
     const ring = async (button: Locator) => {
       await button.focus()
       await page.keyboard.press('Shift+Tab')
       await page.keyboard.press('Tab')
+      // Element Plus transitions the offset too: read the ring at its final
+      // 2 px, not halfway through the transition from its 1 px default.
+      await expect(button).toHaveCSS('outline-offset', '2px')
       return button.evaluate((el) => {
         const s = getComputedStyle(el)
         const probe = document.createElement('span')
@@ -498,6 +501,11 @@ test.describe('a page’s sections, boxes, buttons and corners', () => {
     const remove = page.locator('.page-header').getByRole('button', { name: 'Remove', exact: true })
     await expect(remove).toHaveClass(/is-text/)
     expect(await ring(remove)).toEqual(app)
+    // The selected filter radio, including after roving focus lands on it.
+    await page.goto(coursePath('members'))
+    const chip = page.locator('.filter-chips .el-check-tag.is-checked')
+    await expect(chip).toBeVisible()
+    expect(await ring(chip)).toEqual(app)
     // A later proposal's Approve, indigo words.
     await page.goto(coursePath('approvals'))
     const later = page.locator('.action-card').nth(1).getByRole('button', { name: 'Approve', exact: true })
