@@ -50,10 +50,34 @@ const blank = (s: string) => s.replace(/[^\n]/g, ' ')
 
 /** The code of a source with its comments blanked out, lines kept where they were. */
 function withoutComments(text: string): string {
-  return text
-    .replace(/<!--[\s\S]*?-->/g, blank)
-    .replace(/\/\*[\s\S]*?\*\//g, blank)
-    .replace(/(^|[^:'"`\\])\/\/[^\n]*/g, (m, before: string) => before + ' '.repeat(m.length - before.length))
+  // One small lexer, rather than regular expressions that cannot tell a glob's
+  // `/*` from a comment or a quote in a comment from a string. Strings stay:
+  // the rules read what the code builds. Every comment becomes spaces, lines kept.
+  const out = text.split('')
+  let quote = ''
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!
+    const next = text[i + 1]
+    if (quote) {
+      if (c === '\\') i++
+      else if (c === quote) quote = ''
+      continue
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      quote = c
+      continue
+    }
+    const html = text.startsWith('<!--', i)
+    const line = !html && c === '/' && next === '/'
+    const block = !html && !line && c === '/' && next === '*'
+    if (!html && !line && !block) continue
+    const end = html ? '-->' : block ? '*/' : '\n'
+    const close = text.indexOf(end, i + (html ? 4 : 2))
+    const last = close < 0 ? text.length : line ? close : close + end.length
+    for (let j = i; j < last; j++) if (text[j] !== '\n') out[j] = ' '
+    i = last - 1
+  }
+  return out.join('')
 }
 
 /**
@@ -77,26 +101,51 @@ function templateCode(template: string): string {
   return out.join('')
 }
 
+/** The template's text and tags, with bound attribute expressions left to templateCode alone. */
+function templateText(template: string): string {
+  const out = template.split('')
+  for (const m of template.matchAll(/(?<=\s)([:@#]|v-)([^\s=>"'/]*)\s*=\s*("[^"]*"|'[^']*')/g)) {
+    const value = m[3]
+    const from = m.index + m[0].length - value.length
+    for (let i = 0; i < value.length; i++) out[from + i] = ' '
+  }
+  return out.join('')
+}
+
+/** Blank only a dot that is an element of its own and is drawn, not read: app-sep or aria-hidden. */
+function withoutDrawnDots(template: string): string {
+  return template.replace(/<([A-Za-z][\w-]*)([^>]*)>\s*·\s*<\/\1\s*>/g, (whole, _tag: string, attrs: string) => {
+    const hidden = /\baria-hidden\s*=\s*(["'])true\1/i.test(attrs)
+    const classes = /\bclass\s*=\s*(["'])(.*?)\1/i.exec(attrs)?.[2] ?? ''
+    return hidden || classes.split(/\s+/).includes('app-sep') ? blank(whole) : whole
+  })
+}
+
 /** A .vue file's template, its code, and the rest (its scripts); a .ts file is all script. */
 function parts(path: string, text: string): { template: string; code: string; script: string } {
   if (!path.endsWith('.vue')) return { template: '', code: '', script: text }
   const template = text
     .replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>|<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, blank)
-    // The dot written as an entity is the dot.
+    // Entities are the character a reader gets.
     .replace(/&middot;|&#183;|&#x0*b7;/gi, '·')
+    .replace(/&nbsp;|&#160;|&#x0*a0;/gi, ' ')
   const script = text.replace(/<template>[\s\S]*<\/template>|<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, blank)
-  return { template, code: templateCode(template), script }
+  return { template: withoutDrawnDots(templateText(template)), code: templateCode(template), script }
 }
 
 /** What a template may not write in its text: each with what to use instead. */
 const IN_TEMPLATE: [string, RegExp][] = [
-  // A dot that is not an element of its own: "}} · {{", "</span> ·", a line of its own.
-  ['a dot between values: common.sep', /(?<!>)·|·(?!<)/],
-  ['a "%" after a number: formatPct', /\}\}\s*%/],
+  // withoutDrawnDots has let only an app-sep or an aria-hidden drawing through.
+  ['a dot between values: common.sep', /·/],
+  ['items joined by a comma: formatList or joinParts', /\}\}\s*,\s*\{\{/],
+  ['a "%" after a number: formatPct', /\}\}\s*%|\}\}\s*<\/[^>]+>\s*%/],
   ['a "$" before a number, or beside a field of dollars: formatMoney, USD_SIGN', /\$\s*\{\{|>\s*\$\s*</],
   ['brackets around a value: common.bracketed or common.aside', /\(\s*\{\{|\}\}\s*\)|\(\s*<[A-Za-z]|\/>\s*\)/],
   ['a colon between values: common.pair', /\}\}\s*:\s*(\{\{|<[A-Za-z])/],
-  ['quotation marks around a value: common.quoted', /[“‘「『"]\s*\{\{|\}\}\s*[”’」』"]/],
+  [
+    'quotation marks around a value: common.quoted',
+    /[“‘「『"]\s*(?:\{\{|<[A-Za-z])|\}\}\s*[”’」』"]|<\/[A-Za-z][^>]*>\s*[”’」』"]|\/>\s*[”’」』"]/,
+  ],
 ]
 
 /** A quote of any kind, as the start of a string the code writes. */
@@ -113,8 +162,24 @@ const ADDS = `\\s*\\+(?!\\+)`
  */
 const NOT_WORDS = `^(?!.*(?:new Error\\(|\\.(?:includes|indexOf|startsWith|endsWith)\\())`
 
+type ScanRule = [string, RegExp | ((line: string) => boolean)]
+
+const PERCENT_IN_CODE = new RegExp(`(?:\\$\\{[^}]+\\}\\s*%|${ADDED}${Q}\\s*%)`)
+/** A percentage is CSS only beside a CSS property, never because a line mentions "desktop" or "daysLeft". */
+function percentOffence(line: string): boolean {
+  const m = PERCENT_IN_CODE.exec(line)
+  if (!m) return false
+  const before = line.slice(0, m.index)
+  const property = String.raw`(?:width|height|translate|inset|left|top)`
+  const css = new RegExp(
+    `(?:^|[,{;])\\s*['"\`]?${property}['"\`]?\\s*:\\s*['"\`][^,{;]*$|\\bsetProperty\\(\\s*['"]${property}['"]\\s*,\\s*['"\`][^)]*$`,
+    'i',
+  )
+  return !css.test(before)
+}
+
 /** What code may not build into a string, in a module, a script or a template's code. */
-const IN_CODE: [string, RegExp][] = [
+const IN_CODE: ScanRule[] = [
   // (A comma alone joins a file's fields, a CSV's, not words.)
   [
     'items joined by a comma or a dot: formatList or joinParts',
@@ -142,13 +207,8 @@ const IN_CODE: [string, RegExp][] = [
       'i',
     ),
   ],
-  [
-    'a "%" after a number: formatPct',
-    new RegExp(
-      `^(?!.*(?:width|height|style|translate|inset|left|top)).*(?:\\$\\{[^}]+\\}\\s*%|${ADDED}${Q}\\s*%)`,
-      'i',
-    ),
-  ],
+  ['items joined by a comma: formatList or joinParts', /\?\s*(['"`])(?:, |，|、)\1\s*:/],
+  ['a "%" after a number: formatPct', percentOffence],
   ['a "$" before a number: formatMoney', new RegExp(`\\$\\$\\{|${Q}\\$\\s*\\1${ADDS}`)],
   [
     'brackets around a value: common.aside',
@@ -177,9 +237,12 @@ const IN_CODE: [string, RegExp][] = [
 function offences(path: string, text: string): string[] {
   const { template, code, script } = parts(path, withoutComments(text))
   const out: string[] = []
-  const scan = (lines: string, rules: [string, RegExp][]) =>
+  const scan = (lines: string, rules: ScanRule[]) =>
     lines.split('\n').forEach((line, i) => {
-      for (const [rule, re] of rules) if (re.test(line)) out.push(`${path.slice(1)}:${i + 1}: ${rule}`)
+      for (const [rule, re] of rules) {
+        const fails = typeof re === 'function' ? re(line) : re.test(line)
+        if (fails) out.push(`${path.slice(1)}:${i + 1}: ${rule}`)
+      }
     })
   scan(template, IN_TEMPLATE)
   scan(code, IN_CODE)
@@ -189,7 +252,7 @@ function offences(path: string, text: string): string[] {
 
 /** What a message may not write: in every language, and in Chinese. */
 const IN_MESSAGES: [string, RegExp][] = [
-  ['a "%" after a number, which is formatPct’s: give the number as it writes it', /\}\s*%|\d\s*%/],
+  ['a "%" after a number, which is formatPct’s: give the number as it writes it', /\}\s*[%％]|\d\s*[%％]/],
 ]
 const IN_CHINESE: [string, RegExp][] = [
   ['a half-width colon beside a placeholder: 「：」', /\}\s*:(?!\/\/)|:\s*\{/],
@@ -198,7 +261,12 @@ const IN_CHINESE: [string, RegExp][] = [
 
 /** Each message that breaks a rule, as `locale:namespace.key: rule`. */
 function messageOffences(name: string, text: string): string[] {
-  const rules = /^zh-/.test(name) ? [...IN_MESSAGES, ...IN_CHINESE] : IN_MESSAGES
+  const quotes: [string, RegExp][] = name.startsWith('zh-Hans:')
+    ? [['Traditional Chinese quotation marks in Simplified Chinese: “”', /[「」]/]]
+    : name.startsWith('zh-Hant:')
+      ? [['Simplified Chinese quotation marks in Traditional Chinese: 「」', /[“”]/]]
+      : []
+  const rules = [...IN_MESSAGES, ...quotes, ...(/^zh-/.test(name) ? IN_CHINESE : [])]
   return rules.filter(([, re]) => re.test(text)).map(([rule]) => `${name}: ${rule}`)
 }
 
@@ -240,6 +308,11 @@ describe('punctuation between values', () => {
     '<span>{{ a }} · {{ b }}</span>',
     '<span>{{ a }} &middot; {{ b }}</span>',
     '<span>{{ a }} &#183; {{ b }}</span>',
+    '<span>·</span>',
+    '<span>{{ a }}, {{ b }}</span>',
+    '<span>{{ i ? \', \' : \'\'}}{{ nm }}</span>',
+    '<strong>{{ pct }}</strong>%',
+    '<span>{{ n }}&nbsp;%</span>',
     '<span>{{ a }}</span> ·',
     '<p>\n  ·\n</p>',
     '<span>{{ n }}%</span>',
@@ -273,6 +346,8 @@ describe('punctuation between values', () => {
     '<span>\n  “{{ reason }}”\n</span>',
     '<span>「{{ reason }}」</span>',
     '<span>"{{ reason }}"</span>',
+    '<span>“<MemberName :id="x" />”</span>',
+    '<span>「<b>{{ q }}</b>」</span>',
   ])('catches %s in a template', (template) => {
     expect(vue(template)).not.toEqual([])
   })
@@ -292,6 +367,9 @@ describe('punctuation between values', () => {
     "const s = a + '、' + b",
     'const s = `${n}%`',
     'const s = `${n} %`',
+    'const daysLeft = (n: number) => `${n}%`',
+    'const desktop = `${n} %`',
+    'const stop = `${n}%`',
     "const s = n + '%'",
     "const s = n + ' %'",
     'const s = n + "%"',
@@ -314,6 +392,13 @@ describe('punctuation between values', () => {
   ])('catches %s in code', (script) => {
     expect(vue('', script)).not.toEqual([])
     expect(offences('/src/x.ts', script)).not.toEqual([])
+  })
+
+  it('does not mistake comment delimiters inside strings or line comments for block comments', () => {
+    expect(offences('/src/i18n/index.ts', "const glob = './messages/*/*.ts'\nconst s = `${n} %`")).not.toEqual([])
+    expect(offences('/src/x.ts', "const cmap = '/node_modules/pdfjs-dist/cmaps/*.bcmap'\nconst s = `${n}%`")).not.toEqual([])
+    expect(offences('/src/x.ts', '// /assets/* is a route, not a block comment\nconst s = `${n}%`')).not.toEqual([])
+    expect(vue('', 'const url = "https://example.edu/a//b"\nconst s = `${n}%`')).not.toEqual([])
   })
 
   it('lets a dot of its own be, and what is not words', () => {
@@ -344,6 +429,8 @@ describe('punctuation between values', () => {
     expect(vue('', 'const kept = problem.includes(`(${reason})`)')).toEqual([])
     expect(vue("<span>{{ t('common.quoted', { text: q }) }}</span>")).toEqual([])
     expect(vue('<span :class="{ on }">{{ q }}</span>')).toEqual([])
+    expect(vue('<router-link :to="{ name: \'a\', params: { id: x }}">x</router-link>')).toEqual([])
+    expect(vue('<el-table><template #default="{ row: { id }}">{{ id }}</template></el-table>')).toEqual([])
     expect(vue('', 'const s = "it\'s" + q')).toEqual([])
   })
 
@@ -351,6 +438,10 @@ describe('punctuation between values', () => {
     ['en:common.zzPct', '{n} %'],
     ['en:common.zzPct', '{n}%'],
     ['en:common.zzPct', '47 %'],
+    ['en:common.zzPct', '{n}％'],
+    ['zh-Hant:common.zzPct', '{n}％'],
+    ['zh-Hans:common.zzQuote', '沒有符合「{q}」的對話。'],
+    ['zh-Hant:common.zzQuote', '沒有符合“{q}”的對話。'],
     ['zh-Hant:common.zzPct', '{n} %'],
     ['zh-Hans:common.zzPct', '{n}%'],
     ['zh-Hant:common.zzPair', '{label}: {value}'],
@@ -368,6 +459,8 @@ describe('punctuation between values', () => {
     expect(messageOffences('zh-Hant:classbook.total', '{name}（%）')).toEqual([])
     expect(messageOffences('zh-Hant:common.pair', '{label}：{value}')).toEqual([])
     expect(messageOffences('zh-Hant:common.aside', '{text}（{aside}）')).toEqual([])
+    expect(messageOffences('zh-Hans:common.quoted', '“{text}”')).toEqual([])
+    expect(messageOffences('zh-Hant:common.quoted', '「{text}」')).toEqual([])
     expect(messageOffences('zh-Hant:x.link', '前往 https://{host}/join')).toEqual([])
   })
 })

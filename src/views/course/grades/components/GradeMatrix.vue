@@ -16,7 +16,7 @@ import { formatNumber, formatPct as fractionPct } from '@/utils/format'
 import { classFigure, formatScore } from './grading'
 import type { ColumnSummary, MatrixCell, MatrixColumn, MatrixRow, MatrixStudent, SortBy } from './classMatrix'
 import { NO_CELL } from './classMatrix'
-import { joinParts } from '@/utils/parts'
+import { joinParts, joinSentences } from '@/utils/parts'
 import GroupGlyph from './GroupGlyph.vue'
 
 const props = defineProps<{
@@ -222,7 +222,7 @@ function cellTitle(cell: MatrixCell, shown: { text: string; full: string | null 
   else if (sayFigure) said.push(shown.full ?? shown.text)
   if (cell.waiting) said.push(t('classbook.waiting'))
   if (cell.group) said.push(groupWords(cell))
-  return said.join(' ')
+  return joinSentences(said)
 }
 /** A grade given from a group's, in words: whose group, and how the member's score was set apart. */
 function groupWords(cell: MatrixCell): string {

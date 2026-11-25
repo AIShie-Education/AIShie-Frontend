@@ -10,7 +10,7 @@
    needs, and the -rgb triplets repeat the colours they name. Success,
    warning and danger are the state tags' colours: the colour is the tag's
    text (done, waiting, refused), light-9 its ground, and the steps between
-   are mixed the same way. Info is the neutral state tag's, the third ink.
+   are mixed the same way. Info is the neutral state tag's ink, a step darker than the third.
 
    Its shapes are the app's (styles/tokens.css, "Shapes"): every corner it
    draws is 2 px but a mark's that is round (an avatar, a radio, a dot), and

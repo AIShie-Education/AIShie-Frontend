@@ -26,6 +26,7 @@ import AiBadge from '@/components/AiBadge.vue'
 import MarkdownView from '@/components/MarkdownView.vue'
 import TimeText from '@/components/TimeText.vue'
 import { copyText } from '@/utils/clipboard'
+import { scriptLanguage } from '@/utils/script'
 import '@/styles/chat-prose.css'
 import { retractedBy } from './chat'
 import ChatMessageFiles from './ChatMessageFiles.vue'
@@ -97,7 +98,7 @@ async function copy() {
   >
     <header v-if="showAuthor" class="chat-msg__head">
       <AgentAvatar v-if="!fromOpener" :name="authorName" size="small" />
-      <span class="chat-msg__author">{{ authorName }}</span>
+      <span class="chat-msg__author" :lang="scriptLanguage(authorName)">{{ authorName }}</span>
       <AiBadge v-if="!fromOpener" />
     </header>
     <ChatMessageFiles

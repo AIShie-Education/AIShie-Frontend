@@ -115,6 +115,7 @@ import { notePrivacySeen, privacyNotice, privacySeen, type AnswerHosting, type S
 import { useAnswerModels } from './useAnswerModels'
 import { attachmentsFor, rememberSent, sentFilesOf } from './attachments'
 import { joinParts } from '@/utils/parts'
+import { scriptLanguage } from '@/utils/script'
 
 const props = withDefaults(
   defineProps<{
@@ -937,10 +938,13 @@ const closedLine = computed(() => {
             ><span class="chat-pane__course">{{ courseLabel }}</span
             >{{ t('common.sep') }}</template
           >
-          <template v-if="role === 'overseer' && view">
+          <span
+            v-if="role === 'overseer' && view"
+            :lang="scriptLanguage(`${view.opener.display_name} ${view.respondent.display_name}`)"
+          >
             {{ t('chat.between', { opener: view.opener.display_name, respondent: view.respondent.display_name }) }}
-          </template>
-          <template v-else>{{ other?.name ?? '' }}</template>
+          </span>
+          <span v-else :lang="scriptLanguage(other?.name)">{{ other?.name ?? '' }}</span>
         </span>
         <AiBadge v-if="other?.kind === 'agent'" class="chat-pane__ai" />
         <!-- Not said of an agent nobody can ask here now: whether something runs it tells nothing of that. -->

@@ -129,7 +129,7 @@ function declarations(property: string, from: Sources = sources): Declaration[] 
   // In a script's or a template's style: an object's key, camel-cased or quoted, an assignment
   // to an element's style, or setProperty's first argument; its value quoted or not.
   const js = new RegExp(
-    `(?:(?<![-\\w$])${camel(property)}\\s*(?::|=(?![=>]))|(['"\`])${property}\\1\\s*[:,])\\s*(?:(['"\`])(.*?)\\2|([^,;}\\n]+))`,
+    `(?:(?<![-\\w$])${camel(property)}\\s*(?::|=(?![=>]))|(['"\`])${camel(property)}\\1\\s*:|(['"\`])${property}\\2\\s*[:,]|\\bstyle\\s*\\[\\s*(['"\`])${property}\\3\\s*\\]\\s*=)\\s*(?:(['"\`])(.*?)\\4|([^,;}\\n]+))`,
     'g',
   )
   const out: Declaration[] = []
@@ -139,7 +139,7 @@ function declarations(property: string, from: Sources = sources): Declaration[] 
     for (const m of text.matchAll(css))
       found.set(m.index!, { file, value: clean(m[1]!), selector: selectorAt(text, m.index!) })
     for (const m of text.matchAll(js))
-      found.set(m.index!, { file, value: clean(m[3] ?? m[4]!), selector: selectorAt(text, m.index!) })
+      found.set(m.index!, { file, value: clean(m[5] ?? m[6]!), selector: selectorAt(text, m.index!) })
     out.push(...[...found].sort(([a], [b]) => a - b).map(([, d]) => d))
   }
   return out
@@ -148,10 +148,16 @@ function declarations(property: string, from: Sources = sources): Declaration[] 
 /** Each custom property a source sets, written as CSS writes it or quoted as a script does, with its value. */
 function customProperties(from: Sources = sources): (Declaration & { name: string })[] {
   const re = /(?<![\w(-])(['"`]?)(--[\w-]+)\1\s*[:,]\s*(?:(['"`])(.*?)\3|([^;}"'`\n]+))/g
+  const set = /\bsetProperty\(\s*(['"`])(--[\w-]+)\1\s*,\s*(?:(['"`])(.*?)\3|([^)"'`\n]+))/g
   const out: (Declaration & { name: string })[] = []
-  for (const [file, text] of Object.entries(from))
+  for (const [file, text] of Object.entries(from)) {
+    const found = new Map<number, Declaration & { name: string }>()
     for (const m of text.matchAll(re))
-      out.push({ file, name: m[2]!, value: clean(m[4] ?? m[5]!), selector: selectorAt(text, m.index!) })
+      found.set(m.index!, { file, name: m[2]!, value: clean(m[4] ?? m[5]!), selector: selectorAt(text, m.index!) })
+    for (const m of text.matchAll(set))
+      found.set(m.index!, { file, name: m[2]!, value: clean(m[4] ?? m[5]!), selector: selectorAt(text, m.index!) })
+    out.push(...[...found].sort(([a], [b]) => a - b).map(([, d]) => d))
+  }
   return out
 }
 
@@ -227,11 +233,14 @@ const PLANTED: Sources = {
   '/src/Planted.vue': `<template>
   <span :style="{ fontSize: '11px', fontWeight: 600 }">a</span>
   <b :style="{ 'font-size': '11px' }">b</b>
+  <b :style="{ 'fontSize': '11px' }">quoted camel</b>
   <i :style="{ '--el-tag-font-size': '10px' }">c</i>
 </template>
 <script setup lang="ts">
 el.style.fontSize = '12px'
+el.style['font-size'] = '11px'
 el.style.setProperty('font-weight', '700')
+el.style.setProperty('--el-tag-font-size', '11px')
 </script>
 <style scoped>
 .a {
@@ -297,7 +306,7 @@ describe('the type scale', () => {
   })
 
   it('sets Chinese no smaller than 13 px, with the interface’s lines further apart and strong text in 500', () => {
-    const zh = block('html:lang(zh)')
+    const zh = block(':lang(zh)')
     expect([zh['--app-text-xs'], zh['--app-text-sm']]).toEqual(['13px', '14px'])
     expect(zh['--app-lh-ui']).toBe('1.6')
     // Running text and headings are set as in English: 1.7 and 1.25, the site's in every language.
@@ -424,13 +433,16 @@ describe('the type scale', () => {
     expect(sizesOff(PLANTED)).toEqual([
       '/src/Planted.vue: font-size: 11px',
       '/src/Planted.vue: font-size: 11px',
+      '/src/Planted.vue: font-size: 11px',
       '/src/Planted.vue: font-size: 12px',
+      '/src/Planted.vue: font-size: 11px',
       '/src/Planted.vue: font-size: 12px',
       '/src/Planted.vue: font-size: 0.7em',
     ])
     expect(weightsOff(PLANTED)).toEqual(['/src/Planted.vue: font-weight: 600', '/src/Planted.vue: font-weight: 700'])
     expect(customOff(PLANTED)).toEqual([
       '/src/Planted.vue: --el-tag-font-size: 10px',
+      '/src/Planted.vue: --el-tag-font-size: 11px',
       '/src/Planted.vue: --el-font-size-base: 12px',
       '/src/Planted.vue: --el-tag-font-size: 11px',
       '/src/Planted.vue: --app-text-xs: 11px',

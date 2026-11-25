@@ -6,6 +6,7 @@ import {
   openChat,
   photograph,
   pickOption,
+  ratioForReport,
   signIn,
   signInAsRoot,
   wordsBelowAA,
@@ -36,7 +37,7 @@ async function hoverRow(row: Locator) {
   await row.hover({ position: { x: 4, y: 4 } })
 }
 
-const PAGES = ['', 'materials', 'assignments', 'submissions', 'grades', 'gradebook', 'members', 'approvals', 'activity']
+const PAGES = ['', 'materials', 'assignments', 'submissions', 'grades', 'gradebook', 'scheme', 'members', 'approvals', 'activity']
 
 for (const theme of ['light', 'dark'] as const) {
   test(`every word on a teacher's pages reads at AA in the ${theme} theme`, async ({ page }) => {
@@ -121,4 +122,74 @@ for (const theme of ['light', 'dark'] as const) {
 
     expect(found).toEqual({})
   })
+
+  test(`every word on a student's course pages and chat reads at AA in the ${theme} theme`, async ({ page }) => {
+    const d = demo()
+    await page.addInitScript((t) => localStorage.setItem('aishie.theme', t), theme)
+    await signIn(page, d.actors.yuki)
+    const found: Record<string, Miss[]> = {}
+    for (const sub of ['', 'materials', 'assignments', 'submissions', 'grades', 'activity']) {
+      await page.goto(coursePath(sub))
+      await expect(page.locator('h1').first()).toBeAttached()
+      const misses = await settled(page)
+      if (misses.length) found[sub || 'overview'] = misses
+    }
+    await page.goto(coursePath())
+    await openChat(page)
+    const chat = await settled(page)
+    if (chat.length) found.chat = chat
+    expect(found).toEqual({})
+  })
 }
+
+test.describe('contrast on a phone in Traditional Chinese', () => {
+  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
+
+  test('a student’s course pages and chat are measured at 390×844', async ({ page }) => {
+    const d = demo()
+    await signIn(page, d.actors.yuki)
+    await page.addInitScript(() => localStorage.setItem('aishie.locale', 'zh-Hant'))
+    const found: Record<string, Miss[]> = {}
+    for (const sub of ['', 'assignments', 'submissions', 'grades']) {
+      await page.goto(coursePath(sub))
+      await expect(page.locator('h1').first()).toBeAttached()
+      await expect(page.locator('html')).toHaveAttribute('lang', 'zh-Hant')
+      const misses = await settled(page)
+      if (misses.length) found[sub || 'overview'] = misses
+    }
+    await page.goto(coursePath())
+    await page.locator('.app-chat-entry button').first().click()
+    await expect(page.locator('#chat-panel')).toBeVisible()
+    const chat = await settled(page)
+    if (chat.length) found.chat = chat
+    expect(found).toEqual({})
+  })
+})
+
+test('the contrast reader measures visible aria-hidden text and fails rather than skipping an unmeasurable word', async ({
+  page,
+}) => {
+  await page.setContent(`<style>
+    body { background: #fff; }
+    .quiet { color: #aaa; }
+    .clipped { position: absolute; clip: rect(0, 0, 0, 0); }
+  </style>
+  <span class="quiet" aria-hidden="true">Visible hint</span>
+  <span class="clipped">Screen reader alone</span>
+  <div style="background-image: linear-gradient(transparent, transparent); color: #444">Gradient words</div>
+  <span class="unparseable">Unparseable ink</span>`)
+  await page.evaluate(() => {
+    const original = window.getComputedStyle
+    window.getComputedStyle = (el: Element) => {
+      const style = original(el)
+      if (!el.classList.contains('unparseable')) return style
+      return new Proxy(style, { get: (target, key) => (key === 'color' ? 'oklch(50% 0.1 20)' : Reflect.get(target, key)) })
+    }
+  })
+  const misses = await wordsBelowAA(page)
+  expect(misses.find((m) => m.text === 'Visible hint')).toBeTruthy()
+  expect(misses.find((m) => m.text === 'Gradient words')?.bg).toBe('ground not measurable')
+  expect(misses.find((m) => m.text === 'Unparseable ink')?.bg).toBe('ink not measurable')
+  expect(misses.find((m) => m.text === 'Screen reader alone')).toBeUndefined()
+  expect(ratioForReport(4.4994)).toBe(4.49)
+})

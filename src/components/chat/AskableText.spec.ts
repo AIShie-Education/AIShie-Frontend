@@ -47,8 +47,8 @@ describe('AskableText', () => {
   })
 
   it.each([
-    ['zh-Hant', '可提問', '暫停', /^最後連線：3 小時前。目前似乎沒有程式在運行它/],
-    ['zh-Hans', '可提问', '暂停', /^最后连接：3 小时前。目前似乎没有程序在运行它/],
+    ['zh-Hant', '可提問', '暫停', /^最後連線：3小時前。目前似乎沒有程式在運行它/],
+    ['zh-Hans', '可提问', '暂停', /^最后连接：3小时前。目前似乎没有程序在运行它/],
   ] as const)('reads naturally in %s, and says when it last connected in its words', (lang, askable, paused, since) => {
     setLocale(lang)
     expect(ask({ last_seen_at: '2026-09-26T11:59:00Z' }).text()).toBe(askable)

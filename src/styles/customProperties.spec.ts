@@ -27,12 +27,37 @@ const sources = [
 
 /** Without its comments, which may name a property no rule sets. */
 function uncommented(text: string): string {
-  let out = text
-  for (let before = ''; before !== out;) {
-    before = out
-    out = out.replace(/\/\*[\s\S]*?\*\//g, '').replace(/<!--[\s\S]*?-->/g, '')
+  const out: string[] = []
+  let quote = ''
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i]!
+    const next = text[i + 1]
+    if (quote) {
+      out.push(c)
+      if (c === '\\' && next) out.push(text[++i]!)
+      else if (c === quote) quote = ''
+      continue
+    }
+    if (c === "'" || c === '"' || c === '`') {
+      quote = c
+      out.push(c)
+      continue
+    }
+    const html = text.startsWith('<!--', i)
+    const line = !html && c === '/' && next === '/'
+    const block = !html && !line && c === '/' && next === '*'
+    if (!html && !line && !block) {
+      out.push(c)
+      continue
+    }
+    const end = html ? '-->' : block ? '*/' : '\n'
+    const close = text.indexOf(end, i + (html ? 4 : 2))
+    const last = close < 0 ? text.length : line ? close : close + end.length
+    // Keep the lines, so an offence still points at its own line.
+    for (let j = i; j < last; j++) if (text[j] === '\n') out.push('\n')
+    i = last - 1
   }
-  return out
+  return out.join('')
 }
 
 /**
@@ -71,8 +96,16 @@ describe('the app’s custom properties', () => {
     expect(unsetTokens(['el.style.setProperty(\'--app-z\', "2px")', '.a { width: var(--app-z) }'])).toEqual([])
   })
 
-  it('does not take a comment as setting one, nor a name built in a script as read', () => {
+  it('does not take a comment as setting or reading one, nor a name built in a script as read', () => {
     expect(unsetTokens(['/* --app-c: 1px */ .a { width: var(--app-c) }'])).toEqual(['--app-c'])
+    expect(unsetTokens(['// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual(['--app-c'])
+    expect(unsetTokens([':root { --app-c: 1px } // was var(--app-c)\n'])).toEqual([])
+    expect(unsetTokens(['const glob = "./messages/*/*.ts"\n// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual([
+      '--app-c',
+    ])
+    expect(unsetTokens(['const url = "https://example.edu/a//b"\n// --app-c: 1px\n.a { width: var(--app-c) }'])).toEqual([
+      '--app-c',
+    ])
     expect(unsetTokens(['const c = `var(--app-${tone}-bg)`'])).toEqual([])
   })
 })

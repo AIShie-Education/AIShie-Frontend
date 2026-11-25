@@ -1,17 +1,19 @@
 /* IBM Plex Sans and Source Serif 4 under names of their own, 'AIshie Latin'
    and 'AIshie Latin Serif', for Latin letters, figures and their punctuation
    only: Basic Latin and Latin-1 (which hold the dot of "CS101·A", U+00B7),
-   the en dash, the bullet and the minus sign. Named first in the Chinese
-   stacks (styles/tokens.css), they set a course's code, an email or "88.46%"
-   in the faces an English page sets them in, and the dot narrow. The rest of
-   a Chinese page, Han and its full-width punctuation, falls through to Noto:
-   the quotation marks, the ellipsis, and the em dash, which Chinese doubles
-   for its dash (「——」), one line in Noto and two with a gap in Plex.
+   Latin Extended and Vietnamese, the en dash, bullet and minus sign. Named
+   first in the Chinese stacks (styles/tokens.css), they set a name such as
+   「Nguyễn Văn An」 or 「Łukasz Nowak」, a course's code, an email or "88.46%"
+   in the faces an English page sets them in. Han and its full-width
+   punctuation fall through to Noto. Simplified Chinese keeps “” in Noto;
+   Traditional Chinese puts Latin data's curly quotes in Plex through the
+   quote-only 'AIshie Latin Hant' and 'AIshie Latin Serif Hant' faces.
 
-   The files are the Latin pieces styles/fonts.ts loads for the English
-   faces, the same URLs: a page that uses both names fetches each once.
-   Their weights are those faces' (Plex 400, 500 and 600; Source Serif 600):
-   a bolder weight asked for takes the boldest, with nothing synthesised. */
+   The files are the Latin, Latin Extended and Vietnamese pieces
+   styles/fonts.ts loads for the English faces, the same URLs: a page that
+   uses both names fetches each once. Their weights are those faces' (Plex
+   400, 500 and 600; Source Serif 600): a bolder weight asked for takes the
+   boldest, with nothing synthesised. */
 @font-face {
   font-family: 'AIshie Latin';
   font-style: normal;
@@ -19,6 +21,24 @@
   font-weight: 400;
   src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-400-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-vietnamese-400-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301,
+    U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
 }
 @font-face {
   font-family: 'AIshie Latin';
@@ -32,9 +52,45 @@
   font-family: 'AIshie Latin';
   font-style: normal;
   font-display: swap;
+  font-weight: 500;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-500-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-vietnamese-500-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301,
+    U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
   font-weight: 600;
   src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-ext-600-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'AIshie Latin';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-vietnamese-600-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301,
+    U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
 }
 @font-face {
   font-family: 'AIshie Latin Serif';
@@ -43,4 +99,58 @@
   font-weight: 600;
   src: url('@fontsource/source-serif-4/files/source-serif-4-latin-600-normal.woff2') format('woff2');
   unicode-range: U+0000-00FF, U+2013, U+2022, U+2212;
+}
+@font-face {
+  font-family: 'AIshie Latin Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/source-serif-4/files/source-serif-4-latin-ext-600-normal.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'AIshie Latin Serif';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/source-serif-4/files/source-serif-4-vietnamese-600-normal.woff2') format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301,
+    U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+
+/* Traditional Chinese alone: Latin data's apostrophes and quotation marks
+   use the same Latin files. These ranges are deliberately not in the aliases
+   above, so Simplified Chinese keeps “” as its own full-width marks. */
+@font-face {
+  font-family: 'AIshie Latin Hant';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+  unicode-range: U+2018-201D;
+}
+@font-face {
+  font-family: 'AIshie Latin Hant';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 500;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+  unicode-range: U+2018-201D;
+}
+@font-face {
+  font-family: 'AIshie Latin Hant';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/ibm-plex-sans/files/ibm-plex-sans-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+2018-201D;
+}
+@font-face {
+  font-family: 'AIshie Latin Serif Hant';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 600;
+  src: url('@fontsource/source-serif-4/files/source-serif-4-latin-600-normal.woff2') format('woff2');
+  unicode-range: U+2018-201D;
 }

@@ -129,7 +129,7 @@ async function signOut() {
         <AppWordmark class="app-auth-page__wordmark change-pw__wordmark" decorative />
         <div class="app-auth-page__lang">
           <el-select v-model="ui.locale" size="small" style="width: 120px" :aria-label="t('common.nav.language')">
-            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" />
+            <el-option v-for="l in LOCALES" :key="l.value" :value="l.value" :label="l.label" :lang="l.value" data-lang-option />
           </el-select>
         </div>
       </div>

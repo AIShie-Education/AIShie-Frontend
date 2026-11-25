@@ -67,6 +67,7 @@ import {
 } from './panel'
 import { courseLabel } from './seat'
 import { joinParts } from '@/utils/parts'
+import { scriptLanguage } from '@/utils/script'
 
 const { t } = useI18n()
 const chat = useChatStore()
@@ -272,6 +273,7 @@ const courseName = computed(() => {
   const m = chat.courseId ? byCourse.value.get(chat.courseId) : undefined
   return m ? courseLabel(m, chat.courses) : ''
 })
+const courseTitle = computed(() => (chat.courseId ? (byCourse.value.get(chat.courseId)?.title ?? '') : ''))
 const inHistory = computed(() => chat.screen === 'history')
 
 function startAgain(courseId: string, agent: Respondent) {
@@ -369,6 +371,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         class="chat-panel__course"
         popper-class="chat-panel__course-popper"
         :aria-label="t('chat.panel.course')"
+        :lang="scriptLanguage(courseTitle)"
         @update:model-value="(id: string) => chat.selectCourse(id)"
       >
         <el-option
@@ -376,6 +379,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           :key="m.course_id"
           :value="m.course_id"
           :label="joinParts([courseLabel(m, chat.courses), m.title])"
+          :lang="scriptLanguage(m.title)"
         />
       </el-select>
       <span v-else class="chat-panel__spacer" />

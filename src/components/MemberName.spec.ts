@@ -32,6 +32,13 @@ function course(perms: Record<string, string>, members: { id: string; display_na
 beforeEach(() => setLocale('en'))
 
 describe('MemberName', () => {
+  it('marks a Chinese member name with its language', async () => {
+    course({ member_read: 'autonomous' }, [{ id: ID, display_name: '林家明', kind: 'human' }])
+    const w = mount(MemberName, { props: { id: ID }, global })
+    await flushPromises()
+    expect(w.find('.member-name').attributes('lang')).toBe('zh-Hant')
+  })
+
   it('names a member from the member list', async () => {
     course({ member_read: 'autonomous' }, [{ id: ID, display_name: 'Sato Hiroshi', kind: 'human' }])
     const w = mount(MemberName, { props: { id: ID }, global })

@@ -606,7 +606,7 @@ function noteSource(): PrintRequest {
                   <span class="doc-content__by">
                     <template v-if="showAuthor">
                       <MemberName :id="shown.author_member_id" show-kind />
-                      <span class="doc-content__dot">·</span>
+                      <span class="doc-content__dot" aria-hidden="true">·</span>
                     </template>
                     <TimeText :value="shown.created_at" />
                   </span>

@@ -161,10 +161,18 @@ function drawnAs(node) {
   if (node.rawName !== 'component') return [kebab(node.rawName)]
   const is = attributeOf(node, 'is')
   if (!is) return []
-  if (is.directive && is.value?.expression?.type === 'Identifier') return [kebab(is.value.expression.name)]
-  return valuesOf(is)
-    .filter((v) => typeof v === 'string')
-    .map((v) => kebab(v.replace(/^vue:/, '')))
+  // An imported identifier names a component too, including each branch of a
+  // conditional; valuesOf quite rightly calls it UNKNOWN for an alert's type.
+  const components = (e) => {
+    if (!e) return []
+    if (e.type === 'Identifier') return [kebab(e.name)]
+    if (e.type === 'ConditionalExpression') return [...components(e.consequent), ...components(e.alternate)]
+    if (e.type === 'Literal' && typeof e.value === 'string') return [kebab(e.value.replace(/^vue:/, ''))]
+    if (e.type === 'TemplateLiteral' && !e.expressions.length) return [kebab(e.quasis[0].value.cooked.replace(/^vue:/, ''))]
+    return []
+  }
+  if (!is.directive) return valuesOf(is).filter((v) => typeof v === 'string').map((v) => kebab(v.replace(/^vue:/, '')))
+  return components(is.value?.expression)
 }
 const elementLook = {
   meta: { type: 'problem', schema: [] },

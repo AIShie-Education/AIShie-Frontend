@@ -113,8 +113,8 @@ describe('the font stacks', () => {
 
   it('in Traditional Chinese begin with the Latin faces, then Noto TC', () => {
     const { sans, serif } = stacks('html:lang(zh-Hant)')
-    expect(sans.slice(0, 2)).toEqual(['AIshie Latin', 'Noto Sans TC'])
-    expect(serif.slice(0, 2)).toEqual(['AIshie Latin Serif', 'Noto Serif TC'])
+    expect(sans.slice(0, 3)).toEqual(['AIshie Latin Hant', 'AIshie Latin', 'Noto Sans TC'])
+    expect(serif.slice(0, 3)).toEqual(['AIshie Latin Serif Hant', 'AIshie Latin Serif', 'Noto Serif TC'])
   })
 
   it('in Simplified Chinese begin with the Latin faces, then Noto SC', () => {
@@ -151,7 +151,13 @@ describe('the font stacks', () => {
 })
 
 describe('the Latin faces of a Chinese page (fonts-latin.css)', () => {
-  const ranges = [...uncommented(latin).matchAll(/unicode-range\s*:\s*([^;]+);/g)].map((m) => m[1]!.trim())
+  const faces = [...uncommented(latin).matchAll(/@font-face\s*\{[^}]+\}/g)].map((m) => m[0])
+  const rangesOf = (hant: boolean) =>
+    faces
+      .filter((f) => f.includes('Hant') === hant)
+      .flatMap((f) => [...f.matchAll(/unicode-range\s*:\s*([^;]+);/g)].map((m) => m[1]!.trim()))
+  const ranges = rangesOf(false)
+  const hantRanges = rangesOf(true)
 
   /** Whether a range of the form `U+0000-00FF, U+2013` holds a character. */
   const holds = (range: string, char: string) => {
@@ -162,14 +168,22 @@ describe('the Latin faces of a Chinese page (fonts-latin.css)', () => {
     })
   }
 
-  it('are each limited to Latin letters, figures and their punctuation', () => {
-    expect(ranges.length).toBe(4)
+  it('cover Latin, Latin Extended and Vietnamese, and leave Han and its punctuation to Noto', () => {
+    expect(ranges.length).toBe(12)
+    // Basic Latin and its dot, accents past Latin-1, and Vietnamese names.
+    for (const c of ['A', '9', '%', '·', '×', 'é', '–', '•', '−', 'Ł', 'ễ', 'ă', 'ĩ'])
+      expect(ranges.some((range) => holds(range, c)), c).toBe(true)
     for (const range of ranges) {
-      // Latin-1 (with the dot of "CS101·A" and ×), the en dash, the bullet, the minus sign.
-      for (const c of ['A', '9', '%', '·', '×', 'é', '–', '•', '−']) expect(holds(range, c), c).toBe(true)
-      // Han and its punctuation, and the em dash Chinese doubles (「——」): Noto's.
-      for (const c of ['中', '「', '」', '，', '。', '：', '（', '）', '、', '—', '“', '”', '…', '・'])
+      for (const c of ['中', '「', '」', '，', '。', '：', '（', '）', '、', '—', '“', '”', '’', '…', '・'])
         expect(holds(range, c), c).toBe(false)
+    }
+  })
+
+  it('has a Traditional-Chinese-only face for Latin data’s curly apostrophes and quotes', () => {
+    expect(hantRanges.length).toBe(4)
+    for (const range of hantRanges) {
+      for (const c of ['‘', '’', '“', '”']) expect(holds(range, c), c).toBe(true)
+      for (const c of ['中', '「', '」', 'A']) expect(holds(range, c), c).toBe(false)
     }
   })
 })

@@ -32,7 +32,7 @@ export default {
     moreFailed: '无法加载更多对话，请再试一次。',
     // Searching the history (title and agent), and its groups by last activity.
     search: '搜索标题或智能体',
-    noMatch: '没有符合「{q}」的对话。',
+    noMatch: '没有符合“{q}”的对话。',
     searchLoaded: '只搜索已加载的对话：加载更多即可一并搜索。',
     groups: {
       today: '今天',
@@ -162,9 +162,9 @@ export default {
   // What an @ offers: the course's assignments and materials, whose title it writes in, quoted.
   mention: {
     label: '作业与教材',
-    insert: '「{title}」',
+    insert: '“{title}”',
     loading: '正在加载作业与教材…',
-    none: '没有标题含「{q}」的作业或教材。',
+    none: '没有标题含“{q}”的作业或教材。',
     empty: '这门课程还没有你看得到的作业或教材。',
     kind: {
       assignment: '作业',

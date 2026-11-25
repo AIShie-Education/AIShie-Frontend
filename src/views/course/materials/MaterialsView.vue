@@ -7,6 +7,7 @@
 // Whoever writes material may drop files anywhere on the page: the dialog for
 // new material opens with them, one material for each.
 import { computed, ref } from 'vue'
+import { joinSentences } from '@/utils/parts'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
 import type { DocumentSummary } from '@/api/types'
@@ -80,7 +81,7 @@ function onProposed(info: { titles: string[]; publish: boolean }) {
       : t('materials.pending.createMany', { n: info.titles.length }),
   ]
   if (info.publish) lines.push(t('materials.pending.createPublish'))
-  pendingNote.value = lines.join(' ')
+  pendingNote.value = joinSentences(lines)
   void list.reload()
 }
 </script>

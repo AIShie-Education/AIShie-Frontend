@@ -4,9 +4,10 @@
 // unicode-range, and a browser fetches only the pieces the page's text uses.
 //
 // IBM Plex Sans (400, 500, 600) and Source Serif 4 (600) set English text and
-// headings, and load with the app; so do the same faces under names of their
-// own for Latin alone, which a page in Chinese sets its letters and figures
-// in (fonts-latin.css). Chinese is set in Noto Sans (400, 500, 700) and Noto
+// headings, and load with the app; so do the same faces and files under names
+// of their own for Latin alone (Latin, Latin Extended and Vietnamese), which
+// a page in Chinese sets its letters and figures in (fonts-latin.css).
+// Chinese is set in Noto Sans (400, 500, 700) and Noto
 // Serif (700), in the forms of each script: TC for Traditional Chinese, SC
 // for Simplified, whose glyphs differ even where the code points are the
 // same. Their style sheets alone outweigh the rest of the app's, so each
@@ -46,11 +47,11 @@ function load(script: string): void {
 const HAN = /\p{Script=Han}/u
 /**
  * Text that is not the page's own: what is marked as in a language of its
- * own (a language's name in the language menu, `lang="zh-Hans"`, and the
- * menu's 文; the loading screen's Chinese, index.html), and what a browser
- * that runs scripts never shows.
+ * own (a language menu's own names, marked data-lang-option so their lang
+ * does not suppress the face), and what a browser that runs scripts never
+ * shows. Data marked lang="zh-Hant" still counts: its script needs Noto too.
  */
-const NOT_THE_PAGES = ':not(html)[lang], noscript, script, style'
+const NOT_THE_PAGES = '[data-lang-option], noscript, script, style'
 
 /** Whether a text node is Chinese the page shows. */
 function isHan(text: Node): boolean {

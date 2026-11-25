@@ -401,7 +401,7 @@ const editable = computed(() => status.value !== 'done' || !!loaded.value || !!p
               : t('materials.document.text.source.aiNoModel')
           }}
           <template v-if="current?.produced_at">
-            <span class="text-pane__dot">·</span>
+            <span class="text-pane__dot" aria-hidden="true">·</span>
             <TimeText :value="current.produced_at" relative />
           </template>
         </span>

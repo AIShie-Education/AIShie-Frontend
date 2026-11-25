@@ -345,6 +345,7 @@ defineExpose({ show, hide })
               data-item
               tabindex="-1"
               :lang="l.value"
+              data-lang-option
               :aria-checked="ui.locale === l.value ? 'true' : 'false'"
               @click="chooseLocale(l.value)"
             >

@@ -117,9 +117,8 @@ const DARK = declared('html.dark')
 const THEMES = { light: ROOT, dark: { ...ROOT, ...DARK } } as const
 type Theme = keyof typeof THEMES
 
-/** A custom property's value in a theme, var() followed. */
-function resolved(theme: Theme, name: string): string | undefined {
-  const props = THEMES[theme]
+/** A custom property's value in these properties, var() followed. */
+function resolvedIn(props: Record<string, string>, name: string): string | undefined {
   let value = props[name]
   for (let hops = 0; value?.startsWith('var('); hops++) {
     if (hops > 10) throw new Error(`--${name} refers to itself`)
@@ -127,13 +126,30 @@ function resolved(theme: Theme, name: string): string | undefined {
   }
   return value
 }
-const isColour = (value: string | undefined) => !!value && /^#[0-9a-f]{6}$/i.test(value)
+const resolved = (theme: Theme, name: string) => resolvedIn(THEMES[theme], name)
+
+/** A colour the guard can measure, normalised to #rrggbb; anything else must not vanish from the palette. */
+function colourValue(value: string | undefined): string | undefined {
+  if (!value) return undefined
+  const short = /^#([0-9a-f]{3})$/i.exec(value)
+  if (short) return `#${[...short[1]!].map((c) => c + c).join('')}`.toLowerCase()
+  if (/^#[0-9a-f]{6}$/i.test(value)) return value.toLowerCase()
+  const rgb = /^rgb\(\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*[, ]\s*(\d+(?:\.\d+)?)\s*\)$/i.exec(value)
+  if (!rgb) return undefined
+  const channels = rgb.slice(1, 4).map(Number)
+  if (channels.some((v) => v < 0 || v > 255)) return undefined
+  return `#${channels.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')}`
+}
+const isColour = (value: string | undefined) => !!colourValue(value)
+/** A value that purports to be a colour; an unsupported form is included so colour() fails it loudly. */
+const claimsColour = (value: string | undefined) =>
+  !!value && (/^#|^(?:rgb|oklch|hsl|color)\(/i.test(value) || /^var\(--app-/.test(value))
 
 /** A custom property's colour in a theme, var() followed; '#rrggbb'. */
 function colour(theme: Theme, name: string): string {
-  const value = resolved(theme, name)
-  if (!isColour(value)) throw new Error(`--${name} is not a colour in the ${theme} theme: ${value}`)
-  return value!.toLowerCase()
+  const value = colourValue(resolved(theme, name))
+  if (!value) throw new Error(`--${name} is not a colour in the ${theme} theme: ${resolved(theme, name)}`)
+  return value
 }
 
 function rgb(hex: string): [number, number, number] {
@@ -209,22 +225,24 @@ const DEEP_FILLS: Record<string, string> = {
   'el-fill-color-darker': "a skeleton's shimmer, and the edge of a date picker's button",
 }
 
-/**
- * Every colour of a theme's palette: the app's (tokens.css), Element Plus's fills and the palest step
- * of each of its colours (a tag's, an alert's or a chosen item's ground). One that is another of them
- * by name (`var(--x)`) is measured as the one it names.
- */
-function palette(theme: Theme): string[] {
-  const props = THEMES[theme]
-  const names = Object.keys(props).filter(
-    (k) => /^(app-|el-fill-color|el-color-[a-z]+-light-9$)/.test(k) && isColour(resolved(theme, k)),
+/** Every colour token, including a form colour() will reject rather than silently leave unmeasured. */
+function paletteFrom(props: Record<string, string>): string[] {
+  return Object.keys(props).filter(
+    (k) =>
+      /^(app-|el-fill-color|el-color-[a-z]+-light-9$)/.test(k) &&
+      (claimsColour(props[k]) || isColour(resolvedIn(props, k))),
   )
-  return names.filter((k) => !names.includes(/^var\(--([a-z0-9-]+)\)$/.exec(props[k])?.[1] ?? ''))
 }
-
-/** The grounds text is drawn on, in a theme: the page and its second shade, a card, what floats, a field, the fills, the tints and the state tags' grounds. */
+/** The grounds text is drawn on. An alias of a ground is measured as that ground; an alias of an ink or line is one of its own. */
+function groundsFrom(props: Record<string, string>): string[] {
+  const candidates = paletteFrom(props).filter((k) => !(k in NOT_GROUNDS) && !STATES.some((p) => k === `app-${p}-fg`))
+  return candidates.filter((k) => {
+    const target = /^var\(--([a-z0-9-]+)\)$/.exec(props[k])?.[1]
+    return !target || !candidates.includes(target)
+  })
+}
 function grounds(theme: Theme): string[] {
-  return palette(theme).filter((k) => !(k in NOT_GROUNDS) && !STATES.some((p) => k === `app-${p}-fg`))
+  return groundsFrom(THEMES[theme])
 }
 
 /**
@@ -507,14 +525,32 @@ describe('what the app shares with aishie.app', () => {
 })
 
 describe('the palette', () => {
-  const colours = Object.entries(ROOT)
-    .filter(([k, v]) => k.startsWith('app-') && /^#[0-9a-f]{6}$/i.test(v))
-    .map(([k]) => k)
+  const colours = paletteFrom(ROOT).filter((k) => k.startsWith('app-'))
 
   it('is read', () => {
     expect(colours).toContain('app-ink-3')
     expect(colours.length).toBeGreaterThan(30)
     expect(SOURCES.length).toBeGreaterThan(100)
+  })
+
+  it('reads short hex, rgb() and aliases, and never silently drops an unsupported colour form', () => {
+    const planted = {
+      'app-card': '#ffffff',
+      'app-field': 'var(--app-card)',
+      'app-short': '#bbb',
+      'app-rgb': 'rgb(1, 2, 3)',
+      'app-line-strong': '#123456',
+      'app-alias': 'var(--app-line-strong)',
+      'app-unsupported': 'oklch(50% 0.1 20)',
+    }
+    expect(paletteFrom(planted)).toEqual(
+      expect.arrayContaining(['app-short', 'app-rgb', 'app-alias', 'app-field', 'app-unsupported']),
+    )
+    expect(groundsFrom(planted)).toEqual(expect.arrayContaining(['app-short', 'app-rgb', 'app-alias']))
+    expect(groundsFrom(planted)).not.toContain('app-field')
+    expect(colourValue('#bbb')).toBe('#bbbbbb')
+    expect(colourValue('rgb(1, 2, 3)')).toBe('#010203')
+    expect(colourValue('oklch(50% 0.1 20)')).toBeUndefined()
   })
 
   it('decides every colour for the dark theme too, and the dark theme has none the light one lacks', () => {
@@ -529,7 +565,7 @@ describe('the palette', () => {
 
   it('gives every state tag its ground and its text, in both themes', () => {
     expect(STATES).toEqual(expect.arrayContaining(['wait', 'done', 'danger', 'neutral']))
-    const unpaired = STATES.flatMap((p) => [`app-${p}-bg`, `app-${p}-fg`]).filter((k) => !isColour(ROOT[k]))
+    const unpaired = STATES.flatMap((p) => [`app-${p}-bg`, `app-${p}-fg`]).filter((k) => !isColour(resolved('light', k)))
     expect(unpaired, 'a state tag’s ground without its text, or its text without its ground').toEqual([])
   })
 

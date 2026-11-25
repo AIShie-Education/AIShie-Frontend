@@ -126,8 +126,8 @@
      refuses any other; docs/CONVENTIONS.md, "Type"). In Chinese the two
      smallest are a step larger (below): at 12 px a Han character's strokes run
      together on a laptop's screen, so 12 px is left to English and figures.
-       xs   a time, a hint under a field, a unit, a tag, a tooltip
-       sm   a row's second line, a table's cells, a note, a small button
+       xs   a time, a hint under a field, a unit, a tag, a tooltip, a small button
+       sm   a row's second line, a table's cells, a note
        md   the interface's text (Element Plus's base)
        lg   an item's title, and a field's text on a touch screen, below which
             iOS zooms into the field
@@ -187,12 +187,13 @@
 }
 
 /* In Chinese, either script, headings bold and untracked, the interface's
-   lines further apart; <html lang> is set with the language (zh-Hans or
-   zh-Hant). Running text keeps 1.7, as in English. The two
-   smallest sizes are a step larger, and strong text is 500: Noto Sans,
+   lines further apart. This is :lang(zh), not html:lang(zh), so Han data
+   marked with scriptLanguage on an English page gets the same steps. Running
+   text keeps 1.7, as in English. The two smallest sizes are a step larger,
+   and strong text is 500: Noto Sans,
    loaded in 400, 500 and 700, has no 600, which falls to 700 and makes every
    label and table heading bold. A heading stays 700. */
-html:lang(zh) {
+:lang(zh) {
   --app-heading-weight: 700;
   --app-heading-tracking: 0;
   --app-text-xs: 13px;
@@ -201,11 +202,14 @@ html:lang(zh) {
   --app-weight-strong: 500;
 }
 
-/* Traditional Chinese in Noto Sans TC and Noto Serif TC, */
+/* Traditional Chinese in Noto Sans TC and Noto Serif TC. Its first alias is
+   quote-only, so Latin data's curly apostrophes and quotes stay narrow; the
+   next holds every other Latin character. */
 html:lang(zh-Hant) {
   --app-font-sans:
-    'AIshie Latin', 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-  --app-font-serif: 'AIshie Latin Serif', 'Noto Serif TC', 'Songti TC', serif;
+    'AIshie Latin Hant', 'AIshie Latin', 'Noto Sans TC', system-ui, -apple-system, 'PingFang TC',
+    'Microsoft JhengHei', sans-serif;
+  --app-font-serif: 'AIshie Latin Serif Hant', 'AIshie Latin Serif', 'Noto Serif TC', 'Songti TC', serif;
 }
 
 /* and Simplified Chinese in Noto Sans SC and Noto Serif SC, whose glyphs take
@@ -223,6 +227,7 @@ html.dark {
   --app-ground: #10131c;
   --app-ground-2: #161a26;
   --app-card: #1a1f2d;
+  --app-page: var(--app-card);
   --app-overlay: #212739;
   --app-field: #1a1f2d;
   --app-line: #2b3245;

@@ -294,7 +294,7 @@ const backLink = computed(() => ({
           <template #subtitle>
             <span class="grade-view__subtitle">
               <MemberName :id="g.student_member_id" />
-              <span>·</span>
+              <span aria-hidden="true">·</span>
               <span>{{ kindLabel }}</span>
             </span>
           </template>
@@ -368,7 +368,7 @@ const backLink = computed(() => ({
             </div>
             <p class="grade-view__override-line">
               {{ t('grades.override.computed', { value: formatPct(g.score) }) }}
-              <span class="grade-view__dot">·</span>
+              <span class="grade-view__dot" aria-hidden="true">·</span>
               <span>{{ t('grades.override.at', { time: formatDateTime(override.at) }) }}</span>
             </p>
             <p v-if="override.by_member_id" class="grade-view__override-line">

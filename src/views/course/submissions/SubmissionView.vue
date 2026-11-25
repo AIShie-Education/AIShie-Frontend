@@ -191,7 +191,7 @@ function onGraded() {
             <span class="submission-view__subtitle">
               <span v-if="isGroup">{{ s.group_name ?? t('groupGrading.members.groupWork') }}</span>
               <MemberName v-else :id="s.student_member_id" />
-              <span>·</span>
+              <span aria-hidden="true">·</span>
               <span>{{ t('submissions.detail.attempt', { n: s.attempt }) }}</span>
             </span>
           </template>
