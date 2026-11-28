@@ -1,25 +1,27 @@
 import { expect, test, type Page } from '@playwright/test'
-import { call, coursePath, demo, hostOnRuntime, photograph, signIn, type CoreReply } from './support'
+import { arList, arMessages, call, coursePath, demo, hostARAgent, releaseARAgent, modelRules, photograph, signIn, type CoreReply } from './support'
 
-// Where a student asks, the chat says who else can read the conversation and
-// where the agent sends what they write (AIShie-Frontend#79): the first time
-// they start a conversation, its points on the new conversation, until they
-// say they have seen them; after that, a line under the composer; and "More"
-// opens the whole notice, in their language. Told through Ken and a course
-// agent made for this run, hosted as the site's runtime hosts it. The run has
-// no privacy-capable runtime, so the route's failure keeps the generic provider words.
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
+
+// Before a conversation exists the points use the app's default disclosure.
+// Once AR owns it, the composer line uses AR's two participants; both phases
+// use only the deterministic school offer's safe provider disclosure.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Privacy tutor ${STAMP}`
 const QUESTION = `Who marks the lab report? (${STAMP})`
-const READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format([
+const ANSWER = `The course tutor marks it (${STAMP}).`
+const DEFAULT_READERS = new Intl.ListFormat('en', { type: 'conjunction' }).format([
   'The two taking part',
   'course staff',
   'people and agents that decide actions',
   'other members it answers',
   'site and department administrators',
 ])
-const LINE = `${READERS} can read this; ${TUTOR} sends it to its AI model’s provider.`
+// The deterministic provider uses a custom local endpoint: it deliberately
+// does not borrow an official OpenAI label.
+const DRAFT_LINE = `${DEFAULT_READERS} can read this; ${TUTOR} sends it to its AI model’s provider.`
+const AR_LINE = `The two taking part can read this; ${TUTOR} sends it to its AI model’s provider.`
 const ZH_READERS = new Intl.ListFormat('zh-Hans', { type: 'conjunction' }).format([
   '对话双方',
   '课程教职员',
@@ -28,7 +30,7 @@ const ZH_READERS = new Intl.ListFormat('zh-Hans', { type: 'conjunction' }).forma
   '网站及部门管理员',
 ])
 
-const w = { tutorId: '' }
+const w = { tutorId: '', hostedId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -64,11 +66,12 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
       }),
       'member.add_delegate',
     )
-    await hostOnRuntime(w.tutorId)
+    w.hostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -83,7 +86,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.getByRole('heading', { name: 'Before you ask' })).toBeVisible()
     await expect(first.locator('.data-flow__icon')).toBeVisible()
     await expect(first.locator('li')).toHaveText([
-      `${READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
+      `${DEFAULT_READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
       `${TUTOR} sends what you write here to its AI model’s provider to answer it.`,
       'Nothing here is deleted: a message you withdraw is hidden, but kept.',
     ])
@@ -101,7 +104,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(notice).toContainText('The two taking part')
     await expect(notice).toContainText('who may export it for audit, withdrawn messages included')
     await expect(notice).toContainText(`${TUTOR} is hosted on AIshie.`)
-    await expect(notice).toContainText('This page cannot show you which provider it is.')
+    await expect(notice).toContainText('That model is on the school’s plan; this page cannot name its AI model’s provider.')
     await expect(notice).toContainText('Conversations are never deleted.')
     await expect(notice).toContainText(
       'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
@@ -114,16 +117,24 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await first.getByRole('button', { name: 'Got it' }).click()
     await expect(first).toHaveCount(0)
     const line = panel.locator('.chat-pane__privacy')
-    await expect(line.locator('.chat-pane__privacy-text')).toHaveText(LINE)
+    await expect(line.locator('.chat-pane__privacy-text')).toHaveText(DRAFT_LINE)
     await expect(line.locator('.data-flow__icon')).toBeVisible()
     await photograph(page, 'privacy-line-new')
 
-    // In the conversation, where they ask again.
+    // In the conversation, where they ask again. The answer comes from AR's
+    // real deterministic provider, not a Core conversation write.
+    modelRules([{ match: QUESTION, answer: ANSWER }])
     const composer = panel.locator('textarea')
     await composer.fill(QUESTION)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    await expect(line.locator('.chat-pane__privacy-text')).toHaveText(LINE)
+    await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible({ timeout: 20_000 })
+    const arConversation = (await arList(demo().actors.ken, demo().course.id)).find((c) => c.title === QUESTION)
+    expect(arConversation, 'the question belongs to AR').toBeTruthy()
+    const stored = await arMessages(demo().actors.ken, demo().course.id, arConversation!.id)
+    expect(stored.messages.some((m) => m.role === 'assistant' && m.body === ANSWER && m.status === 'posted')).toBe(true)
+    // Once AR owns the conversation, its reader list is the two participants.
+    await expect(line.locator('.chat-pane__privacy-text')).toHaveText(AR_LINE)
     await line.getByRole('button', { name: 'More: who reads this conversation, and where it goes' }).click()
     await expect(noticeOf(page)).toContainText('its files on the site, which exports list without their contents.')
     await page.keyboard.press('Escape')

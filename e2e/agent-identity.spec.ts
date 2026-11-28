@@ -1,11 +1,13 @@
 import { expect, test, type Locator } from '@playwright/test'
 import {
+  arCall,
   call,
   coursePath,
   courseTab,
   demo,
   expectCourseAgentRow,
-  hostOnRuntime,
+  hostARAgent,
+  releaseARAgent,
   inTraditionalChinese,
   openChat,
   registerPerson,
@@ -31,8 +33,10 @@ const w = {
   submission: '',
   proposal: '',
   tutorId: '',
+  tutorHostedId: '',
   tutorSeat: '',
   hyphenId: '',
+  hyphenHostedId: '',
   helperId: '',
   seatAction: '',
   botId: '',
@@ -51,7 +55,9 @@ const HELPER = `Ben’s revision helper ${STAMP}`
 const LOOPS = `Loops ${STAMP}`
 const LOOPS_ASKED = `How does a while loop end? (${STAMP})`
 // An agent nobody owns, which the course seats itself to tutor him: a course agent, though nobody's delegate.
-const BOT = `Course Q&A bot ${STAMP}`
+// The CI operator/static fixture has a stable name; its Core actor id is
+// supplied separately for each throwaway run.
+const BOT = process.env.E2E_UNOWNED_AGENT_NAME ?? 'E2E unowned course bot'
 let ada: Awaited<ReturnType<typeof registerPerson>>
 let ben: Awaited<ReturnType<typeof registerPerson>>
 
@@ -109,7 +115,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       }),
       'member.add_delegate',
     ).member_id
-    await hostOnRuntime(w.tutorId)
+    w.tutorHostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
     // Its course agent with a long name and no spaces, for the chat's list of agents and the course's Agents.
     w.hyphenId = done(
       await call(I, 'POST', '/v1/me/agents', { display_name: HYPHEN, hosting: 'runtime' }),
@@ -123,7 +129,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       }),
       'member.add_delegate',
     )
-    await hostOnRuntime(w.hyphenId)
+    w.hyphenHostedId = (await hostARAgent(d.actors.instructor, w.hyphenId)).id
 
     // Ben brings in an agent of his own, which the instructor seats.
     ben = await registerPerson(`Ben ${STAMP}`, { email: `ben+${STAMP}@identity.test` })
@@ -190,12 +196,10 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       'conversation.open',
     )
 
-    // The course seats an agent nobody owns to tutor him, hosted on AIshie: nobody's delegate, so Core
-    // says it answers no course (answers_course is a delegate's), though it is the course's.
-    w.botId = done(
-      await call(root().token, 'POST', '/v1/actors', { kind: 'agent', display_name: BOT, hosting: 'runtime' }),
-      'actor.register',
-    ).actor_id
+    // CI registered this agent with no owner and gave its operator-owned YAML
+    // to AR, whose token manager hosts it. No root owner/inspect path is used.
+    w.botId = process.env.E2E_UNOWNED_AGENT_ID ?? ''
+    if (!w.botId) throw new Error('E2E_UNOWNED_AGENT_ID is required: run scripts/ci-runtime.sh start')
     w.botSeat = done(
       await call(I, 'POST', `/v1/courses/${c}/members`, {
         actor_id: w.botId,
@@ -205,18 +209,26 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       }),
       'member.add (bot)',
     ).member_id
-    await hostOnRuntime(w.botId)
+    await expect
+      .poll(async () => {
+        const out = await arCall<{ agents: { agent_id: string }[] }>(ben, 'GET', `/courses/${c}/chat/agents`)
+        return out.status === 200 && out.body.agents.some((a) => a.agent_id === w.botId)
+      }, { timeout: 30_000 })
+      .toBe(true)
   })
 
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.tutorHostedId)
+    await releaseARAgent(demo().actors.instructor, w.hyphenHostedId)
     for (const id of [w.tutorId, w.hyphenId])
       if (id) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${id}/suspend`, {})
     if (w.helperId && ben) await call(ben.token, 'POST', `/v1/me/agents/${w.helperId}/suspend`, {})
     const I = demo().actors.instructor.token
     if (w.botSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.botSeat}/remove`, {})
     if (w.personSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.personSeat}/remove`, {})
-    if (w.botId) await call(root().token, 'POST', `/v1/actors/${w.botId}/suspend`, {})
+    // The unowned bot is the CI runtime's static fixture, not one person's
+    // agent: do not suspend it before a retry or another spec.
   })
 
   test('agents as a kind take the seat icon, and a proposal’s proposer its avatar and “AI”', async ({ page }) => {
@@ -362,7 +374,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await expect(made.locator('dd')).toHaveText(HELPER)
   })
 
-  test('a chat’s news says it is about a conversation, in words, and opens it', async ({ page }) => {
+  test('legacy chat news says it is a conversation, and opens its read-only Core archive', async ({ page }) => {
     await signIn(page, ben)
     await inTraditionalChinese(page)
     await page.goto(coursePath('activity'))
@@ -381,12 +393,14 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       .filter({ has: page.locator('.event-item__title', { hasText: '新訊息' }) })
       .first()
     await expect(recent.locator('.event-item__subject')).toHaveText('對話')
-    // It opens the chat on that conversation, beside the page.
+    // This event was written by Core v0.2.1. Its id opens the separate legacy
+    // reader, never a new AR conversation pretending to share that id.
     await recent.locator('.event-item__subject').click()
-    const panel = page.locator('#chat-panel')
-    await expect(panel).toBeVisible()
-    await expect(panel).toContainText(LOOPS_ASKED)
-    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+    const archive = page.locator('.legacy-chat__detail')
+    await expect(archive).toBeVisible()
+    await expect(archive).toContainText(LOOPS_ASKED)
+    await expect(page).toHaveURL(new RegExp(`${coursePath('legacy-conversations/[^/]+')}$`))
+    await expect(page.locator('#chat-panel')).toHaveCount(0)
   })
 
   test('the chat calls an agent the course seated itself a course agent, which answers others too', async ({
@@ -397,9 +411,11 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     const panel = await openChat(page)
     const row = panel.locator('.resp-row').filter({ hasText: BOT })
     await expectCourseAgentRow(panel, row)
-    // And so its draft says, once chosen.
+    // No owner does not imply a course-wide repeating notice: Core's fresh
+    // answers_course grant is false for this unowned seat. It is still not
+    // mislabeled as the student's personal agent.
     await row.click()
-    await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')
+    await expect(panel.locator('.chat-pane__shared')).toHaveCount(0)
   })
 
   test('a draft grade names the agent that drafted it, and marks what it filled in until it is changed', async ({

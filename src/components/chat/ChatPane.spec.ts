@@ -3,8 +3,9 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
-import { defineComponent, h, inject, provide } from 'vue'
+import { defineComponent, h, inject, provide, ref } from 'vue'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
+import type { ChatSubmission, ChatConversation, ChatDraft, ChatMessage, ChatSnapshot } from '@/api/runtimeChat'
 
 let server: {
   messages: ConversationMessage[]
@@ -16,7 +17,11 @@ let server: {
   draft?: unknown
 }
 const writes: { tool: string; args: Record<string, unknown> }[] = []
+const paneStreams: { opts: { onEvent: (e: { event: string; data: unknown }) => void | Promise<void>; signal?: AbortSignal } }[] = []
 let writeAnswer: (tool: string) => unknown
+let arState: ChatConversation['state'] | null = null
+let arMeta: Record<string, Partial<ChatMessage>> = {}
+let arSubmission: ChatSubmission | null = null
 
 vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
@@ -48,6 +53,81 @@ vi.mock('@/api/http', async (orig) => {
     })),
     uploadLimits: vi.fn(async () => ({ maxBytes: 5_000, maxFiles: 10, maxConversationBytes: 50_000 })),
     uploadLimit: vi.fn(async () => 5_000),
+  }
+})
+
+// AR owns every conversation in these tests. Core's conversation tools remain
+// mocked below only so any accidental call is visible in `writes`/the reads mock.
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  const chat = {
+    agents: vi.fn(async () => ({
+      agents: server.respondents.map((r) => ({
+        agent_id: r.actor_id,
+        display_name: r.display_name,
+        is_my_delegate: r.is_my_delegate ?? false,
+        answers_course: r.answers_course ?? !r.is_my_delegate,
+        answer_level: r.answer_level ?? 'autonomous',
+      })),
+    })),
+    messages: vi.fn(async () => arSnapshot()),
+    stream: vi.fn((_course: string, _id: string, opts: { onEvent: (e: { event: string; data: unknown }) => void | Promise<void>; signal?: AbortSignal }) => {
+      paneStreams.push({ opts })
+      return new Promise<void>((_, reject) => {
+        opts.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+      })
+    }),
+    create: vi.fn(async (courseId: string, input: { body: string; agent_id: string; attachment_ids?: string[] }) => {
+      writes.push({ tool: 'ar.create', args: { course_id: courseId, ...input } })
+      const answer = writeAnswer('conversation.open') as { result?: { conversation_id?: string; message_id?: string } }
+      const id = answer?.result?.conversation_id ?? 'c2'
+      const messageId = answer?.result?.message_id ?? 'm1'
+      const conversation = arConversation(view({ id, respondent: server.respondents[0] ? view().respondent : view().respondent }))
+      const message = arMessage(msg(1, 'student', { body: input.body, id: messageId }), id)
+      return {
+        conversation,
+        messages: [message],
+        more: false,
+        draft: null,
+        message,
+        ...(arSubmission ? { submission: arSubmission } : {}),
+      }
+    }),
+    ask: vi.fn(async (courseId: string, conversationId: string, input: { body: string; attachment_ids?: string[] }) => {
+      writes.push({ tool: 'ar.ask', args: { course_id: courseId, conversation_id: conversationId, ...input } })
+      writeAnswer('conversation.ask')
+      const seq = Math.max(0, ...server.messages.map((m) => m.seq)) + 1
+      server.messages = [...server.messages, msg(seq, 'student', { body: input.body })]
+      if (arSubmission?.status === 'proposed') arMeta[`m${seq}`] = { status: 'pending' }
+      return { ...arSnapshot(), ...(arSubmission ? { submission: arSubmission } : {}) }
+    }),
+    withdraw: vi.fn(async (courseId: string, conversationId: string, messageId: string) => {
+      writes.push({ tool: 'ar.withdraw', args: { course_id: courseId, conversation_id: conversationId, message_id: messageId } })
+      writeAnswer('conversation.retract')
+      let retracted = server.messages.find((m) => m.id === messageId)
+      if (!retracted?.retracted) {
+        retracted = { ...retracted!, body: null, retracted: { at: 'x', by_member_id: 'student', reason: null } }
+        server.messages = server.messages.map((m) => (m.id === messageId ? retracted! : m))
+      }
+      server.view = view({ state: 'answered', last_author_member_id: 'student' })
+      return { ...arSnapshot(), retracted: arMessage(retracted, conversationId) }
+    }),
+    close: vi.fn(),
+  }
+  return {
+    ...real,
+    runtimeChat: chat,
+    uploadChatAttachment: vi.fn(async (_course: string, _kind: string, file: File) => ({
+      uploadToken: `tok-${file.name}`,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })),
+    downloadChatAttachmentBytes: vi.fn(async (_course: string, id: string, opts?: { filename?: string }) => ({
+      blob: new Blob(['AR file']),
+      filename: opts?.filename ?? `${id}.txt`,
+      contentType: 'text/plain',
+    })),
   }
 })
 
@@ -180,10 +260,37 @@ const DropdownItem = defineComponent({
       )
   },
 })
+// Element Plus's autosize implementation reads a null textarea in a nextTick
+// when a refusal removes the composer. A native textarea keeps these tests on
+// the composer's own keyboard, input, focus and IME behavior instead.
+const Input = defineComponent({
+  name: 'ElInput',
+  props: { modelValue: { type: String, default: '' }, disabled: Boolean },
+  emits: ['update:modelValue'],
+  setup(props, { emit, expose }) {
+    const el = ref<HTMLTextAreaElement | null>(null)
+    expose({
+      focus: () => el.value?.focus(),
+      blur: () => el.value?.blur(),
+      get textarea() {
+        return el.value
+      },
+    })
+    return () =>
+      h('textarea', {
+        ref: el,
+        class: 'el-textarea',
+        value: props.modelValue,
+        disabled: props.disabled,
+        onInput: (e: Event) => emit('update:modelValue', (e.target as HTMLTextAreaElement).value),
+      })
+  },
+})
 const global = {
   plugins: [i18n, ElementPlus],
   components: icons,
   stubs: {
+    ElInput: Input,
     ElTooltip: Tooltip,
     ElPopover: Passthrough('ElPopover'),
     ElDropdown: Dropdown,
@@ -244,6 +351,58 @@ const tutorOffered: Respondent = {
   last_seen_at: '2026-09-26T11:59:30Z',
 }
 
+function arConversation(v = server.view): ChatConversation {
+  return {
+    id: v.id,
+    course_id: 'k1',
+    agent_id: (v.respondent as { actor_id?: string }).actor_id ?? '',
+    title: v.title ?? '',
+    state:
+      arState ??
+      (v.status === 'closed'
+        ? 'closed'
+        : v.state === 'answered' || v.state === 'reply_pending_approval'
+          ? v.state
+          : 'answering'),
+    revision: 1,
+    created_at: v.created_at,
+    updated_at: v.last_message_at ?? v.created_at,
+    last_activity_at: v.last_message_at ?? v.created_at,
+    close_reason: v.closed_reason ?? undefined,
+  }
+}
+
+function arMessage(m: ConversationMessage, conversationId = 'c1'): ChatMessage {
+  return {
+    id: m.id,
+    conversation_id: conversationId,
+    seq: m.seq,
+    role: m.author_member_id === server.view.opener.member_id ? 'user' : 'assistant',
+    status: m.retracted ? 'retracted' : 'posted',
+    body: m.body ?? '',
+    created_at: m.created_at,
+    attachments: (m.attachments ?? []).map((a) => ({
+      id: a.id,
+      filename: a.filename,
+      media_type: a.content_type,
+      size: a.byte_size,
+      created_at: a.created_at,
+    })),
+    retracted_at: m.retracted?.at,
+    retracted_reason: m.retracted?.reason ?? undefined,
+    ...arMeta[m.id],
+  }
+}
+
+function arSnapshot(): ChatSnapshot {
+  return {
+    conversation: arConversation(),
+    messages: server.messages.map((m) => arMessage(m)),
+    more: false,
+    draft: server.draft ? (server.draft as ChatDraft) : null,
+  }
+}
+
 /** Core's refusal of a question to an agent nobody asks in the site now: one with MCP access, or not running. */
 const notAskable = (reason: 'mcp_agent' | 'agent_not_hosted' = 'agent_not_hosted') =>
   new ApiError({
@@ -298,6 +457,10 @@ beforeEach(() => {
   vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'] })
   vi.setSystemTime(new Date('2026-09-26T12:00:00Z'))
   writes.length = 0
+  paneStreams.length = 0
+  arState = null
+  arMeta = {}
+  arSubmission = null
   printed.length = 0
   dropdownClosed.mockClear()
   forgetSent()
@@ -321,8 +484,15 @@ beforeEach(() => {
   writeAnswer = () => executed({ message_id: 'm4' })
   document.querySelectorAll('.el-notification, .el-message').forEach((n) => n.remove())
 })
-afterEach(() => vi.useRealTimers())
+afterEach(async () => {
+  await flushPromises()
+  vi.useRealTimers()
+})
 enableAutoUnmount(afterEach)
+// Let Element Plus's textarea autosize nextTick settle on either side of the auto-unmount hook.
+afterEach(async () => {
+  await flushPromises()
+})
 
 const pdf = (name: string, type = 'application/pdf', size = 120) => new File([new Uint8Array(size)], name, { type })
 /** A DataTransfer as the browser hands one to a drop (jsdom has none). */
@@ -337,6 +507,11 @@ function transfer(files: File[]) {
 /** Until files added are up (their uploads are answered at once here). */
 async function settle() {
   for (let i = 0; i < 6; i++) await flushPromises()
+}
+
+async function pushChat(event: string, data: unknown) {
+  await paneStreams.at(-1)!.opts.onEvent({ event, data })
+  await flushPromises()
 }
 
 async function type(wrapper: ReturnType<typeof mount>, text: string) {
@@ -356,12 +531,73 @@ describe('ChatPane', () => {
     // The agent at work, in a line of its own, counting the seconds since the question (asked at 11:59:00).
     const line = w.get('.chat-pane__typing .chat-status')
     expect(line.attributes('role')).toBe('status')
-    expect(line.find('.chat-status__label').text()).toBe('Thinking…')
+    expect(line.find('.chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(line.find('.chat-status__time').text()).toBe('1m 00s')
     vi.advanceTimersByTime(5000)
     await flushPromises()
     expect(line.find('.chat-status__time').text()).toBe('1m 05s')
     expect(w.find('.chat-pane__dots').exists()).toBe(false)
+  })
+
+  it('shows the exact no-response notice after 20 seconds, in three locales, and withdraws with one click', async () => {
+    seat('student')
+    server.messages = [msg(1, 'student'), msg(2, 'tutor'), msg(3, 'student', { created_at: '2026-09-26T12:00:00Z' })]
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    await vi.advanceTimersByTimeAsync(19_000)
+    expect(w.find('.chat-pane__no-response').exists()).toBe(false)
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(w.find('.chat-pane__no-response').text()).toContain('The agent is not responding right now.')
+    expect(w.find('.chat-pane__no-response button').text()).toBe('Withdraw question')
+    setLocale('zh-Hant')
+    await flushPromises()
+    expect(w.find('.chat-pane__no-response').text()).toContain('代理目前沒有回應。')
+    expect(w.find('.chat-pane__no-response button').text()).toBe('撤回問題')
+    setLocale('zh-Hans')
+    await flushPromises()
+    expect(w.find('.chat-pane__no-response').text()).toContain('智能体目前没有回应。')
+    expect(w.find('.chat-pane__no-response button').text()).toBe('撤回问题')
+    setLocale('en')
+    writeAnswer = () => {
+      server.messages = server.messages.map((m) =>
+        m.id === 'm3' ? { ...m, body: null, retracted: { at: 'x', by_member_id: 'student', reason: null } } : m,
+      )
+      return executed({})
+    }
+    await w.find('.chat-pane__no-response button').trigger('click')
+    await flushPromises()
+    expect(writes.map((x) => x.tool)).toEqual(['ar.withdraw'])
+    expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('message 3')
+    expect(w.find('.chat-pane__no-response').exists()).toBe(false)
+  })
+
+  it('hides the no-response notice as soon as AR sends a draft', async () => {
+    seat('student')
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__no-response').exists()).toBe(true)
+    await pushChat('draft', {
+      conversation_id: 'c1',
+      revision: 2,
+      draft: { version: 1, text: 'Working', steps: [], updated_at: '2026-09-26T12:00:00Z' },
+    })
+    expect(w.find('.chat-pane__no-response').exists()).toBe(false)
+    expect(w.find('.chat-pane__draft').exists()).toBe(true)
+  })
+
+  it('treats failed as terminal, shows the safe failure state, and allows another question without starting the timer', async () => {
+    seat('student')
+    arState = 'failed'
+    arMeta.m2 = { status: 'failed', error: { kind: 'provider_failed', retryable: true }, body: '' }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    expect(w.find('.chat-pane__no-response').exists()).toBe(false)
+    expect(w.find('.chat-msg__lifecycle.is-failed').text()).toBe('The answer could not be completed. You can ask again.')
+    const ta = await type(w, 'Try again')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(writes.map((x) => x.tool)).toEqual(['ar.ask'])
   })
 
   it('shows the answer being written where Core sends it, in place of the working line, until it is posted', async () => {
@@ -405,7 +641,7 @@ describe('ChatPane', () => {
     }
     await w.get('.chat-composer__stop').trigger('click')
     await flushPromises()
-    expect(writes).toEqual([{ tool: 'conversation.retract', args: { course_id: 'k1', message_id: 'm3' } }])
+    expect(writes).toEqual([{ tool: 'ar.withdraw', args: { course_id: 'k1', conversation_id: 'c1', message_id: 'm3' } }])
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('line one\nline two')
     expect(document.body.querySelector('.el-message')?.textContent).toContain('Stopped: your question was withdrawn')
     expect(w.find('.chat-pane__typing').exists()).toBe(false)
@@ -436,9 +672,12 @@ describe('ChatPane', () => {
     expect(writes).toHaveLength(0)
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes).toEqual([
-      { tool: 'conversation.ask', args: { course_id: 'k1', conversation_id: 'c1', body: '還有一個問題' } },
-    ])
+    expect(writes).toHaveLength(1)
+    expect(writes[0]).toMatchObject({
+      tool: 'ar.ask',
+      args: { course_id: 'k1', conversation_id: 'c1', body: '還有一個問題' },
+    })
+    expect(writes[0]!.args.idempotency_key).toEqual(expect.any(String))
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('')
   })
 
@@ -464,7 +703,7 @@ describe('ChatPane', () => {
     }
     await edits[0]!.trigger('click')
     await flushPromises()
-    expect(writes).toEqual([{ tool: 'conversation.retract', args: { course_id: 'k1', message_id: 'm3' } }])
+    expect(writes).toEqual([{ tool: 'ar.withdraw', args: { course_id: 'k1', conversation_id: 'c1', message_id: 'm3' } }])
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('line one\nline two')
     expect(w.find('.chat-msg.is-retracted').text()).toContain('You withdrew this message.')
     expect(document.body.querySelector('.el-message')?.textContent).toContain(
@@ -589,47 +828,13 @@ describe('ChatPane', () => {
     expect(html).toContain('<em>Withdrawn</em>')
   })
 
-  it('lets the one asked only read it: people no longer answer in the chat', async () => {
+  it('keeps an AR conversation’s owner composer available without a Core respondent role', async () => {
     seat('tutor', { conversation_answer: 'autonomous' })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(w.findAll('.chat-msg')).toHaveLength(3)
-    expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice').text()).toContain('Agents answer questions in the chat now')
+    expect(w.find('textarea').exists()).toBe(true)
     expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
-  })
-
-  it('keeps a conversation from before with a person readable, closed, saying that conversations are with agents', async () => {
-    seat('student')
-    server.view = view({
-      status: 'closed',
-      state: 'closed',
-      closed_reason: 'conversations_are_with_agents',
-      respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
-    })
-    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
-    await flushPromises()
-    expect(w.findAll('.chat-msg')).toHaveLength(3)
-    expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__typing').exists()).toBe(false)
-    expect(w.find('.chat-pane__closed').text()).toContain('This conversation is closed.')
-    // One line, read as one: that it is closed, and why.
-    expect(w.find('.chat-pane__closed-text').element.tagName).toBe('P')
-    expect(w.find('.chat-pane__closed-text').element.textContent).toBe(
-      'This conversation is closed. It was with a person, and conversations are with agents now',
-    )
-    expect(w.find('.chat-pane__closed-reason').text()).toBe(
-      'It was with a person, and conversations are with agents now',
-    )
-    // Nothing more to do in it: not closed again, and no new conversation with a person.
-    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
-    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
-    // Its state, closed, is said beside the name, and nobody is said to be online.
-    expect(w.find('.chat-pane__name-row').text()).toContain('Closed')
-    expect(w.find('.chat-pane__presence').exists()).toBe(false)
-    setLocale('zh-Hant')
-    await flushPromises()
-    expect(w.find('.chat-pane__closed-reason').text()).toBe('這段對話的對象是真人，而現在對話只與代理進行')
   })
 
   it('marks it read on opening when Core says the agent wrote since the caller last read it, and says so', async () => {
@@ -640,9 +845,7 @@ describe('ChatPane', () => {
       tool === 'conversation.mark_read' ? executed({ read_up_to_seq: 2, unread: false }) : executed({})
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(writes).toEqual([
-      { tool: 'conversation.mark_read', args: { course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm2' } },
-    ])
+    expect(writes).toEqual([])
     expect(w.emitted('read')).toEqual([['c1']])
   })
 
@@ -655,22 +858,21 @@ describe('ChatPane', () => {
     expect(writes).toEqual([])
     server.messages = [...server.messages, msg(4, 'tutor', { body: 'An answer' })]
     server.view = view({ state: 'answered' })
-    await vi.advanceTimersByTimeAsync(3000)
-    await flushPromises()
+    await pushChat('message', arSnapshot())
     expect(w.text()).toContain('An answer')
-    expect(writes.map((x) => x.args)).toEqual([{ course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm4' }])
-    expect(w.emitted('read')).toEqual([['c1']])
+    expect(writes).toEqual([])
+    expect(w.emitted('read')).toEqual([['c1'], ['c1']])
 
     // Off screen (the panel closed): an answer read then is not marked until it is shown again.
     await w.setProps({ active: false })
     server.messages = [...server.messages, msg(5, 'student'), msg(6, 'tutor', { body: 'Another' })]
     await vi.advanceTimersByTimeAsync(30_000)
-    expect(writes).toHaveLength(1)
+    expect(w.emitted('read')).toHaveLength(2)
     await w.setProps({ active: true })
-    await vi.advanceTimersByTimeAsync(3000)
     await flushPromises()
+    await pushChat('snapshot', arSnapshot())
     expect(w.text()).toContain('Another')
-    expect(writes.map((x) => x.args.up_to_message_id)).toEqual(['m4', 'm6'])
+    expect(w.emitted('read')).toEqual([['c1'], ['c1'], ['c1']])
   })
 
   it('closes its ⋯ menu as it goes off screen (an agent’s log closed by back), rather than leaving it over the page', async () => {
@@ -708,7 +910,7 @@ describe('ChatPane', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    const reads = (await import('@/api/http')).read as unknown as { mock: { calls: unknown[][] } }
+    const reads = (await import('@/api/runtimeChat')).runtimeChat.messages as unknown as { mock: { calls: unknown[][] } }
     const before = reads.mock.calls.length
     const ta = await type(w, 'One more thing')
     await ta.trigger('keydown', { key: 'Enter' })
@@ -719,17 +921,6 @@ describe('ChatPane', () => {
     expect(w.emitted('changed')).toBeTruthy()
   })
 
-  it('reads a conversation as staff when overseeing it, and offers to withdraw a message where the seat decides', async () => {
-    seat('staff', { action_decide: 'autonomous' })
-    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', oversee: true }, global })
-    await flushPromises()
-    expect(w.find('.chat-pane__name').text()).toBe('Chan Tai Man → Course tutor')
-    expect(w.find('textarea').exists()).toBe(false)
-    expect(w.find('.chat-pane__notice').text()).toContain('You are reading this as course staff.')
-    expect(w.findAll('.chat-msg__retract').map((b) => b.text())).toEqual(['Withdraw', 'Withdraw', 'Withdraw'])
-    expect(menu(w)).toEqual(['Who can read this', 'Download as PDF'])
-  })
-
   it('names the course beside the agent, where it is given', async () => {
     seat('student')
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1', courseLabel: 'CS101' }, global })
@@ -737,16 +928,50 @@ describe('ChatPane', () => {
     expect(w.find('.chat-pane__name-row').text()).toMatch(/^CS101\s*·\s*Course tutor/)
   })
 
-  it('keeps a question that waits for approval on screen, marked so', async () => {
+  it('keeps an AR question whose answer waits for approval on screen, marked so', async () => {
     seat('student')
-    writeAnswer = () => ({ status: 'proposed', actionId: 'a9', reviewState: 'none', replayed: false })
+    writeAnswer = () => {
+      server.view = view({ state: 'reply_pending_approval' })
+      return executed({})
+    }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const ta = await type(w, 'Is this allowed?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(w.find('.chat-pane__held').text()).toContain('Is this allowed?')
-    expect(w.find('.chat-pane__held').text()).toContain('Waiting for approval')
+    expect(w.text()).toContain('Is this allowed?')
+    expect(w.find('.chat-pane__notice').text()).toContain('An answer is waiting for approval.')
+  })
+
+  it('treats an AR 202 proposed question as accepted for approval, never as a failure or as generating', async () => {
+    seat('student')
+    arSubmission = { status: 'proposed', approval_id: 'ap1', review_state: 'pending' }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const ta = await type(w, 'Please review this')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(w.find('.chat-msg__lifecycle').text()).toBe('Waiting for approval.')
+    expect(w.find('.chat-pane__typing').exists()).toBe(false)
+    expect(w.find('.chat-pane__no-response').exists()).toBe(false)
+    expect(document.body.querySelector('.el-message--success')?.textContent).toContain(
+      'Your question was accepted and is waiting for approval. It will be answered once approved.',
+    )
+    expect(writes[0]!.tool).toBe('ar.ask')
+    expect(writes[0]!.args.idempotency_key).toEqual(expect.any(String))
+  })
+
+  it('reports an executed pending_review submission as done and awaiting later review, not as proposed', async () => {
+    seat('student')
+    arSubmission = { status: 'executed', approval_id: 'ap1', review_state: 'pending' }
+    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    await flushPromises()
+    const ta = await type(w, 'Post this now')
+    await ta.trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    expect(document.body.querySelector('.el-message--info')?.textContent).toContain('Done. It will be reviewed after the fact.')
+    expect(document.body.textContent).not.toContain('Your question was accepted and is waiting for approval. It will be answered once approved.')
+    expect(w.find('.chat-msg__lifecycle').exists()).toBe(false)
   })
 
   it('shows a closed conversation read-only, with why, and offers a new one', async () => {
@@ -757,7 +982,7 @@ describe('ChatPane', () => {
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__closed').text()).toContain('A participant left the course')
     await w.find('.chat-pane__closed button').trigger('click')
-    expect(w.emitted('start')?.[0]?.[0]).toMatchObject({ member_id: 'tutor', display_name: 'Course tutor' })
+    expect(w.emitted('start')?.[0]?.[0]).toMatchObject({ member_id: 'core-agent-1', display_name: 'Course tutor' })
   })
 
   it('shows a retracted message without its text', async () => {
@@ -767,7 +992,7 @@ describe('ChatPane', () => {
     ]
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-msg.is-retracted').text()).toContain('Course staff withdrew this message.')
+    expect(w.find('.chat-msg.is-retracted').text()).toContain('You withdrew this message.')
     expect(w.find('.chat-msg.is-retracted').text()).toContain('Off topic')
   })
 
@@ -825,15 +1050,16 @@ describe('ChatPane', () => {
     const ta = await type(w, '\n  What is due Friday?  \nAnd how long should it be?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes[0]).toEqual({
-      tool: 'conversation.open',
+    expect(writes[0]).toMatchObject({
+      tool: 'ar.create',
       args: {
         course_id: 'k1',
-        respondent_member_id: 'tutor',
+        agent_id: 'tutor',
         body: '  What is due Friday?  \nAnd how long should it be?',
         title: 'What is due Friday?',
       },
     })
+    expect(writes[0]!.args.idempotency_key).toEqual(expect.any(String))
     expect(w.emitted('opened')?.[0]).toEqual(['c2'])
   })
 
@@ -843,10 +1069,11 @@ describe('ChatPane', () => {
       title: 'Loops',
       respondent: { ...view().respondent, answer_level: 'confirm_required', last_seen_at: '2026-09-26T11:23:00Z' },
     })
+    server.respondents = [{ ...tutorOffered, answer_level: 'confirm_required' }]
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const row = w.find('.chat-pane__name-row')
-    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
+    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Can be asked$/)
     expect(row.attributes('title')).toBe('Loops')
     // An open conversation shows no state; nothing but the row and the menu in the header.
     expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
@@ -864,31 +1091,19 @@ describe('ChatPane', () => {
     expect(readers.textContent).toContain('The two taking part')
   })
 
-  it('says an answer is awaited in one quiet line, not that the agent thinks when nothing runs it', async () => {
+  it('says an answer is awaited in one quiet line, with AR availability beside the agent', async () => {
     seat('student')
     server.view = view({ respondent: { ...view().respondent, last_seen_at: '2026-09-26T09:00:00Z' } })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    // Nothing runs it now: it is waited for, not "thinking", and the line above the composer says nothing more.
+    // The AR offer, not Core's last_seen_at, says this agent can be asked;
+    // the answer itself is still awaited in one quiet line.
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
-    expect(w.find('.chat-pane__presence').text()).toBe('Paused')
+    expect(w.find('.chat-pane__presence').text()).toBe('Can be asked')
     expect(w.find('.chat-pane__typing .chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(w.find('textarea').exists()).toBe(true)
   })
 
-  it('says in one muted line what stops the caller writing', async () => {
-    seat('student')
-    server.view = view({ respondent: { ...view().respondent, seat_status: 'paused' } })
-    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
-    await flushPromises()
-    const line = w.find('.chat-pane__notice')
-    expect(line.element.tagName).toBe('P')
-    expect(line.text()).toBe('Course tutor is paused in this course and cannot answer now.')
-    expect(w.find('textarea').attributes('disabled')).toBeDefined()
-  })
-})
-
-describe('ChatPane, with an agent nobody asks in the site now', () => {
   it('puts why in place of the composer, and keeps what was written readable', async () => {
     seat('student')
     server.respondents = []
@@ -913,8 +1128,8 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const note = w.find('.chat-pane__notice.is-elsewhere')
-    expect(note.text()).toContain(`${NOTE} Its page`)
-    expect(note.find('.chat-pane__notice-sub').text()).toBe('Its page, under My agents, says why.')
+    expect(note.text()).toBe(NOTE)
+    expect(note.find('.chat-pane__notice-sub').exists()).toBe(false)
   })
 
   it('in Traditional and Simplified Chinese too', async () => {
@@ -950,7 +1165,7 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes.map((x) => x.tool)).toEqual(['conversation.ask'])
+    expect(writes.map((x) => x.tool)).toEqual(['ar.ask'])
     expect(document.querySelector('.el-notification')?.textContent).toContain(NOT_RUNNING)
     expect(w.find('textarea').exists()).toBe(false)
     expect(w.find('.chat-pane__notice.is-elsewhere').text()).toBe(NOT_RUNNING)
@@ -1004,21 +1219,24 @@ describe('ChatPane, with an agent nobody asks in the site now', () => {
     expect(w.find('.chat-pane__closed-elsewhere').text()).toBe(NOTE)
   })
 
-  it('never says it of an agent that has left the course, which is why it is not offered', async () => {
+})
+
+describe('ChatPane ownership and privacy', () => {
+  it.each([
+    { name: 'own personal delegate', mine: true, answersCourse: false, shared: false },
+    { name: 'course-owned delegate', mine: true, answersCourse: true, shared: true },
+    { name: 'unowned course agent', mine: false, answersCourse: true, shared: true },
+  ] as const)('uses AR’s explicit flags for $name, including its privacy notice', async ({ mine, answersCourse, shared }) => {
     seat('student')
-    server.view = view({
-      status: 'closed',
-      state: 'closed',
-      closed_reason: 'seat_removed',
-      respondent: { ...view().respondent, seat_status: 'removed' },
-    })
-    server.respondents = []
+    server.view = view({ respondent: { ...view().respondent, is_delegate_of_opener: mine } })
+    server.respondents = [{ ...tutorOffered, is_my_delegate: mine, answers_course: answersCourse }]
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__closed').text()).toContain('A participant left the course')
-    expect(w.find('.chat-pane__closed-elsewhere').exists()).toBe(false)
-    expect(w.text()).not.toContain('can’t be asked here')
-    expect(w.find('.chat-pane__closed button').exists()).toBe(false)
+    const tip = w.find('.chat-pane__presence .tooltip-stub').attributes('data-tip') ?? ''
+    expect(tip.includes('Your agent')).toBe(mine)
+    expect(w.find('.chat-pane__shared').exists()).toBe(shared)
+    if (shared) expect(w.find('.chat-pane__shared').text()).toContain('may repeat to them')
+    w.unmount()
   })
 })
 
@@ -1029,13 +1247,6 @@ describe('ChatPane: who reads it, and where it goes', () => {
     'people and agents that decide actions',
     'other members it answers',
     'site and department administrators',
-  ])
-  const ZH_READERS = new Intl.ListFormat('zh-Hant', { type: 'conjunction' }).format([
-    '對話雙方',
-    '課程教職員',
-    '負責審批操作的人及代理',
-    '它回答的其他成員',
-    '網站及部門管理員',
   ])
   /** The one asking, signed in as p1: the first time is remembered for them. */
   function signedIn() {
@@ -1072,7 +1283,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     expect(text).not.toContain('An agent that decides actions')
     expect(text).toContain('A withdrawn message is hidden here, but kept')
     expect(text).toContain('A question or answer that waited for approval and was not posted is also kept, with its text')
-    expect(text).toContain('kept for up to 180 days')
+    expect(text).not.toContain('kept for up to 180 days')
     expect(
       Array.from(notice.querySelectorAll('.el-dialog__title, .chat-privacy__heading')).filter(
         (el) => el.textContent === 'Who can read this conversation',
@@ -1086,10 +1297,12 @@ describe('ChatPane: who reads it, and where it goes', () => {
     const respondent = { ...view().respondent }
     delete (respondent as { actor_id?: string }).actor_id
     server.view = view({ respondent })
-    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
+    server.respondents = []
+    mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(runtimeCalls).toEqual([])
-    expect(w.find('.chat-pane__privacy-text').text()).toContain('Course tutor sends it to its AI model’s provider.')
+    // Without an actor mapping there is no safe asker-facing provider lookup;
+    // the Core mock would fail the test if it fell back to member.get.
   })
 
   it('names another agent’s providers from the asker-facing privacy route, including its fallback', async () => {
@@ -1151,9 +1364,9 @@ describe('ChatPane: who reads it, and where it goes', () => {
       },
     ]
     server.view = view({
-      respondent: { ...view().respondent, member_id: 'helper', display_name: 'My helper', is_delegate_of_opener: true },
+      respondent: { ...view().respondent, actor_id: 'helper', member_id: 'helper', display_name: 'My helper', is_delegate_of_opener: true },
     })
-    server.respondents = [{ ...tutorOffered, member_id: 'helper', display_name: 'My helper', is_my_delegate: true }]
+    server.respondents = [{ ...tutorOffered, actor_id: 'helper', member_id: 'helper', display_name: 'My helper', is_my_delegate: true }]
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     expect(runtimeCalls).toEqual(['list', 'models'])
@@ -1220,35 +1433,6 @@ describe('ChatPane: who reads it, and where it goes', () => {
     expect(localStorage.getItem('aishie.chatPrivacySeen.p1')).toBe('1')
   })
 
-  it('says nothing of a model of a conversation with a person, from before', async () => {
-    seat('student')
-    signedIn()
-    server.visibleTo = ['participants', 'audit_export']
-    server.view = view({
-      status: 'closed',
-      state: 'closed',
-      closed_reason: 'conversations_are_with_agents',
-      respondent: { ...view().respondent, member_id: 'ta', display_name: 'Ms Wong', kind: 'human', last_seen_at: null },
-    })
-    const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
-    await flushPromises()
-    await w.findAll('.chat-pane__head [role="menuitem"]')[0]!.trigger('click')
-    await flushPromises()
-    const notice = document.body.querySelector('.chat-pane__readers')!
-    expect(notice.querySelector('.el-dialog__title')?.textContent).toBe('Who can read this conversation')
-    expect(notice.querySelector('.chat-privacy__route')).toBeNull()
-    expect(
-      Array.from(notice.querySelectorAll('.el-dialog__title, .chat-privacy__heading')).filter(
-        (el) => el.textContent === 'Who can read this conversation',
-      ),
-    ).toHaveLength(1)
-    const text = notice.textContent ?? ''
-    expect(text).toContain('The two taking part')
-    expect(text).toContain('Conversations are never deleted.')
-    expect(text).not.toContain('AI model')
-    expect(text).not.toContain('180 days')
-  })
-
   it('in Traditional Chinese', async () => {
     seat('student')
     signedIn()
@@ -1257,7 +1441,7 @@ describe('ChatPane: who reads it, and where it goes', () => {
     await flushPromises()
     const line = w.find('.chat-pane__privacy')
     expect(line.find('.chat-pane__privacy-text').text()).toBe(
-      `${ZH_READERS}可閱讀這段對話；Course tutor會把內容傳送至其 AI 模型的供應商作答。`,
+      '對話雙方可閱讀這段對話；Course tutor會把內容傳送至其 AI 模型的供應商作答。',
     )
     expect(line.find('button').text()).toBe('詳情')
   })
@@ -1310,7 +1494,7 @@ describe('ChatComposer', () => {
       'el-textarea',
       'chat-composer__bar',
     ])
-    expect(box.find('.el-textarea').element.children[0]!.tagName).toBe('TEXTAREA')
+    expect(box.find('textarea').element.tagName).toBe('TEXTAREA')
     expect(w.find('textarea').attributes('aria-label')).toBe('Ask Course tutor…')
     const send = w.find('.chat-composer__bar .chat-composer__send')
     expect(send.attributes('aria-label')).toBe('Send')
@@ -1351,20 +1535,17 @@ describe('ChatComposer', () => {
     const ta = await type(w, 'Are these right?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes).toEqual([
-      {
-        tool: 'conversation.ask',
-        args: {
-          course_id: 'k1',
-          conversation_id: 'c1',
-          body: 'Are these right?',
-          attachments: [
-            { upload_token: 'tok-notes.pdf', filename: 'notes.pdf' },
-            { upload_token: 'tok-plot.png', filename: 'plot.png' },
-          ],
-        },
+    expect(writes).toHaveLength(1)
+    expect(writes[0]).toMatchObject({
+      tool: 'ar.ask',
+      args: {
+        course_id: 'k1',
+        conversation_id: 'c1',
+        body: 'Are these right?',
+        attachment_ids: ['tok-notes.pdf', 'tok-plot.png'],
       },
-    ])
+    })
+    expect(writes[0]!.args.idempotency_key).toEqual(expect.any(String))
     expect(w.findAll('.chat-chip')).toHaveLength(0)
     expect((w.find('textarea').element as HTMLTextAreaElement).value).toBe('')
   })
@@ -1379,16 +1560,17 @@ describe('ChatComposer', () => {
     const ta = await type(w, 'Is my essay on topic?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(writes[0]).toEqual({
-      tool: 'conversation.open',
+    expect(writes[0]).toMatchObject({
+      tool: 'ar.create',
       args: {
         course_id: 'k1',
-        respondent_member_id: 'tutor',
+        agent_id: 'tutor',
         body: 'Is my essay on topic?',
-        attachments: [{ upload_token: 'tok-essay.pdf', filename: 'essay.pdf' }],
+        attachment_ids: ['tok-essay.pdf'],
         title: 'Is my essay on topic?',
       },
     })
+    expect(writes[0]!.args.idempotency_key).toEqual(expect.any(String))
     expect(w.emitted('opened')?.[0]).toEqual(['c2'])
   })
 
@@ -1442,9 +1624,8 @@ describe('ChatComposer', () => {
     expect(document.body.querySelector('.el-notification')).toBeNull()
   })
 
-  it('keeps the names of the files of a question that waits for approval', async () => {
+  it('sends AR attachment ids in order and empties the uploaded chips', async () => {
     seat('student')
-    writeAnswer = () => ({ status: 'proposed', actionId: 'a9', reviewState: 'none', replayed: false })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     ;(w.vm as unknown as { takeFiles: (f: File[]) => void }).takeFiles([pdf('notes.pdf')])
@@ -1452,7 +1633,7 @@ describe('ChatComposer', () => {
     const ta = await type(w, 'Is this allowed?')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()
-    expect(w.find('.chat-pane__held-files').text()).toBe('With 1 file: notes.pdf')
+    expect(writes[0]!.args.attachment_ids).toEqual(['tok-notes.pdf'])
     expect(w.findAll('.chat-chip')).toHaveLength(0)
   })
 

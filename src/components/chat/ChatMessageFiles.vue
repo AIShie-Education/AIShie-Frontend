@@ -84,7 +84,7 @@ async function download(f: MessageAttachment) {
   if (busy.value) return
   busy.value = f.id
   try {
-    await downloadAttachment(props.courseId, f.id)
+    await downloadAttachment(props.courseId, f.id, f.filename)
   } catch (e) {
     notifyError(e, f.filename, { reasons: REFUSAL_SCOPE })
   } finally {

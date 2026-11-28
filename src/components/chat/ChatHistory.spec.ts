@@ -30,6 +30,47 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async (courseId: string) => ({
+        agents: [...new Map(mine.filter((c) => c.course.course_id === courseId).map((c) => [c.respondent.actor_id, c])).values()].map((c) => ({
+          agent_id: c.respondent.actor_id,
+          display_name: c.respondent.display_name,
+          answers_course: true,
+          answer_level: 'autonomous',
+        })),
+      })),
+      list: vi.fn(async (courseId: string, args: { limit?: number; after?: string }) => {
+        reads.push({ tool: 'ar.list', args: { course_id: courseId, ...args } })
+        if (fail) throw fail
+        const list = mine.filter((c) => c.course.course_id === courseId && c.respondent.kind === 'agent')
+        const limit = args.limit ?? 50
+        return { conversations: list.slice(0, limit).map((c) => ({
+          id: c.conversation_id,
+          course_id: courseId,
+          agent_id: c.respondent.actor_id,
+          title: c.title ?? '',
+          state:
+            c.state === 'closed'
+              ? ('closed' as const)
+              : c.state === 'awaiting_answer'
+                ? ('answering' as const)
+                : c.state === 'reply_pending_approval'
+                  ? ('reply_pending_approval' as const)
+                  : ('answered' as const),
+          revision: 1,
+          created_at: c.created_at,
+          updated_at: c.last_activity_at,
+          last_activity_at: c.last_activity_at,
+        })), next: list.length > limit ? (list[limit - 1]?.conversation_id ?? null) : null }
+      }),
+    },
+  }
+})
+
 const { ApiError } = await import('@/api/http')
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
@@ -162,7 +203,7 @@ describe('ChatHistory', () => {
   it('lists the conversations with agents in the course asked in, each as course · agent, newest first', async () => {
     const { w } = setup()
     await flushPromises()
-    expect(reads).toEqual([{ tool: 'me.conversations', args: { course_id: 'k1', limit: HISTORY_PAGE } }])
+    expect(reads).toEqual([{ tool: 'ar.list', args: { course_id: 'k1', limit: HISTORY_PAGE } }])
     expect(where(w)).toEqual(['CS101 · Lab helper', 'CS101 · Course tutor'])
     const rows = w.findAll('.hist-row')
     expect(rows[0]!.find('.hist-row__title').text()).toBe('About c3')
@@ -174,8 +215,14 @@ describe('ChatHistory', () => {
     expect(w.text()).not.toContain('Ms Wong')
   })
 
-  it('marks an answer Core says is not read yet', async () => {
+  it('marks a new answer AR activity brings, then clears it when read here', async () => {
     const { w, chat } = setup()
+    await flushPromises()
+    expect(w.find('.hist-row.is-unread').exists()).toBe(false)
+    mine = mine.map((c) =>
+      c.conversation_id === 'c3' ? { ...c, last_activity_at: '2026-09-26T12:00:00Z' } : c,
+    )
+    await chat.loadHistory('course:k1', { quiet: true })
     await flushPromises()
     const [unread, read] = w.findAll('.hist-row')
     expect(unread!.classes()).toContain('is-unread')
@@ -199,7 +246,8 @@ describe('ChatHistory', () => {
     await scope.findAll('.filter-chip')[1]!.trigger('click')
     await flushPromises()
     expect(chat.historyScope).toBe('all')
-    expect(reads.at(-1)).toEqual({ tool: 'me.conversations', args: { limit: HISTORY_PAGE } })
+    expect(reads.length).toBeGreaterThan(0)
+    expect(reads.every((r) => r.tool === 'ar.list' && r.args.limit === HISTORY_PAGE)).toBe(true)
     expect(where(w)).toEqual([
       'CS101 · Lab helper',
       'MA201 · Maths tutor',
@@ -228,7 +276,7 @@ describe('ChatHistory', () => {
     expect(more.text()).toBe('Load more')
     await more.trigger('click')
     await flushPromises()
-    expect(reads.at(-1)!.args).toEqual({ course_id: 'k1', limit: HISTORY_PAGE, after: `p${HISTORY_PAGE}` })
+    expect(reads.at(-1)!.args).toEqual({ course_id: 'k1', limit: HISTORY_PAGE * 2 })
     expect(w.findAll('.hist-row')).toHaveLength(HISTORY_PAGE + 3)
     expect(w.find('.load-more').exists()).toBe(false)
   })

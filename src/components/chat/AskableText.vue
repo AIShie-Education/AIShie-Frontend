@@ -18,6 +18,8 @@ import { availabilityOf } from './chat'
 
 const props = defineProps<{
   who: { kind: string; last_seen_at?: string | null; answer_level?: string | null; seat_status?: string | null }
+  /** AR's fresh offered/authorized state; Core's last_seen_at is not used for AR chat. */
+  available?: boolean
   /** The agent's name, for the tooltip. */
   name: string
   /** Whose agent it is ("Your agent"), said first in the tooltip. */
@@ -29,7 +31,7 @@ const { t, locale } = useI18n()
 const now = useNow()
 
 const availability = computed(() => availabilityOf(props.who, now.value))
-const askable = computed(() => availability.value === 'online' || availability.value === 'human')
+const askable = computed(() => props.available === true || availability.value === 'online' || availability.value === 'human')
 const text = computed(() => (askable.value ? t('common.presence.askable') : t('common.presence.paused')))
 const why = computed(() => {
   const a = availability.value

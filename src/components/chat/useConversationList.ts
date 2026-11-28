@@ -6,11 +6,13 @@
 // empties or flickers while it is read again. (The caller's own conversations
 // across their courses, the chat's history, are the chat store's.)
 import { computed, onScopeDispose, ref, shallowRef, toValue, watch, type MaybeRefOrGetter } from 'vue'
-import { ApiError, read } from '@/api/http'
+import { ApiError } from '@/api/http'
+import { runtimeChat } from '@/api/runtimeChat'
 import type { ConversationRole, ConversationView, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { usePolling } from '@/composables/usePolling'
 import { agentPurpose, byActivity } from './chat'
+import { chatAgentView, chatConversationView } from './arModel'
 
 /** Conversations per page (Core's most is 200). */
 export const LIST_PAGE = 100
@@ -91,15 +93,17 @@ export function useConversationList(opts: {
       hasMore.value = false
       return all
     }
+    const offered = await runtimeChat.agents(opts.courseId)
+    const agents = new Map((offered.agents ?? []).map((a) => [a.agent_id, a]))
     for (let i = 0; i < pages; i++) {
-      const out = await read('conversation.list', {
-        course_id: opts.courseId,
-        as: opts.as,
-        limit: LIST_PAGE,
-        ...(only ? { respondent_member_id: only } : {}),
-        ...(after ? { after } : {}),
-      })
-      all.push(...(out.conversations ?? []))
+      // AR lists only the assertion actor's own conversations. Staff oversight is not
+      // inferred from Core's old conversation.list scope.
+      const out = await runtimeChat.list(opts.courseId, { limit: LIST_PAGE, ...(after ? { after } : {}) })
+      all.push(
+        ...(out.conversations ?? [])
+          .filter((c) => !only || c.agent_id === only)
+          .map((c) => chatConversationView(c, agents.get(c.agent_id))),
+      )
       after = out.next ?? undefined
       more = !!after
       if (!after) break
@@ -161,14 +165,36 @@ export function useConversationList(opts: {
  */
 export function useRespondents(opts: { courseId: string; enabled?: Enabled; lazy?: boolean }) {
   const list = useQuietList<Respondent>(async () => {
-    const out = await read('conversation.respondents', { course_id: opts.courseId })
-    return sortRespondents(out.respondents ?? [])
+    const out = await runtimeChat.agents(opts.courseId)
+    return sortRespondents((out.agents ?? []).map(chatAgentView))
   })
   const polling = usePolling(list.refresh, {
     intervalMs: RESPONDENTS_POLL_MS,
     immediate: false,
     enabled: () => on(opts.enabled) && list.loaded.value,
   })
+  // A transient first-read failure must not leave an AR conversation blocked
+  // forever. Permission refusals stay fail-closed and are not retried.
+  let retry: ReturnType<typeof setTimeout> | null = null
+  let failures = 0
+  const stopRetry = () => {
+    if (retry !== null) clearTimeout(retry)
+    retry = null
+  }
+  watch(list.error, (err) => {
+    stopRetry()
+    if (!err) {
+      failures = 0
+      return
+    }
+    if (!on(opts.enabled) || (err.status !== 0 && err.status !== 429 && err.status < 500)) return
+    const delay = Math.min(250 * 2 ** failures++, 5_000)
+    retry = setTimeout(() => {
+      retry = null
+      if (on(opts.enabled)) void list.load()
+    }, delay)
+  })
+  onScopeDispose(stopRetry)
   const started = startWhenEnabled(list.load, opts.lazy ? opts.enabled : true)
   return { ...list, reload: list.load, refresh: () => (started() ? polling.pollNow() : Promise.resolve()) }
 }

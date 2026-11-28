@@ -146,7 +146,9 @@ export function sameMessages(a: readonly ConversationMessage[], b: readonly Conv
   for (let i = 0; i < a.length; i++) {
     const x = a[i]!
     const y = b[i]!
-    if (x.id !== y.id || x.seq !== y.seq || !!x.retracted !== !!y.retracted) return false
+    // AR can move the same message pending → posted/failed, or add its
+    // body/sources/attachments without changing its seq. Compare all of it.
+    if (x.id !== y.id || x.seq !== y.seq || JSON.stringify(x) !== JSON.stringify(y)) return false
   }
   return true
 }

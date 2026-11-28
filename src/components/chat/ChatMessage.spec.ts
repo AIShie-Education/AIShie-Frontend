@@ -173,9 +173,10 @@ describe('ChatMessage', () => {
     expect(kids.indexOf('msg-files')).toBeGreaterThan(kids.indexOf('chat-msg__body'))
   })
 
-  it('says under an answer’s words and files that it relied on no course material, where it said so', () => {
+  it('says under an answer’s words and files that it relied on no course material, where it said so', async () => {
     const csv = { id: 'f2', filename: 'data.csv', content_type: 'text/csv', byte_size: 300, created_at: 'x' }
     const w = agent({ sources: [], attachments: [csv] }, { courseId: 'k1' })
+    await flushPromises()
     expect(w.get('.chat-sources').text()).toBe('No course material cited')
     const kids = [...w.get('article').element.children].map((c) => c.classList[0])
     expect(kids.slice(-4)).toEqual(['chat-msg__body', 'msg-files', 'chat-sources', 'chat-msg__foot'])

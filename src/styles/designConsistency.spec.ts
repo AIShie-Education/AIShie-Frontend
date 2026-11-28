@@ -42,7 +42,6 @@ describe('shared empty places, explanations and row states', () => {
     '/src/views/course/submissions/SubmissionsView.vue',
     '/src/views/course/scheme/SchemeView.vue',
     '/src/views/admin/runtime/RuntimeAsync.vue',
-    '/src/views/admin/runtime/TranscriptionCard.vue',
     '/src/components/preview/FileViewer.vue',
     '/src/views/admin/components/ActorCredentialsCard.vue',
   ])('uses AppNote for explanations in %s', (path) => {

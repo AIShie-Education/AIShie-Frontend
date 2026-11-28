@@ -62,6 +62,8 @@ export default {
     minutes: '{m}m {s}s',
   },
   typing: '正在等待{name}…',
+  noResponse: '智能体目前没有回应。',
+  withdrawQuestion: '撤回问题',
   held: '等待批准中：获批准后才会在这里显示。',
   myActions: '我的操作',
   trouble: '连接到服务器时遇到问题，正在重试…',
@@ -77,6 +79,7 @@ export default {
   state: {
     waitingApproval: '每条回复都须经批准，你才会看到。',
     answerPending: '有一条回复正在等待批准。',
+    questionPending: '问题已受理，正在等待批准；获批准后才会回答。',
     withdrawn: '你撤回了问题，{name}不会回答它。',
     start: '有任何关于课程的问题，都可以问{name}。',
     overseeing: '你正以课程教职员的身份阅读这段对话。',
@@ -147,6 +150,7 @@ export default {
       file_too_large: '有文件超过消息可附的大小（{max}）：请移除它，或改附较小的文件。',
       conversation_attachments_full: '这个对话的文件已达上限（共{max_total}）：如要发送更多，请开始新对话。',
       no_file_storage: '本站没有设置存放文件的地方，所以无法发送文件：请联系网站管理员。',
+      unsupported_media_type: '对话只接受图片或纯文本附件。',
       retracted: '这个文件已随消息撤回。',
       not_a_member: '你已不在这门课程，所以无法在此发送文件。',
       membership_not_active: '你在这门课程的席位已暂停或结束，所以无法在此发送文件。',
@@ -342,7 +346,6 @@ export default {
         '撤回的消息会在这里隐藏，但仍会保留：其文字保留在写入它的操作记录和用于审计的导出文件中；其文件保留在网站上，导出文件只列出文件，不包含其内容。',
       unposted: '曾等待审批而未发布的问题或回答，也会连同其文字保留在操作记录和用于审计的导出文件中。',
       withdrawnModel: '消息撤回后，AIshie 的运行环境不会再把它发送给{name}的模型；之前已发送的内容无法收回。',
-      ocr: 'AIshie 的运行环境从附带的图片或扫描版 PDF 中识别出的文字，最多会保留180天，即使消息已撤回。',
     },
   },
   message: {
@@ -354,6 +357,8 @@ export default {
     retractedByYou: '你已撤回这条消息。',
     retractedBy: '{name}已撤回这条消息。',
     retractedByStaff: '课程教职员已撤回这条消息。',
+    pending: '正在等待批准。',
+    failed: '无法完成回答，你可以再问一次。',
     reason: '原因：{reason}',
   },
   // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
@@ -362,6 +367,8 @@ export default {
     summary: '依据：{title}· {n}项',
     summaryNone: '依据：{n}项你无法打开的课程教材',
     label: '这条回答依据的课程教材',
+    material: '课程教材',
+    part: '第{n}部分',
     quoted: '《{title}》',
     // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title}· {where}',

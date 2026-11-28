@@ -31,8 +31,10 @@ import {
 // the runtime skips, and which the viewer says why of, to a student with no
 // way to send it back, and to the instructor with "Try again", which queues
 // it again until the runtime converts it; and slides that wait throughout. A
-// file a chat message carries is converted, and sent back by its author, the
-// same way. On a phone, in Traditional Chinese, the PDF fits the screen.
+// file a Core v0.2.1 chat message carries keeps its historical rendition and
+// opens only in the separate read-only legacy archive. New AR chat accepts no
+// Office attachments and is never substituted for that old Core fixture.
+// On a phone, in Traditional Chinese, the PDF fits the screen.
 // Nothing the viewer does is refused by the page's policy.
 
 const tag = Date.now().toString(36)
@@ -420,7 +422,7 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
     await expectNoneRefused()
   })
 
-  test('a file a chat message carries is shown as its PDF too, and its author sends a failed one back', async ({
+  test('a Core v0.2.1 chat attachment keeps its historical rendition and opens only in the read-only legacy archive', async ({
     page,
   }) => {
     const expectNoneRefused = await watchPolicy(page)
@@ -428,7 +430,8 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
     const I = d.actors.instructor.token
     const Y = d.actors.yuki.token
     const C = `/v1/courses/${d.course.id}`
-    // A course agent of this run's, hosted on AIshie (the test plays the runtime), which Yuki asks.
+    // Core writes in this test only arrange a v0.2.1 historical fixture. They
+    // are not a new chat path; the page under test is the read-only archive.
     const name = `Graphs tutor ${tag}`
     const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
     try {
@@ -467,29 +470,10 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
         await runtime.stop()
       }
 
-      await signIn(page, d.actors.yuki)
-      await page.goto(coursePath())
-      const panel = page.locator('#chat-panel')
-      if (!(await panel.isVisible())) await page.locator('#chat-panel-toggle').click()
-      await expect(panel).toBeVisible()
-      const history = panel.getByRole('button', { name: 'History', exact: true })
-      const row = panel.locator('.hist-row').filter({ hasText: title })
-      await expect(async () => {
-        if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
-        await expect(row).toBeVisible({ timeout: 5_000 })
-      }).toPass({ timeout: 30_000 })
-      await row.click()
-      const card = panel.locator('.msg-file').filter({ hasText: slides.name })
-      await expect(card.locator('.msg-file__pdf')).toHaveCount(0)
-      await card.getByRole('button', { name: new RegExp(`^Preview “${slides.name}”`) }).click()
-      const dialog = viewer(page, slides.name)
-      await expect(dialog.locator('.file-viewer__note-text')).toHaveText(
-        'The conversion failed. Download the file to open it.',
-      )
-      // Hers to send back: she sent it.
-      await dialog.getByRole('button', { name: 'Try again' }).click()
-      await expect(dialog.locator('.file-viewer__note-title')).toHaveText('Converting to PDF…')
-
+      // Finish arranging the old record: its author queued the failed rendition
+      // again and the runtime converted it. None of these writes is done by the
+      // legacy reader under test.
+      await done(Y, `${C}/conversation-attachments/${attachment.id}/rendition/retry`, {})
       runtime = await playRuntime()
       try {
         const claim = await runtime.claim((c) => c.attachment_id === attachment.id)
@@ -497,12 +481,39 @@ test.describe.serial('Office files previewed as the PDF the server makes', () =>
       } finally {
         await runtime.stop()
       }
-      await expectPdfDrawn(dialog, 'Page 1: a graph is vertices and edges.')
-      await expect(dialog.locator('.file-viewer__meta')).toContainText('PDF of one page')
-      const download = page.waitForEvent('download')
-      await dialog.getByRole('button', { name: `Download PDF “${pdfName(slides)}”` }).click()
-      expect((await download).suggestedFilename()).toBe(pdfName(slides))
-      await photograph(page, 'rendition-chat')
+      const historical = await call(Y, 'GET', `${C}/conversations/${opened.conversation_id}/messages`)
+      const oldFile = historical.body.result.messages[0].attachments[0] as {
+        id: string
+        rendition: { state: string; page_count?: number }
+      }
+      expect(oldFile.id).toBe(attachment.id)
+      expect(oldFile.rendition).toMatchObject({ state: 'done', page_count: 1 })
+
+      // The old Core id has one unambiguous read-only address. It never opens
+      // the AR panel and never becomes an AR conversation id.
+      const arReads: string[] = []
+      page.on('request', (r) => {
+        if (r.url().includes('/runtime/api/v1/') && r.url().includes(opened.conversation_id)) arReads.push(r.url())
+      })
+      await signIn(page, d.actors.yuki)
+      await page.goto(coursePath(`legacy-conversations/${opened.conversation_id}`))
+      const archive = page.locator('.legacy-chat__detail')
+      await expect(archive).toBeVisible()
+      await expect(archive).toHaveAttribute('data-legacy-conversation-id', opened.conversation_id)
+      await expect(archive).toContainText(title)
+      await expect(archive).toContainText('Are these right?')
+      await expect(archive.locator('.legacy-chat__attachment')).toContainText(slides.name)
+      await expect(archive.locator('.legacy-chat__notice').first()).toContainText('Read-only archive')
+      await expect(archive.locator('.legacy-chat__notice.is-bottom')).toHaveText(
+        'This legacy conversation cannot be replied to.',
+      )
+      await expect(page.locator('#chat-panel')).toHaveCount(0)
+      await expect(archive.locator('textarea')).toHaveCount(0)
+      await expect(archive.locator('.msg-file')).toHaveCount(0)
+      await expect(archive.getByRole('button', { name: 'Try again' })).toHaveCount(0)
+      await expect(archive.getByRole('button', { name: /Download PDF/ })).toHaveCount(0)
+      expect(arReads).toEqual([])
+      await photograph(page, 'rendition-legacy-chat')
     } finally {
       // A person may have five agents at once: this run's is suspended, for the specs after it.
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})

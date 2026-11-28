@@ -1,0 +1,25 @@
+// 獨立標示、唯讀的v0.2.1舊對話紀錄。
+export default {
+  title: '舊對話（唯讀）',
+  subtitle: 'v0.2.1的歷史對話。可閱讀訊息及開啟附件；新聊天會分開保存。',
+  show: '顯示舊對話',
+  hide: '隱藏舊對話',
+  readOnly: '此區只供閱讀，不能發問、撤回訊息、建立草稿或接收即時回答。',
+  loading: '正在載入舊對話…',
+  error: '暫時無法讀取舊對話，請重試。',
+  retry: '重試',
+  empty: '沒有舊對話。',
+  untitled: '未命名對話',
+  loadMore: '載入更多舊對話',
+  back: '返回舊對話列表',
+  messages: {
+    loading: '正在載入訊息…',
+    empty: '這段對話沒有可顯示的訊息。',
+    older: '載入較早的訊息',
+    withdrawn: '此訊息已撤回。',
+    attachments: '附件',
+    openAttachment: '開啟附件{name}',
+    attachmentError: '暫時無法開啟附件，請重試。',
+    readOnly: '此舊對話不設回覆。',
+  },
+}

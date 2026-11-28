@@ -31,6 +31,8 @@ import '@/styles/chat-prose.css'
 import { retractedBy } from './chat'
 import ChatMessageFiles from './ChatMessageFiles.vue'
 import ChatMessageSources from './ChatMessageSources.vue'
+import ArMessageSources from './ArMessageSources.vue'
+import { arMessageMeta } from './arModel'
 
 const props = defineProps<{
   message: ConversationMessage
@@ -71,6 +73,7 @@ const sources = computed(() =>
   props.message.retracted || props.fromOpener || !props.courseId ? null : (props.message.sources ?? null),
 )
 /** The name over a run of messages: the agent's always; the person's only when it is not the caller's own. */
+const ar = computed(() => arMessageMeta(props.message))
 const showAuthor = computed(() => !props.grouped && (!props.fromOpener || !props.mine))
 
 const copied = ref(false)
@@ -121,6 +124,10 @@ async function copy() {
       <MarkdownView v-else-if="!fromOpener" :source="message.body" code-tools class="chat-msg__markdown chat-prose" />
       <p v-else class="chat-msg__text">{{ message.body }}</p>
     </div>
+    <p v-if="ar.status === 'pending'" class="chat-msg__lifecycle" role="status">{{ t('chat.message.pending') }}</p>
+    <p v-else-if="ar.status === 'failed' || ar.error" class="chat-msg__lifecycle is-failed" role="status">
+      {{ t('chat.message.failed') }}
+    </p>
     <ChatMessageFiles
       v-if="files.length && !fromOpener"
       class="chat-msg__files is-after"
@@ -128,7 +135,8 @@ async function copy() {
       :files="files"
       :retry-renditions="canRetract"
     />
-    <ChatMessageSources v-if="sources" :course-id="courseId!" :sources="sources" />
+    <ArMessageSources v-if="(ar.sources.length || ar.sourcesStated) && courseId" :course-id="courseId" :sources="ar.sources" />
+    <ChatMessageSources v-else-if="sources" :course-id="courseId!" :sources="sources" />
     <footer class="chat-msg__foot">
       <TimeText :value="message.created_at" class="chat-msg__time" />
       <template v-if="!message.retracted">
@@ -256,6 +264,14 @@ async function copy() {
   margin-top: 4px;
   font-size: var(--app-text-sm);
   white-space: pre-wrap;
+}
+.chat-msg__lifecycle {
+  margin: 4px 2px 0;
+  color: var(--app-ink-3);
+  font-size: var(--app-text-xs);
+}
+.chat-msg__lifecycle.is-failed {
+  color: var(--el-color-danger);
 }
 /* Under the message: its time and what may be done with it. */
 .chat-msg__foot {

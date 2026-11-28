@@ -27,6 +27,7 @@ import { HISTORY_GROUPS, historyGroup, historyMatches, stateOf, type HistoryGrou
 import { useNow } from '@/composables/useNow'
 import { courseLabel } from './seat'
 import { LIST_POLL_MS } from './useConversationList'
+import LegacyConversationView from './LegacyConversationView.vue'
 
 const props = withDefaults(defineProps<{ active?: boolean }>(), { active: true })
 const emit = defineEmits<{ open: [courseId: string, conversationId: string] }>()
@@ -156,6 +157,9 @@ function more() {
       <LoadMore :has-more="!!list?.hasMore" :loading="!!list?.loadingMore" @more="more" />
       <p v-if="list?.moreError" class="chat-history__hint" role="alert">{{ t('chat.history.moreFailed') }}</p>
     </AsyncState>
+
+    <!-- Separate Core v0.2.1 archive: its ids never enter the AR conversation above. -->
+    <LegacyConversationView :course-id="chat.historyScope === 'course' ? chat.courseId : null" />
   </div>
 </template>
 

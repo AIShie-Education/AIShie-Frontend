@@ -22,7 +22,7 @@ import type { DocumentFile, MessageAttachment, TextVersion } from '@/api/types'
 import { downloadDocumentFile } from '@/utils/documentFiles'
 import type { Rendition } from '@/utils/rendition'
 import { readWholeText } from '@/views/course/materials/components/textVersion'
-import { downloadAttachment } from '@/components/chat/attachments'
+import { attachmentObjectUrl, downloadAttachment } from '@/components/chat/attachments'
 
 /** A file the viewer shows. */
 export interface PreviewFile {
@@ -184,7 +184,7 @@ export function documentPreviewFiles(
 export function attachmentPreviewFiles(
   courseId: string,
   files: MessageAttachment[],
-  opts: PreviewFileOptions = {},
+  _opts: PreviewFileOptions = {},
 ): PreviewFile[] {
   return files.map((f) => ({
     key: f.id,
@@ -193,17 +193,12 @@ export function attachmentPreviewFiles(
     byteSize: f.byte_size,
     date: f.created_at ?? null,
     url: async () => {
-      const got = await read('conversation.attachment', { course_id: courseId, attachment_id: f.id })
-      return got.download_url
+      const url = await attachmentObjectUrl(courseId, f.id)
+      if (!url) throw new Error('the attachment could not be read from the agent runtime')
+      return url
     },
-    download: () => downloadAttachment(courseId, f.id),
-    rendition: f.rendition ?? null,
-    readRendition: async (signal) =>
-      (await read('conversation.attachment', { course_id: courseId, attachment_id: f.id }, { signal })).rendition ??
-      null,
-    retryRendition:
-      opts.retry && f.rendition
-        ? () => write('conversation.rendition_retry', { course_id: courseId, attachment_id: f.id })
-        : undefined,
+    download: () => downloadAttachment(courseId, f.id, f.filename),
+    // AR chat attachments are image/text bytes only: no Office rendition is requested or retried.
+    rendition: null,
   }))
 }

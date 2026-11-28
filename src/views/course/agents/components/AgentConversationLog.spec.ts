@@ -3,7 +3,7 @@ import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import * as icons from '@element-plus/icons-vue'
-import { defineComponent, h } from 'vue'
+import { defineComponent, h, inject, provide } from 'vue'
 import type { ConversationView } from '@/api/types'
 
 const reads: { tool: string; args: Record<string, unknown> }[] = []
@@ -74,8 +74,52 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  const asAr = (c: ConversationView) => ({
+    id: c.id,
+    course_id: 'k1',
+    agent_id: c.respondent.member_id,
+    title: c.title ?? '',
+    state: 'answered' as const,
+    revision: 1,
+    created_at: c.created_at,
+    updated_at: c.last_message_at ?? c.created_at,
+    last_activity_at: c.last_message_at ?? c.created_at,
+  })
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async () => ({
+        agents: [
+          { agent_id: 'tutor', display_name: 'Course tutor', answers_course: true, answer_level: 'autonomous' },
+          { agent_id: 'other', display_name: 'Other agent', answers_course: true, answer_level: 'autonomous' },
+        ],
+      })),
+      list: vi.fn(async (_course: string, _opts: { after?: string } = {}) => ({
+        conversations: list.map(asAr),
+        next: null,
+      })),
+      messages: vi.fn(async (_course: string, id: string) => {
+        const c = list.find((x) => x.id === id)!
+        return {
+          conversation: asAr(c),
+          more: false,
+          draft: null,
+          messages: [
+            { id: 'm1', conversation_id: id, seq: 1, role: 'user' as const, status: 'posted' as const, body: 'When is it due?', created_at: c.created_at },
+            { id: 'm2', conversation_id: id, seq: 2, role: 'assistant' as const, status: 'posted' as const, body: 'On Friday.', created_at: c.created_at },
+          ],
+        }
+      }),
+      stream: vi.fn(() => new Promise<void>(() => undefined)),
+    },
+  }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
+const { runtimeChat } = await import('@/api/runtimeChat')
 const { default: AgentConversationLog } = await import('./AgentConversationLog.vue')
 
 const Passthrough = (name: string) =>
@@ -86,6 +130,34 @@ const Passthrough = (name: string) =>
       () =>
         h('span', slots.default?.() ?? slots.reference?.()),
   })
+
+const CommandDropdown = defineComponent({
+  name: 'ElDropdown',
+  emits: ['command'],
+  setup(_, { slots, emit }) {
+    provide('legacy-log-test-dropdown', (command: unknown) => emit('command', command))
+    return () =>
+      h('div', [slots.default?.(), h('div', { class: 'chat-pane__menu', role: 'menu' }, slots.dropdown?.())])
+  },
+})
+const CommandDropdownItem = defineComponent({
+  name: 'ElDropdownItem',
+  props: { command: { type: String, default: undefined }, disabled: Boolean },
+  setup(props, { slots }) {
+    const command = inject<(command: unknown) => void>('legacy-log-test-dropdown')
+    return () =>
+      h(
+        'button',
+        {
+          type: 'button',
+          role: 'menuitem',
+          disabled: props.disabled,
+          onClick: () => props.command && command?.(props.command),
+        },
+        slots.default?.(),
+      )
+  },
+})
 
 beforeEach(() => {
   window.matchMedia = ((query: string) => ({
@@ -119,7 +191,7 @@ afterEach(() => {
 })
 
 describe('AgentConversationLog', () => {
-  it('lists the agent’s conversations that its reader oversees, newest first, and shows one read-only', async () => {
+  it('uses Core overseer rows rather than AR own conversations, and shows one read-only', async () => {
     const w = mount(AgentConversationLog, {
       props: { modelValue: true, courseId: 'k1', agent: { id: 'tutor', display_name: 'Course tutor' } },
       attachTo: document.body,
@@ -135,31 +207,41 @@ describe('AgentConversationLog', () => {
       },
     })
     await flushPromises()
-    // Core is asked for this agent's conversations alone.
-    expect(reads[0]).toEqual({
-      tool: 'conversation.list',
-      args: { course_id: 'k1', as: 'overseer', limit: 100, respondent_member_id: 'tutor' },
-    })
+    expect(reads).toEqual([
+      {
+        tool: 'conversation.list',
+        args: {
+          course_id: 'k1',
+          as: 'overseer',
+          respondent_member_id: 'tutor',
+          after: undefined,
+          limit: 50,
+        },
+      },
+    ])
+    expect(runtimeChat.list).not.toHaveBeenCalled()
     const drawer = document.body.querySelector('.agent-log')!
     expect(drawer.textContent).toContain('Conversation log: Course tutor')
     const rows = [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
     expect(rows.map((r) => r.querySelector('.log-row__name')!.textContent)).toEqual(['Ken', 'Yuki'])
-    // Each opens its conversation, as the › at its end says: a row between rules, without a box to say it.
     expect(rows.map((r) => !!r.querySelector('.log-row__go'))).toEqual([true, true])
     expect(drawer.textContent).not.toContain('Other agent')
 
     rows[1]!.click()
     await flushPromises()
-    expect(drawer.querySelector('.chat-pane__name')!.textContent!.trim()).toBe('Yuki → Course tutor')
-    expect(drawer.querySelector('.chat-pane textarea')).toBeNull()
-    expect(drawer.textContent).toContain('You are reading this as course staff.')
-    // Someone who decides actions may withdraw a message.
-    expect([...drawer.querySelectorAll('.chat-msg__retract')].map((b) => b.textContent!.trim())).toEqual([
-      'Withdraw',
-      'Withdraw',
-    ])
+    expect(drawer.querySelector('.legacy-chat__detail-head h2')!.textContent).toBe('About c1')
+    expect(drawer.textContent).toContain('When is it due?')
+    expect(drawer.textContent).toContain('On Friday.')
+    expect(drawer.querySelector('.chat-msg .chat-msg__body')).not.toBeNull()
+    expect(drawer.querySelector('.chat-pane__more')!.getAttribute('aria-label')).toBe('Conversation options')
+    expect(drawer.querySelector('textarea')).toBeNull()
+    expect(drawer.textContent).toContain('Read-only archive')
+    expect(reads).toContainEqual(
+      expect.objectContaining({ tool: 'conversation.messages', args: expect.objectContaining({ course_id: 'k1', conversation_id: 'c1' }) }),
+    )
+    expect(reads).toContainEqual({ tool: 'conversation.get', args: { course_id: 'k1', conversation_id: 'c1' } })
+    expect(runtimeChat.messages).not.toHaveBeenCalled()
     expect(w.emitted('update:modelValue')).toBeUndefined()
-    // Staff reading it mark nothing read.
     expect(writes).toEqual([])
   })
 
@@ -199,7 +281,7 @@ describe('AgentConversationLog', () => {
     })
     await flushPromises()
     const drawer = document.body.querySelector('.agent-log')!
-    const conversation = () => drawer.querySelector('.chat-pane__name')
+    const conversation = () => drawer.querySelector('.legacy-chat__detail')
     const rows = () => [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
     await settled(() => expect(depth()).toBe(1))
 
@@ -240,6 +322,63 @@ describe('AgentConversationLog', () => {
     expect(depth()).toBe(0)
   })
 
+  it('shows Core visible_to in the readers dialog and back closes it before the conversation and log', async () => {
+    const depth = () => (history.state as { aishieOverlay?: { depth: number } } | null)?.aishieOverlay?.depth ?? 0
+    const w = mount(AgentConversationLog, {
+      props: {
+        modelValue: true,
+        'onUpdate:modelValue': (v: boolean) => w.setProps({ modelValue: v }),
+        courseId: 'k1',
+        agent: { id: 'tutor', display_name: 'Course tutor' },
+      },
+      attachTo: document.body,
+      global: {
+        plugins: [i18n, ElementPlus],
+        components: icons,
+        stubs: {
+          ElTooltip: Passthrough('ElTooltip'),
+          ElPopover: Passthrough('ElPopover'),
+          ElDropdown: CommandDropdown,
+          ElDropdownMenu: Passthrough('ElDropdownMenu'),
+          ElDropdownItem: CommandDropdownItem,
+          RouterLink: true,
+        },
+      },
+    })
+    await flushPromises()
+    await vi.waitFor(() => expect(depth()).toBe(1))
+    const drawer = document.body.querySelector('.agent-log')!
+    ;(drawer.querySelectorAll<HTMLButtonElement>('.log-row')[1]!).click()
+    await flushPromises()
+    await vi.waitFor(() => expect(depth()).toBe(2))
+    expect(drawer.querySelector('.chat-msg')).not.toBeNull()
+
+    ;(drawer.querySelector('.chat-pane__more') as HTMLElement).click()
+    await flushPromises()
+    const item = [...document.body.querySelectorAll<HTMLElement>('.chat-pane__menu [role="menuitem"]')].find(
+      (el) => el.textContent?.includes('Who can read this'),
+    )!
+    item.click()
+    await flushPromises()
+    const readers = document.body.querySelector('.chat-pane__readers')!
+    expect(readers.textContent).toContain('Who can read this conversation')
+    expect(readers.textContent).toContain('The two taking part')
+    expect(readers.textContent).not.toMatch(/DeepSeek|OpenAI|Anthropic/)
+    await vi.waitFor(() => expect(depth()).toBe(3))
+
+    history.back()
+    await vi.waitFor(() => expect(depth()).toBe(2))
+    expect((readers.closest('.el-overlay') as HTMLElement).style.display).toBe('none')
+    expect(drawer.querySelector('.legacy-chat__detail')).not.toBeNull()
+    history.back()
+    await vi.waitFor(() => expect(depth()).toBe(1))
+    expect(drawer.querySelectorAll('.log-row')).toHaveLength(2)
+    expect(drawer.querySelector('.legacy-chat__detail')).toBeNull()
+    history.back()
+    await vi.waitFor(() => expect(depth()).toBe(0))
+    expect(w.props('modelValue')).toBe(false)
+  })
+
   it('reads another agent’s conversations afresh when it shows that agent', async () => {
     const w = mount(AgentConversationLog, {
       props: { modelValue: true, courseId: 'k1', agent: { id: 'tutor', display_name: 'Course tutor' } },
@@ -259,7 +398,19 @@ describe('AgentConversationLog', () => {
     reads.length = 0
     await w.setProps({ agent: { id: 'other', display_name: 'Other agent' } })
     await flushPromises()
-    expect(reads.map((r) => r.args.respondent_member_id)).toEqual(['other'])
+    expect(reads).toEqual([
+      {
+        tool: 'conversation.list',
+        args: {
+          course_id: 'k1',
+          as: 'overseer',
+          respondent_member_id: 'other',
+          after: undefined,
+          limit: 50,
+        },
+      },
+    ])
+    expect(runtimeChat.list).not.toHaveBeenCalled()
     const drawer = document.body.querySelector('.agent-log')!
     expect([...drawer.querySelectorAll('.log-row__name')].map((r) => r.textContent)).toEqual(['Ken'])
     expect(drawer.textContent).toContain('Conversation log: Other agent')

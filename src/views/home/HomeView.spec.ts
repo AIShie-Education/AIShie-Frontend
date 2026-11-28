@@ -97,6 +97,10 @@ async function home(n: number, extra: (i: number) => Record<string, unknown> = (
 
 enableAutoUnmount(afterEach)
 beforeEach(() => {
+  // The fixtures are due in two days; keep them inside the same week rather
+  // than making this test fail on Fridays, weekends or DST boundaries.
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2026-09-23T12:00:00Z'))
   vi.stubGlobal('matchMedia', (media: string) => ({
     matches: false,
     media,
@@ -106,6 +110,7 @@ beforeEach(() => {
   answer()
 })
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   read.mockReset()
   setLocale('en')

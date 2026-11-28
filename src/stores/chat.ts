@@ -5,10 +5,10 @@
 // caller's conversations across their courses, or one of them. Every
 // conversation in it is in a course and with an agent.
 //
-// Core lists the caller's conversations in every course, the latest activity
-// first, each saying whether its agent has written since the caller last
-// read it (me.conversations), and keeps what they have read
-// (conversation.mark_read): the same on every device. The history is that
+// AR lists the caller's own conversations, the latest activity first. The
+// history reads each known course from AR and merges them; the pane clears a
+// conversation's local unread indicator as it is read. No Core conversation
+// tool or Core chat storage is used. The history is that
 // list, of one course or of all of them, read a page at a time. Its first
 // page is read again now and then (the chat panel does, open or not), so
 // that an answer is counted on the panel's button until it is read. What is
@@ -16,11 +16,13 @@
 // in.
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
-import { ApiError, read, type ToolIn, type ToolOut } from '@/api/http'
+import { ApiError } from '@/api/http'
+import { runtimeChat, type ChatConversation } from '@/api/runtimeChat'
 import type { MyConversation, Respondent } from '@/api/types'
 import { toApiError } from '@/composables/useAsync'
 import { loadFrame, loadLastCourse, saveFrame, saveLastCourse } from '@/components/chat/panel'
 import { askableCourses } from '@/components/chat/seat'
+import { chatHistoryView } from '@/components/chat/arModel'
 import { useSessionStore } from './session'
 
 /** What the panel shows: a new conversation (choosing its agent, then writing), the history, or one conversation. */
@@ -114,7 +116,7 @@ export const useChatStore = defineStore('chat', () => {
   })
   const screen = ref<ChatScreen>('new')
   /** The conversation shown (or last shown), and its course. */
-  const conversation = ref<{ courseId: string; id: string } | null>(null)
+  const conversation = ref<{ courseId: string; id: string; respondent?: Respondent } | null>(null)
   /** The agent a new conversation is being written to, in a course. */
   const draft = ref<{ courseId: string; agent: Respondent } | null>(null)
   /** The history lists the course asked in, or every course. */
@@ -163,8 +165,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /** Shows a conversation (and the panel, when opened from elsewhere). */
-  function showConversation(id: string, conversationId: string, opts: { open?: boolean } = {}) {
-    conversation.value = { courseId: id, id: conversationId }
+  function showConversation(id: string, conversationId: string, opts: { open?: boolean; respondent?: Respondent } = {}) {
+    conversation.value = { courseId: id, id: conversationId, respondent: opts.respondent }
     if (courseIds.value.includes(id)) {
       chosenCourseId.value = id
       useCourse(id)
@@ -212,10 +214,12 @@ export const useChatStore = defineStore('chat', () => {
   let marks = 0
   const markedAt = new Map<string, number>()
 
-  /**
-   * What a page of me.conversations says of each conversation in it, unless
-   * the caller has read it here since that page was asked for.
-   */
+  /** The latest activity each AR read has brought, and the activity read on screen. */
+  const activityOf = new Map<string, string>()
+  const readActivity = new Map<string, string>()
+  const coursesRead = new Set<string>()
+
+  /** Notes a new answer without calling a Core read/mark tool. The DTO has no cross-device read marker. */
   function noteUnread(list: readonly MyConversation[], askedAt: number) {
     let next: Map<string, boolean> | null = null
     for (const c of list) {
@@ -227,18 +231,50 @@ export const useChatStore = defineStore('chat', () => {
     if (next) unreadOf.value = next
   }
 
-  /** Reads a page of the caller's conversations (me.conversations), and notes what is unread in it. */
-  async function readMine(args: ToolIn<'me.conversations'>): Promise<ToolOut<'me.conversations'>> {
-    const g = generation
-    const askedAt = marks
-    const out = await read('me.conversations', args)
-    if (g === generation) noteUnread(out.conversations ?? [], askedAt)
-    return out
+  /** One course's latest AR page, enriched with the course/agent names the chat already shows. */
+  async function readCourse(courseId: string, limit: number) {
+    const membership = session.liveMemberships.find((m) => m.course_id === courseId)
+    if (!membership) return { rows: [] as MyConversation[], more: false }
+    const [out, offered] = await Promise.all([
+      runtimeChat.list(courseId, { limit }),
+      runtimeChat.agents(courseId).catch(() => ({ agents: [] })),
+    ])
+    const agents = new Map((offered.agents ?? []).map((a) => [a.agent_id, a]))
+    const wasRead = coursesRead.has(courseId)
+    const rows = (out.conversations ?? []).map((c: ChatConversation) => {
+      const id = c.id
+      const previous = activityOf.get(id)
+      // A conversation first appearing on a later read is new activity too.
+      let unread = unreadOf.value.get(id) === true || (c.state === 'answered' && wasRead && previous !== c.last_activity_at)
+      if (readActivity.get(id) === c.last_activity_at) unread = false
+      activityOf.set(id, c.last_activity_at)
+      return chatHistoryView(c, membership, agents.get(c.agent_id), unread)
+    })
+    coursesRead.add(courseId)
+    return { rows, more: !!out.next }
   }
 
-  /** Core has recorded that the caller read a conversation (conversation.mark_read): it is not unread. */
+  /** Reads and merges the caller's AR conversations, one course or every membership's course. */
+  async function readMine(args: { course_id?: string; limit: number }) {
+    const g = generation
+    const askedAt = marks
+    const ids = args.course_id
+      ? [args.course_id]
+      : [...new Set(session.liveMemberships.map((m) => m.course_id))]
+    const pages = await Promise.all(ids.map((id) => readCourse(id, args.limit)))
+    const conversations = pages
+      .flatMap((p) => p.rows)
+      .sort((a, b) => Date.parse(b.last_activity_at) - Date.parse(a.last_activity_at))
+      .slice(0, args.limit)
+    if (g === generation) noteUnread(conversations, askedAt)
+    return { conversations, next: pages.some((p) => p.more) ? ('more' as string | null) : null }
+  }
+
+  /** The conversation on screen has been read locally; no Core write is sent. */
   function markedRead(conversationId: string) {
     markedAt.set(conversationId, ++marks)
+    const activity = activityOf.get(conversationId)
+    if (activity) readActivity.set(conversationId, activity)
     if (!unreadOf.value.get(conversationId)) return
     const next = new Map(unreadOf.value)
     next.set(conversationId, false)
@@ -292,27 +328,21 @@ export const useChatStore = defineStore('chat', () => {
     const pages = pagesOf.get(key) ?? 1
     const current = () => g === generation && historyReads.get(key) === mine
     try {
-      const all: MyConversation[] = []
+      const out = await readMine({ ...courseArg, limit: HISTORY_PAGE * pages })
+      // One that moved to the top while the courses were read is listed once.
       const seen = new Set<string>()
-      let after: string | undefined
-      for (let i = 0; i < pages; i++) {
-        const out = await readMine({ ...courseArg, limit: HISTORY_PAGE, ...(after ? { after } : {}) })
-        // One that moved to the top while the pages were read is listed where it was first read.
-        for (const c of out.conversations ?? []) {
-          if (seen.has(c.conversation_id)) continue
-          seen.add(c.conversation_id)
-          all.push(c)
-        }
-        after = out.next ?? undefined
-        if (!after) break
-      }
+      const all = out.conversations.filter((c) => {
+        if (seen.has(c.conversation_id)) return false
+        seen.add(c.conversation_id)
+        return true
+      })
       if (!current()) return
       setHistory(key, {
         items: all.filter(withAgent),
         loading: false,
         loaded: true,
         error: null,
-        hasMore: !!after,
+        hasMore: !!out.next,
         loadingMore: false,
         moreError: null,
       })
@@ -353,6 +383,9 @@ export const useChatStore = defineStore('chat', () => {
       lastCourse.value = id ? loadLastCourse(id) : null
       unreadOf.value = new Map()
       markedAt.clear()
+      activityOf.clear()
+      readActivity.clear()
+      coursesRead.clear()
       histories.value = {}
       pagesOf.clear()
       historyReads.clear()

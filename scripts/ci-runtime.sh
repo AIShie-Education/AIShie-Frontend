@@ -17,6 +17,7 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 CORE_DIR=${CORE_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aishie-ci-core}
 DIR=${RUNTIME_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aishie-ci-runtime}
 PORT=${RUNTIME_API_PORT:-9091}
+MODEL_PORT=${E2E_MODEL_PORT:-9092}
 CONTAINER=${RUNTIME_CONTAINER:-aishie-ci-runtime}
 IMAGE=${RUNTIME_IMAGE:-$(grep -v -e '^#' -e '^[[:space:]]*$' "$here/.github/runtime-image" | tail -n 1)}
 DATABASE_URL=${RUNTIME_DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:5432/aishie_runtime_e2e?sslmode=disable}
@@ -39,6 +40,16 @@ maint=${base%/*}/postgres$query
 [[ $dbname =~ ^[a-z_][a-z0-9_]*$ ]] || fail "database name is not a plain lower-case name: $dbname"
 [ "$dbname" != postgres ] || fail "use a scratch runtime database, not postgres"
 
+unowned_agent() {
+  curl -fsS --max-time 30 \
+    -H "Authorization: Bearer $E2E_ROOT_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: ci-runtime-agent-$(openssl rand -hex 16)" \
+    --data '{"kind":"agent","display_name":"E2E unowned course bot","hosting":"runtime"}' \
+    "$E2E_CORE_URL/v1/actors" > "$DIR/unowned-agent.json"
+  node -e 'const fs=require("fs"); const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(r.status!=="executed"||typeof r.result?.actor_id!=="string") process.exit(1); process.stdout.write(r.result.actor_id)' "$DIR/unowned-agent.json"
+}
+
 credential() {
   curl -fsS --max-time 30 \
     -H "Authorization: Bearer $E2E_ROOT_TOKEN" \
@@ -54,18 +65,69 @@ start() {
   local rc=0
   curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/runtime/api/v1/info" || rc=$?
   [ "$rc" = 7 ] || fail "something already listens on 127.0.0.1:$PORT"
+  # Root registers an agent with no owner; AR's owner-only API is never used
+  # for it. The token manager hosts this operator-owned YAML agent normally.
+  mkdir -p "$DIR"
+  local unowned
+  unowned=$(unowned_agent) || fail "Core did not register the unowned runtime agent"
   mkdir -p "$DIR/secrets/kek"
   : > "$DIR/runtime.log"
-  # No static agents: the Playwright setup hosts one through the API instead.
-  printf 'runtime: {}\n' > "$DIR/runtime.yaml"
+  # No static agents: tests host them through the API. One operator-owned,
+  # local OpenAI-compatible offer makes the real TS Runner deterministic.
+  mkdir -p "$DIR/secrets/school/keys"
+  (umask 077 && printf 'e2e-not-a-secret\n' > "$DIR/secrets/school/keys/e2e")
+  printf '[]\n' > "$DIR/model-rules.json"
+  cat > "$DIR/runtime.yaml" <<EOF
+runtime:
+  tenants:
+    ten_e2e:
+      per_day: {answers: 1000}
+  school:
+    offers:
+      - id: e2e
+        label: E2E deterministic model
+        adapter: openai_chat
+        provider: openai
+        model: e2e-model
+        base_url: http://127.0.0.1:$MODEL_PORT/v1
+        key_ref: secret://school/keys/e2e
+        capabilities: {file_input: true}
+EOF
+  cat > "$DIR/unowned-agent.yaml" <<EOF
+agent:
+  id: e2e-unowned
+  display_name: E2E unowned course bot
+  tenant_id: ten_e2e
+  core:
+    base_url: $E2E_CORE_URL
+    agent_id: $unowned
+  model:
+    adapter: openai_chat
+    provider: openai
+    model: e2e-model
+    offer: e2e
+    base_url: http://127.0.0.1:$MODEL_PORT/v1
+    key_ref: secret://school/keys/e2e
+    key_source: school
+  budgets:
+    per_agent_day: {answers: 100}
+    per_asker_day: {answers: 20}
+  tools:
+    writes: false
+EOF
   (umask 077 && openssl rand -base64 32 > "$DIR/secrets/kek/v1")
+  local model_rc=0
+  curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$MODEL_PORT/v1/chat/completions" || model_rc=$?
+  [ "$model_rc" = 7 ] || fail "something already listens on 127.0.0.1:$MODEL_PORT"
+  E2E_MODEL_PORT=$MODEL_PORT E2E_MODEL_RULES="$DIR/model-rules.json" \
+    node "$here/scripts/ci-model-server.mjs" > "$DIR/model.log" 2>&1 &
+  echo "$!" > "$DIR/model.pid"
 
   local token
   token=$(credential) || fail "Core did not issue the runtime credential"
   rm -f "$DIR/credential.json"
   if in_actions; then echo "::add-mask::$token"; fi
   export E2E_SERVICE_CREDENTIAL=$token
-  unset token
 
   if [ "$(psql -X -At -d "$maint" -c "SELECT 1 FROM pg_database WHERE datname = '$dbname'")" != 1 ]; then
     psql -X -q -v ON_ERROR_STOP=1 -d "$maint" -c "CREATE DATABASE \"$dbname\""
@@ -80,9 +142,11 @@ start() {
   docker run -d --name "$CONTAINER" --network host --user "$(id -u):$(id -g)" \
     -v "$DIR/secrets:/secrets" \
     -v "$DIR/runtime.yaml:/config/runtime.yaml:ro" \
-    -e 'CONFIG=/config/runtime.yaml' \
+    -v "$DIR/unowned-agent.yaml:/config/unowned-agent.yaml:ro" \
+    -e 'CONFIG=/config/runtime.yaml,/config/unowned-agent.yaml' \
     -e DATABASE_URL \
     -e 'KMS_KEY_ID=local:/secrets/kek/v1' \
+    -e 'SECRETS_DIR=/secrets' \
     -e "CORE_BASE_URL=$E2E_CORE_URL" \
     -e "CORE_BASE_URL_ALLOWLIST=$E2E_CORE_URL" \
     -e "PUBLIC_URL=$E2E_CORE_URL" \
@@ -106,9 +170,18 @@ start() {
   done
   (
     umask 077
-    printf "export E2E_RUNTIME_URL='%s'\n" "http://127.0.0.1:$PORT" >> "$CORE_DIR/env"
+    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\nexport E2E_UNOWNED_AGENT_ID='%s'\nexport E2E_SERVICE_CREDENTIAL='%s'\n" \
+      "http://127.0.0.1:$PORT" "$DIR/model-rules.json" "$unowned" "$token" >> "$CORE_DIR/env"
   )
-  if in_actions; then printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT" >> "$GITHUB_ENV"; fi
+  if in_actions; then
+    {
+      printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT"
+      printf 'E2E_MODEL_RULES=%s\n' "$DIR/model-rules.json"
+      printf 'E2E_UNOWNED_AGENT_ID=%s\n' "$unowned"
+      printf 'E2E_SERVICE_CREDENTIAL=%s\n' "$token"
+    } >> "$GITHUB_ENV"
+  fi
+  unset token
   echo "Runtime is up on http://127.0.0.1:$PORT; its scratch database is $dbname"
 }
 
@@ -124,7 +197,13 @@ stop() {
     psql -X -q -d "$maint" -c "DROP DATABASE IF EXISTS \"$dbname\" WITH (FORCE)"
     rm -f "$DIR/created-db"
   fi
-  rm -f "$DIR/credential.json"
+  if [ -f "$DIR/model.pid" ]; then
+    local model_pid
+    model_pid=$(cat "$DIR/model.pid")
+    kill "$model_pid" >/dev/null 2>&1 || true
+    rm -f "$DIR/model.pid"
+  fi
+  rm -f "$DIR/credential.json" "$DIR/unowned-agent.json"
 }
 
 case ${1:-} in

@@ -442,8 +442,8 @@ export function subjectRoute(e: CourseEvent, courseId: string, reach: Reach): Ro
     case 'component':
       return { name: 'course-scheme', params: { courseId } }
     case 'conversation':
-      // Opens the chat on it, beside the page (router: course-conversations). Its news is its
-      // participants' alone, so whoever reads it here may read it there.
+      // Core event ids take the compatibility route to the read-only legacy
+      // reader (router: course-conversations), not the AR chat store.
       return id ? { name: 'course-conversations', params: { courseId, conversationId: id } } : null
     case 'groupSet':
       return id ? { name: 'course-group-set', params: { courseId, setId: id } } : null

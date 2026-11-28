@@ -1,0 +1,25 @@
+// The separately labelled, read-only conversation archive from v0.2.1.
+export default {
+  title: 'Legacy conversations (read-only)',
+  subtitle: 'History from version 0.2.1. Read messages and open attachments; new chats are kept separately.',
+  show: 'Show legacy conversations',
+  hide: 'Hide legacy conversations',
+  readOnly: 'Read-only archive: no new questions, withdrawals, drafts or live answers.',
+  loading: 'Loading legacy conversations…',
+  error: 'Legacy conversations could not be read. Please try again.',
+  retry: 'Try again',
+  empty: 'There are no legacy conversations.',
+  untitled: 'Untitled conversation',
+  loadMore: 'Load more legacy conversations',
+  back: 'Back to legacy conversations',
+  messages: {
+    loading: 'Loading messages…',
+    empty: 'There are no messages to show in this conversation.',
+    older: 'Load earlier messages',
+    withdrawn: 'This message was withdrawn.',
+    attachments: 'Attachments',
+    openAttachment: 'Open attachment {name}',
+    attachmentError: 'The attachment could not be opened. Please try again.',
+    readOnly: 'This legacy conversation cannot be replied to.',
+  },
+}

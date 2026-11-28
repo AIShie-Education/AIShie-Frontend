@@ -1,13 +1,12 @@
 // 學校的代理執行環境，由其管理員設定（AI 與文件）：學校 AI 方案（模型、金鑰與
-// 每日額度）、今日用量、掃描文件的文字辨識（OCR），以及文件的文字版（轉寫）。
+// 每日額度）、計價與今日用量。
 export default {
   title: 'AI 與文件',
-  subtitle: '學校的代理執行環境：由學校提供並付費的 AI 模型，以及如何讀取掃描文件。',
+  subtitle: '學校的代理執行環境：AI 模型、計價、額度與用量。',
   tabs: {
     plan: '學校 AI 方案',
     pricing: '計價與額度',
     usage: '今日用量',
-    documents: '文件',
     hosting: '代理託管',
   },
   changedBy: '由{who}於{when}更改',
@@ -15,7 +14,7 @@ export default {
   state: {
     absentTitle: '這個伺服器沒有代理執行環境',
     absent:
-      '學校 AI 方案和掃描文件的讀取都是代理執行環境的設定，而這個伺服器上沒有執行環境回應。請由伺服器營運者在 AIshie 旁邊架設一個。',
+      '學校 AI 方案、計價與代理託管都是代理執行環境的設定，而這個伺服器上沒有執行環境回應。請由伺服器營運者在 AIshie 旁邊架設一個。',
     unreachableTitle: '無法連接代理執行環境',
     unreachable: '它可能正在重新啟動，或已停止運作。請一分鐘後再試。',
     notAdminTitle: '你不是這個執行環境的管理員',
@@ -27,7 +26,6 @@ export default {
 
   errors: {
     not_admin: '只有執行環境的管理員可以這樣做，而你的帳戶不是其中之一。',
-    ocr_unavailable: '這個伺服器目前無法執行 OCR，所以不能開啟它或設定語言。你仍可以關閉它，或改回伺服器預設的語言。',
     offer_not_found: '這個模型已不在方案中：有人剛把它刪除了。',
     offer_exists: {
       config: '伺服器設定中已有使用這個 ID 的模型。請改用其他 ID。',
@@ -51,170 +49,8 @@ export default {
     bad_if_match: '執行環境沒有接受這項更改。請重新載入頁面後再試。',
     missing_field: '執行環境沒有接受這項更改：缺少「{field}」。請重新載入頁面後再試。',
     invalid_field: '執行環境沒有接受這項更改：「{field}」的值不被接受。請檢查後再試。',
-    transcription_unavailable:
-      '文件轉寫現在無法在這台伺服器上執行，所以不能開啟。它仍可關閉，設定亦會保留至可以執行時使用。',
-    offer_no_file_input: '這個模型既不能讀取 PDF 也不能讀取圖片，所以無法轉寫。請選擇方案中可讀取檔案的模型。',
-    credential_rejected: '執行環境測試時 AIshie 不接受這個憑證，所以執行環境沒有保存它。',
     openrouter_unavailable: '無法連線到 OpenRouter，請稍後再試。',
     openrouter_model_not_found: 'OpenRouter 沒有這個 ID 的模型。',
-  },
-
-  ocr: {
-    title: '讀取掃描文件（OCR）',
-    intro: '當模型本身無法讀取檔案時，執行環境會以這裡選擇的語言，替它辨識掃描 PDF 和圖片中的文字。',
-    state: {
-      on: '已開啟',
-      off: '已關閉',
-      unavailable: '無法使用',
-    },
-    unavailable: {
-      operator_off:
-        '伺服器已停用此功能，所以無論這裡如何設定，它都不會執行。你的設定會保留到它開啟時使用；如需開啟，請聯絡伺服器營運者。',
-      not_installed: '這個伺服器沒有安裝 OCR 的程式或語言，所以它無法執行。你的設定會保留到安裝完成時使用。',
-    },
-    details: '詳細資料',
-    enabled: '讀取掃描文件和圖片',
-    enabledHint: '關閉時，對於無法自行讀取檔案的模型，不會替它辨識任何掃描檔案或圖片，之前辨識的文字也不會再提供。',
-    turnedOn: 'OCR 已開啟。',
-    turnedOff: 'OCR 已關閉。',
-    languages: '語言',
-    languagesHint: '最多8種。OCR 會按選擇的先後次序辨識。',
-    order: '辨識次序：{list}',
-    kept: '保留到 OCR 可以執行時使用：{list}',
-    serverDefault: '伺服器預設',
-    saveLanguages: '儲存語言',
-    useDefault: '使用伺服器預設',
-    useDefaultHint: '伺服器預設的語言：{list}。',
-    languagesSaved: 'OCR 會辨識{list}。',
-    defaultRestored: 'OCR 已改回使用伺服器預設的語言。',
-    tooMany: '最多選擇8種。',
-    none: '請至少選擇一種，或使用伺服器預設。',
-    neverChanged: '未曾在這裡更改：沿用伺服器營運者的設定。',
-    vertical: '{name}（直排）',
-    special: {
-      osd: '方向與文字系統',
-      equ: '數學算式',
-    },
-  },
-
-  // 文件的文字版，由學校方案的模型轉寫（轉寫模組）。
-  transcription: {
-    title: '文件轉寫（文字版）',
-    intro:
-      '執行環境會用學校方案的一個模型、以學校的金鑰，把課程檔案（投影片、PDF、Word）的每個版本轉寫一次成 Markdown：所有模型都讀取這份文字版，讀者和教學人員也會在檔案旁看到它。',
-    state: {
-      off: '未啟用',
-      running: '運作中',
-      standby: '待命',
-      blocked: '受阻：{why}',
-    },
-    blocked: {
-      no_credential: '沒有憑證',
-      credential_rejected: 'AIshie 拒絕了它的憑證',
-      no_offer: '未選擇模型',
-      offer_unavailable: '所選模型無法使用',
-      quota_exhausted: '今日頁數已用完',
-      other: '見下文',
-    },
-    unavailable: {
-      operator_off:
-        '伺服器已停用文件轉寫，所以無論這裡如何設定都不會執行。你在這裡的設定會保留，待開啟後使用；如需開啟，請聯絡伺服器營運者。',
-      core_too_old: '這個執行環境連接的伺服器尚未有轉寫佇列，所以無法執行。你在這裡的設定會保留，待伺服器支援後使用。',
-    },
-    enabled: '把文件轉寫成文字版',
-    enabledHint: '關閉時不會轉寫任何檔案，課程頁面也不會顯示排隊狀態。已寫好的文字版會保留，教學人員仍可自行撰寫。',
-    turnedOn: '文件轉寫已開啟。',
-    turnedOff: '文件轉寫已關閉。',
-    offer: '模型',
-    noOffer: '未選擇',
-    offerHint: '學校方案中可讀取 PDF 或圖片的模型。費用由學校支付，在費用中列為「文件轉寫」。',
-    offerStatus: {
-      ok: '可用',
-      not_found: '已不在方案中',
-      disabled: '已在方案中關閉',
-      no_file_input: '無法讀取檔案',
-      not_priced: '未定價',
-    },
-    maxPages: '每份文件最多頁數',
-    perDayPages: '每日頁數',
-    concurrency: '同時轉寫的文件數',
-    numbersHint:
-      '頁數超過上限的文件會被略過；當日頁數用完後至{reset}重新計算前，領取的文件也會被略過，教學人員之後可以再送出。「每日頁數」留空即不限。',
-    saved: '已儲存文件轉寫設定。',
-    invalid: {
-      maxPages: '1至5000之間的整數。',
-      perDayPages: '1至1,000,000之間的整數，或留空即不限。',
-      concurrency: '1至8之間的整數。',
-    },
-    neverChanged: '未在此更改：沿用伺服器營運者的設定。',
-    credential: {
-      title: '與 AIshie 的憑證',
-      status: {
-        none: '未設定',
-        ok: '已獲接受',
-        untested: '尚未測試',
-        rejected: '被拒',
-      },
-      lastSeen: 'AIshie 最後接受於',
-      givenBy: '由{who}於{when}交給執行環境',
-      given: '於{when}交給執行環境',
-      neverSeen: '尚未使用',
-      rejected: 'AIshie 拒絕了這個憑證：它已被撤銷或已過期。請發放一個新的。',
-      issue: '發放並交給執行環境',
-      replace: '更換',
-      withdraw: '撤銷',
-      hint: '「發放」會在 AIshie 為轉寫服務發放一個憑證，並直接交給執行環境，由它先行測試：憑證不會在這裡顯示，也不會保存在這個瀏覽器中。之後會撤銷轉寫服務的其他憑證。',
-      replaceAllTitle: '更換所有憑證？',
-      replaceAllBody:
-        '轉寫服務已有{n}個憑證，已達 AIshie 的上限。新的憑證會取代全部舊憑證：它們會立即失效，執行環境取得新憑證之前也無法運作。',
-      replaceAll: '全部更換',
-      handedOver: '執行環境已取得新的憑證。',
-      unrevoked: '有{n}個轉寫服務的其他憑證無法在 AIshie 撤銷，可能仍然有效。',
-      withdrawTitle: '撤銷文件轉寫的憑證？',
-      withdrawBody: '執行環境會刪除它，AIshie 亦會撤銷它：在發放新憑證之前不會轉寫任何檔案，進行中的工作也會停止。',
-      withdrawn: '已撤銷憑證。',
-      notRevoked: '執行環境已刪除它，但 AIshie 無法撤銷它：它可能仍然有效。請稍後在這裡再試。',
-      refused: {
-        rejected: '執行環境測試時 AIshie 不接受這個憑證，所以執行環境沒有保存它。剛發放的憑證已被撤銷。',
-        notService: 'AIshie 不認為這是轉寫服務的憑證，所以執行環境沒有保存它。剛發放的憑證已被撤銷。',
-      },
-    },
-    // Core 以原因拒絕服務憑證時的說明。
-    coreRefusal: {
-      too_many_credentials: '轉寫服務的憑證數目已達 AIshie 的上限。請撤銷一個，或全部更換。',
-      platform_role_required: '只有 AIshie 的平台管理員可以發放或撤銷文件轉寫的憑證。',
-    },
-    today: {
-      title: '今日',
-      reset: '每天{reset}重新計算。',
-      pages: '頁數',
-      of: '上限{n}',
-      documents: '文件',
-      failed: '失敗',
-      skipped: '略過',
-      cost: '費用',
-    },
-    jobs: {
-      title: '轉寫紀錄',
-      file: '第{n}個檔案',
-      filter: '狀態',
-      all: '全部',
-      status: {
-        working: '轉寫中',
-        done: '完成',
-        failed: '失敗',
-        skipped: '略過',
-        dropped: '已放棄',
-      },
-      empty: '尚未轉寫任何檔案。',
-      document: '文件',
-      pages: '頁數',
-      pagesN: '{n}頁',
-      finished: '完成時間',
-      since: '開始於',
-      unpriced: '未定價',
-      backfill: '較早上傳',
-    },
   },
 
   offers: {
@@ -583,8 +419,6 @@ export default {
   },
   // 只有伺服器營運者會處理的設定，放在文字旁的提示中（OperatorDetail）。
   flags: {
-    ocrOff: '執行環境的 OCR=off',
-    transcribeOff: '執行環境的 TRANSCRIBE=off',
     adminActorIds: '執行環境的 ADMIN_ACTOR_IDS',
     serverFile: '執行環境的 runtime.yaml',
   },

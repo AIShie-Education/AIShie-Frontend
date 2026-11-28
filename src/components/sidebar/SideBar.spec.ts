@@ -26,6 +26,11 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return { ...real, runtimeChat: { agents: vi.fn(async () => ({ agents: [] })), list: vi.fn(async () => ({ conversations: [], next: null })) } }
+})
+
 // Whether this server has the agent runtime, as useRuntime would find it: none, unless a test says so.
 const runtimeHere = vi.hoisted(() => ({ available: false, asked: 0 }))
 vi.mock('@/composables/useRuntime', async () => {

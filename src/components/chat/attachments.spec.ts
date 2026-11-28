@@ -111,11 +111,11 @@ describe('the files attached to a message', () => {
     expect(a.notice.value).toBeNull()
   })
 
-  it('carries ten where Core has not said how many', async () => {
+  it('carries AR’s four image/text attachments by default', async () => {
     const { a } = attachments(played(), null)
     await a.add(Array.from({ length: 12 }, (_, i) => file(`f${i}`)))
     expect(a.count.value).toBe(DEFAULT_MAX_FILES)
-    expect(a.notice.value).toEqual({ kind: 'tooMany', max: 10, skipped: 2 })
+    expect(a.notice.value).toEqual({ kind: 'tooMany', max: 4, skipped: 8 })
   })
 
   it('fails a file larger than Core takes at once, before anything is sent, and keeps the message waiting for it', async () => {

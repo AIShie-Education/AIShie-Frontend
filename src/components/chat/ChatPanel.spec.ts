@@ -6,6 +6,7 @@ import * as icons from '@element-plus/icons-vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import { defineComponent, h } from 'vue'
 import type { ConversationView, MyConversation, Respondent } from '@/api/types'
+import type { ChatConversation, ChatMessage, ChatSnapshot } from '@/api/runtimeChat'
 
 let respondents: Respondent[] = []
 /** The caller's conversations (me.conversations), and whether each is unread. */
@@ -90,6 +91,110 @@ vi.mock('@/api/http', async (orig) => {
     })),
     uploadLimits: vi.fn(async () => ({ maxBytes: 5_000, maxFiles: 10, maxConversationBytes: 50_000 })),
     uploadLimit: vi.fn(async () => 5_000),
+  }
+})
+
+function arConversation(c: ConversationView): ChatConversation {
+  return {
+    id: c.id,
+    course_id: 'k1',
+    agent_id: c.respondent.member_id,
+    title: c.title ?? '',
+    state: 'answered',
+    revision: 1,
+    created_at: c.created_at,
+    updated_at: c.last_message_at ?? c.created_at,
+    last_activity_at: c.last_message_at ?? c.created_at,
+  }
+}
+function arMessage(m: { id: string; seq: number; body: string; role: 'user' | 'assistant' }): ChatMessage {
+  return {
+    id: m.id,
+    conversation_id: 'c1',
+    seq: m.seq,
+    role: m.role,
+    status: 'posted',
+    body: m.body,
+    created_at: c1.created_at,
+  }
+}
+function arSnapshot(): ChatSnapshot {
+  return {
+    conversation: arConversation(c1),
+    messages: [
+      arMessage({ id: 'm1', seq: 1, body: 'When is it due?', role: 'user' }),
+      arMessage({ id: 'm2', seq: 2, body: 'On Friday.', role: 'assistant' }),
+    ],
+    more: false,
+    draft: null,
+  }
+}
+
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async (courseId: string) => {
+        reads.push({ tool: 'ar.agents', args: { course_id: courseId } })
+        return {
+          agents: respondents.map((r) => ({
+            agent_id: r.member_id,
+            display_name: r.display_name,
+            is_my_delegate: r.is_my_delegate ?? false,
+            answers_course: r.answers_course ?? true,
+            answer_level: r.answer_level ?? 'autonomous',
+          })),
+        }
+      }),
+      list: vi.fn(async (courseId: string, args: { limit?: number; after?: string } = {}) => {
+        reads.push({ tool: 'ar.list', args: { course_id: courseId, ...args } })
+        return {
+          conversations: mine
+            .filter((c) => c.course.course_id === courseId)
+            .map((c) => ({
+              id: c.conversation_id,
+              course_id: courseId,
+              agent_id: c.respondent.member_id,
+              title: c.title ?? '',
+              state: c.state === 'closed' ? ('closed' as const) : ('answered' as const),
+              revision: 1,
+              created_at: c.created_at,
+              updated_at: c.last_activity_at,
+              last_activity_at: c.last_activity_at,
+            })),
+          next: null,
+        }
+      }),
+      messages: vi.fn(async () => {
+        reads.push({ tool: 'ar.messages', args: { conversation_id: 'c1' } })
+        return arSnapshot()
+      }),
+      stream: vi.fn((_course: string, id: string, opts: { signal?: AbortSignal }) => {
+        if (opts.signal) waitingReads.push({ args: { conversation_id: id }, signal: opts.signal })
+        return new Promise<void>((_, reject) => {
+          opts.signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')))
+        })
+      }),
+      create: vi.fn(async (courseId: string, input: Record<string, unknown>) => {
+        writes.push({ tool: 'ar.create', args: { course_id: courseId, ...input } })
+        return { ...arSnapshot(), message: arSnapshot().messages[0]! }
+      }),
+      ask: vi.fn(async (courseId: string, conversationId: string, input: Record<string, unknown>) => {
+        writes.push({ tool: 'ar.ask', args: { course_id: courseId, conversation_id: conversationId, ...input } })
+        return arSnapshot()
+      }),
+      withdraw: vi.fn(),
+    },
+    uploadChatAttachment: vi.fn(async (_course: string, _kind: string, file: File) => ({
+      uploadToken: `tok-${file.name}`,
+      fileName: file.name,
+      contentType: file.type,
+      size: file.size,
+    })),
+    downloadChatAttachmentBytes: vi.fn(async (_course: string, id: string) => ({
+      blob: new Blob(['AR']), filename: `${id}.pdf`, contentType: 'application/pdf',
+    })),
   }
 })
 
@@ -606,7 +711,7 @@ describe('ChatPanel', () => {
     const onCourse = await setup({ at: '/courses/k1' })
     expect(onCourse.chat.courseId).toBe('k1')
     expect(onCourse.w.find('.chat-panel__hint').text()).toContain('CS101')
-    expect(reads.filter((r) => r.tool === 'conversation.respondents').map((r) => r.args.course_id)).toContain('k1')
+    expect(reads.filter((r) => r.tool === 'ar.agents').map((r) => r.args.course_id)).toContain('k1')
     await onCourse.router.push('/courses/k2/grades')
     await flushPromises()
     expect(onCourse.chat.courseId).toBe('k2')
@@ -645,9 +750,7 @@ describe('ChatPanel', () => {
     expect(toggle.attributes('aria-pressed')).toBe('true')
     expect(w.find('.chat-history').exists()).toBe(true)
     // The course's history, from the caller's conversations in every course.
-    expect(reads.filter((r) => r.tool === 'me.conversations' && r.args.course_id).map((r) => r.args)).toEqual([
-      { course_id: 'k1', limit: 50 },
-    ])
+    expect(reads.filter((r) => r.tool === 'ar.list').at(-1)?.args).toEqual({ course_id: 'k1', limit: 50 })
     await toggle.trigger('click')
     expect(chat.screen).toBe('new')
   })
@@ -694,21 +797,33 @@ describe('ChatPanel', () => {
     expect(chat.open).toBe(true)
   })
 
-  it('counts what is unread from the newest of the caller’s conversations, read again every 30 seconds, open or not', async () => {
+  it('counts new AR answers from the newest conversations, read again every 30 seconds, open or not', async () => {
     vi.useFakeTimers()
     try {
       mine = [myConversation('c1', true), myConversation('c2', false)]
       const { chat } = await setup()
       expect(chat.open).toBe(false)
-      expect(reads.filter((r) => r.tool === 'me.conversations').map((r) => r.args)).toEqual([{ limit: UNREAD_PAGE }])
+      expect(reads.filter((r) => r.tool === 'ar.list').map((r) => r.args)).toEqual([
+        { course_id: 'k1', limit: UNREAD_PAGE },
+        { course_id: 'k2', limit: UNREAD_PAGE },
+        { course_id: 'k3', limit: UNREAD_PAGE },
+      ])
+      expect(chat.unreadCount).toBe(0)
+      mine = [{ ...mine[0]!, last_activity_at: '2026-09-27T00:00:00Z' }, mine[1]!]
+      await chat.pollUnread()
       expect(chat.unreadCount).toBe(1)
-      // Read elsewhere: counted no more once read again.
-      mine = [myConversation('c1', false), myConversation('c2', true), myConversation('c3', true)]
+      chat.markedRead('c1')
+      mine = [
+        mine[0]!,
+        { ...mine[1]!, last_activity_at: '2026-09-27T00:00:00Z' },
+        { ...myConversation('c3', true), last_activity_at: '2026-09-27T00:00:00Z' },
+      ]
+      const before = reads.filter((r) => r.tool === 'ar.list').length
       await vi.advanceTimersByTimeAsync(UNREAD_POLL_MS - 1000)
-      expect(chat.unreadCount).toBe(1)
+      expect(chat.unreadCount).toBe(0)
       await vi.advanceTimersByTimeAsync(1000)
       expect(chat.unreadCount).toBe(2)
-      expect(reads.filter((r) => r.tool === 'me.conversations')).toHaveLength(2)
+      expect(reads.filter((r) => r.tool === 'ar.list')).toHaveLength(before + 3)
     } finally {
       vi.useRealTimers()
     }
@@ -723,7 +838,7 @@ describe('ChatPanel', () => {
       await flushPromises()
       expect(chat.courses).toEqual([])
       await vi.advanceTimersByTimeAsync(UNREAD_POLL_MS * 3)
-      expect(reads.filter((r) => r.tool === 'me.conversations')).toEqual([])
+      expect(reads.filter((r) => r.tool === 'ar.list')).toEqual([])
     } finally {
       vi.useRealTimers()
     }
@@ -732,13 +847,13 @@ describe('ChatPanel', () => {
   it('marks a conversation read once it is shown, and counts it no more', async () => {
     mine = [myConversation('c1', true)]
     const { w, chat } = await setup()
+    mine = [{ ...mine[0]!, last_activity_at: '2026-09-27T00:00:00Z' }]
+    await chat.pollUnread()
     expect(chat.unreadCount).toBe(1)
     chat.showConversation('k1', 'c1', { open: true })
     await flushPromises()
     expect(w.text()).toContain('On Friday.')
-    expect(writes).toEqual([
-      { tool: 'conversation.mark_read', args: { course_id: 'k1', conversation_id: 'c1', up_to_message_id: 'm2' } },
-    ])
+    expect(writes).toEqual([])
     // Not counted, with it shown or once the panel is closed.
     expect(chat.unreadCount).toBe(0)
     chat.setOpen(false)
@@ -746,18 +861,13 @@ describe('ChatPanel', () => {
     expect(chat.unreadCount).toBe(0)
   })
 
-  it('waits on the conversation shown, one read at a time, cut short when another is shown, the panel closes, or the caller signs out', async () => {
+  it('streams the AR conversation shown, one at a time, cut short when another is shown, the panel closes, or the caller signs out', async () => {
     holdWaits = true
     const { chat } = await setup()
     const live = () => waitingReads.filter((r) => !r.signal.aborted)
     chat.showConversation('k1', 'c1', { open: true })
     await vi.waitFor(() => expect(waitingReads).toHaveLength(1), rendered)
-    expect(waitingReads[0]!.args).toMatchObject({
-      conversation_id: 'c1',
-      after_seq: 2,
-      wait_s: 25,
-      seen_state: 'answered',
-    })
+    expect(waitingReads[0]!.args).toEqual({ conversation_id: 'c1' })
 
     // Another conversation: the first's wait is cut short, and the other's is waited on.
     chat.showConversation('k1', 'c2')
@@ -787,7 +897,7 @@ describe('ChatPanel', () => {
     expect(live()).toHaveLength(0)
     const n = reads.length
     await new Promise((r) => setTimeout(r, 50))
-    expect(reads.slice(n).filter((r) => r.tool === 'conversation.messages')).toEqual([])
+    expect(reads.slice(n).filter((r) => r.tool === 'ar.messages')).toEqual([])
   })
 
   it('says so where the caller may ask in no course', async () => {

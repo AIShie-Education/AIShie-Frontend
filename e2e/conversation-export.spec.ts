@@ -5,6 +5,7 @@ import { buildDeptWorld, type DeptWorld, type Person } from './dept-world'
 import {
   activityBar,
   call,
+  coursePath,
   demo,
   hostOnRuntime,
   photograph,
@@ -15,9 +16,11 @@ import {
   type CoreReply,
 } from './support'
 
-// Exporting conversations for audit (匯出對話), with the real Core. A course
-// agent made for this run, hosted on AIshie (the test plays the runtime),
-// answers Yuki, who asks again and withdraws her second question. Root exports the course's conversations with that agent
+// Exporting Core v0.2.1 conversations for audit (匯出對話). The Core writes in
+// beforeAll only arrange an old three-message fixture; they are not a new chat
+// path. Its source conversation is opened only in the separate read-only
+// legacy reader, never treated as an AR conversation with the same id.
+// Root exports the course's conversations with that agent
 // over two days on Hong Kong's calendar, sees what the export holds, and
 // downloads both files: the JSON Lines file holds the conversation with all
 // three messages, the withdrawn one marked; the CSV file opens with a byte
@@ -111,6 +114,8 @@ test.describe.serial('exporting conversations for audit', () => {
     // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
     w.agentToken = await hostOnRuntime(w.agentId)
 
+    // Legacy fixture arrangement only: this Core conversation is never opened
+    // through AR or used to test new browser chat writes.
     // Yuki asks; the agent answers; she asks again, and withdraws it.
     const Y = d.actors.yuki.token
     const opened = done(
@@ -260,6 +265,28 @@ test.describe.serial('exporting conversations for audit', () => {
       await expect(recent.locator('.export-files__countdown')).toContainText('The download links work for another')
       await photograph(page, 'export-recent')
     })
+  })
+
+  test('the exported source stays a separate Core v0.2.1 read-only legacy conversation', async ({ page }) => {
+    const arReads: string[] = []
+    page.on('request', (r) => {
+      if (r.url().includes('/runtime/api/v1/') && r.url().includes(w.conversationId)) arReads.push(r.url())
+    })
+    await signIn(page, demo().actors.yuki)
+    await page.goto(coursePath(`legacy-conversations/${w.conversationId}`))
+    const archive = page.locator('.legacy-chat__detail')
+    await expect(archive).toBeVisible()
+    await expect(archive).toHaveAttribute('data-legacy-conversation-id', w.conversationId)
+    await expect(archive).toContainText(QUESTION)
+    await expect(archive).toContainText(ANSWER)
+    await expect(archive.locator('.legacy-chat__withdrawn')).toHaveText('This message was withdrawn.')
+    await expect(archive).not.toContainText(WITHDRAWN)
+    await expect(archive.locator('.legacy-chat__notice.is-bottom')).toHaveText(
+      'This legacy conversation cannot be replied to.',
+    )
+    await expect(page.locator('#chat-panel')).toHaveCount(0)
+    await expect(archive.locator('textarea')).toHaveCount(0)
+    expect(arReads).toEqual([])
   })
 
   test('an instructor is offered no such page, and is sent home from its address', async ({ page }) => {

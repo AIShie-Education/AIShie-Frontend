@@ -62,6 +62,8 @@ export default {
     minutes: '{m}m {s}s',
   },
   typing: 'Waiting for {name}…',
+  noResponse: 'The agent is not responding right now.',
+  withdrawQuestion: 'Withdraw question',
   held: 'Waiting for approval: it appears here once someone approves it.',
   myActions: 'My actions',
   trouble: 'Having trouble reaching the server; still trying…',
@@ -77,6 +79,7 @@ export default {
   state: {
     waitingApproval: 'Each answer waits for someone’s approval before you see it.',
     answerPending: 'An answer is waiting for approval.',
+    questionPending: 'Your question was accepted and is waiting for approval. It will be answered once approved.',
     withdrawn: 'You withdrew your question: {name} will not answer it.',
     start: 'Ask {name} anything about the course.',
     overseeing: 'You are reading this as course staff.',
@@ -155,6 +158,7 @@ export default {
       conversation_attachments_full:
         'This conversation holds as many files as it can ({max_total} in all): start a new conversation to send more.',
       no_file_storage: 'This site has nowhere to keep files, so none can be sent: ask its administrator.',
+      unsupported_media_type: 'Chat attachments can be images or plain-text files only.',
       retracted: 'This file was withdrawn with its message.',
       not_a_member: 'You no longer have a seat in this course, so no files can be sent in it.',
       membership_not_active: 'Your seat in this course is paused or has ended, so no files can be sent in it.',
@@ -359,7 +363,6 @@ export default {
         'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
       withdrawnModel:
         'Once a message is withdrawn, AIshie’s agent service no longer sends it to {name}’s model; what was sent before cannot be taken back.',
-      ocr: 'Text that AIshie’s agent service reads from an attached image or scanned PDF is kept for up to 180 days, even after the message is withdrawn.',
     },
   },
   message: {
@@ -371,6 +374,8 @@ export default {
     retractedByYou: 'You withdrew this message.',
     retractedBy: '{name} withdrew this message.',
     retractedByStaff: 'Course staff withdrew this message.',
+    pending: 'Waiting for approval.',
+    failed: 'The answer could not be completed. You can ask again.',
     reason: 'Reason: {reason}',
   },
   // Under an answer: the course materials it relied on (AIShie-Core#69), each as the reader may open it now.
@@ -379,6 +384,8 @@ export default {
     summary: 'Based on: {title} · {n} items',
     summaryNone: 'Based on: {n} course materials you cannot open',
     label: 'Course materials this answer relied on',
+    material: 'Course material',
+    part: 'part {n}',
     quoted: '“{title}”',
     // A source, and where in it the answer read (its file, page or slide, version), or that it read another version.
     entry: '{title} · {where}',

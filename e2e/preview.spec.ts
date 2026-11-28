@@ -3,14 +3,18 @@ import { readFile } from 'node:fs/promises'
 import { crc32, deflateSync } from 'node:zlib'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
+  arCall,
+  arMessages,
   call,
   coursePath,
   demo,
   expectNoLineEndsInADot,
   expectToasted,
-  hostOnRuntime,
+  hostARAgent,
+  releaseARAgent,
   inTraditionalChinese,
   keepToasts,
+  modelRules,
   photograph,
   signIn,
   type CoreReply,
@@ -457,55 +461,63 @@ test.describe.serial('the file viewer', () => {
     await watch.expectNoneRefused()
   })
 
-  test('a file a chat message carries opens in the viewer', async ({ page }) => {
+  test('a file an AR chat message carries opens in the viewer', async ({ page }) => {
+    test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
     const watch = await watchPage(page)
     const d = demo()
     const I = d.actors.instructor.token
-    const Y = d.actors.yuki.token
     const C = `/v1/courses/${d.course.id}`
-    // A course agent of this run's, hosted on AIshie, which people ask in the site; the test plays the runtime.
     const name = `Viewer tutor ${tag}`
     const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    let hostedId = ''
     try {
       await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
-      await hostOnRuntime(agent)
-      const respondents = await call(Y, 'GET', `${C}/conversations/respondents`)
-      const tutor = (respondents.body.result.respondents as { member_id: string; display_name: string }[]).find(
-        (r) => r.display_name === name,
-      )!
-      // Yuki asks it with her notes attached.
+      hostedId = (await hostARAgent(d.actors.instructor, agent)).id
       const notes: FileSpec = {
         name: `my-tree-notes-${tag}.md`,
         mimeType: 'text/markdown',
         buffer: Buffer.from(`# My notes\n\nA **leaf** has no children (${tag}).\n`),
       }
-      const url = await call(
-        Y,
-        'GET',
-        `${C}/conversations/upload-url?content_type=${encodeURIComponent(notes.mimeType)}`,
-      )
-      expect(url.body.status, JSON.stringify(url.body.error)).toBe('executed')
       const title = `Leaves (${tag})`
-      await done(Y, `${C}/conversations`, {
-        respondent_member_id: tutor.member_id,
-        title,
-        body: `${title}\nAre my notes right?`,
-        attachments: [{ upload_token: await put(url.body, notes), filename: notes.name }],
-      })
+      modelRules([{ match: 'Are my notes right?', answer: `Your notes are right (${tag}).` }])
 
+      // Ask and attach through the browser's real AR composer. The paperclip
+      // uploads raw bytes to AR; no Core conversation/upload endpoint is used.
       await signIn(page, d.actors.yuki)
       await page.goto(coursePath())
       const panel = page.locator('#chat-panel')
       if (!(await panel.isVisible())) await page.locator('#chat-panel-toggle').click()
       await expect(panel).toBeVisible()
-      const history = panel.getByRole('button', { name: 'History', exact: true })
-      const row = panel.locator('.hist-row').filter({ hasText: title })
-      await expect(async () => {
-        if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
-        await expect(row).toBeVisible({ timeout: 5_000 })
-      }).toPass({ timeout: 30_000 })
-      await row.click()
+      await panel.locator('button.resp-row').filter({ hasText: name }).click()
+      const choosing = page.waitForEvent('filechooser')
+      await panel.getByRole('button', { name: 'Attach files' }).click()
+      await (await choosing).setFiles(notes)
+      await expect(panel.locator('.chat-chip').filter({ hasText: notes.name })).toHaveClass(/is-done/)
+      const box = panel.locator('.chat-pane textarea')
+      await box.fill(`${title}\nAre my notes right?`)
+      await box.press('Enter')
       const card = panel.locator('.msg-file').filter({ hasText: notes.name })
+      await expect(card).toBeVisible()
+
+      // Prove this is persisted AR data, including its AR-owned attachment id.
+      let arConversation = ''
+      await expect
+        .poll(async () => {
+          const out = await arCall<{ conversations: { id: string; title: string }[] }>(
+            d.actors.yuki,
+            'GET',
+            `/courses/${d.course.id}/conversations?limit=100`,
+          )
+          arConversation = out.body.conversations.find((c) => c.title === title)?.id ?? ''
+          return arConversation || null
+        })
+        .not.toBeNull()
+      const stored = await arMessages(d.actors.yuki, d.course.id, arConversation)
+      const question = stored.messages.find((m) => m.role === 'user' && m.body.includes(title))
+      expect(question?.attachments?.map((a) => [a.filename, a.media_type, a.size])).toEqual([
+        [notes.name, notes.mimeType, notes.buffer.length],
+      ])
+
       await expect(card.getByRole('button', { name: `Download “${notes.name}”` })).toBeVisible()
       await card.getByRole('button', { name: new RegExp(`^Preview “${notes.name}”`) }).click()
       const dialog = viewer(page, notes.name)
@@ -518,6 +530,7 @@ test.describe.serial('the file viewer', () => {
       // The chat is as it was under it.
       await expect(card).toBeVisible()
     } finally {
+      await releaseARAgent(d.actors.instructor, hostedId)
       // A person may have five agents at once: this run's is suspended, for the specs after it.
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
     }

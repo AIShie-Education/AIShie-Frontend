@@ -1,7 +1,7 @@
 // The objects of the AIshie Agent Runtime's API v1 (M2), written by hand from
 // its contract (m2.api.spec.md §4 and §5, and runtime-hosting-api.md, by
 // which it hosts an agent by its id), and those of its administrators'
-// routes (OCR and the school's plan, at the end). Generating them
+// plan, pricing, usage and hosting routes. Generating them
 // (gen:runtime-api) is a follow-up once the runtime publishes a schema.
 // Answers may gain members within v1; what is not named here is ignored.
 //
@@ -452,7 +452,6 @@ export const RUNTIME_ERROR_REASONS = [
   'settings_rejected',
   // Administrators' routes
   'not_admin',
-  'ocr_unavailable',
   'offer_not_found',
   'offer_exists',
   'offer_read_only',
@@ -464,10 +463,6 @@ export const RUNTIME_ERROR_REASONS = [
   'price_not_found',
   'price_exists',
   'price_read_only',
-  // The transcriber (core_unavailable, above, as well)
-  'transcription_unavailable',
-  'offer_no_file_input',
-  'credential_rejected',
   // OpenRouter's upstream providers (admin/openrouter/endpoints)
   'openrouter_unavailable',
   'openrouter_model_not_found',
@@ -495,51 +490,6 @@ export type ClientErrorReason = (typeof CLIENT_ERROR_REASONS)[number]
 // Core's root and admins (narrowed by the runtime's ADMIN_ACTOR_IDS), as
 // GET /me's is_admin says; anyone else is refused 403 not_admin.
 // ---------------------------------------------------------------------------
-
-/** Why OCR cannot run here whatever the site says: the operator's OCR=off, or its programs or languages missing. */
-export type OcrUnavailableReason = 'operator_off' | 'not_installed'
-
-export const OCR_UNAVAILABLE_REASONS: readonly OcrUnavailableReason[] = ['operator_off', 'not_installed']
-
-/** Reading scanned files and images (OCR), as the site sets it within what the operator allows. */
-export interface OcrSettings {
-  /** The operator's environment lets OCR run on this runtime. */
-  available: boolean
-  /** Why not, when available is false; null otherwise. */
-  unavailable_reason: OcrUnavailableReason | null
-  /** What is missing, in English for administrators; null when nothing is. */
-  unavailable_detail: string | null
-  /** The site's switch (true by default). OCR runs when available and enabled. */
-  enabled: boolean
-  /** The languages OCR reads in, in tesseract's order: the site's choice, or default_languages. */
-  languages: string[]
-  /** The operator's languages (OCR_LANGUAGES). */
-  default_languages: string[]
-  /** The languages installed here, which languages is chosen from; [] when not available. */
-  available_languages: string[]
-  /** The site's setting's last write; both null when it was never set. */
-  updated_at: string | null
-  /** A Core actor id. */
-  updated_by: string | null
-}
-
-/** GET and PATCH admin/settings. */
-export interface RuntimeSettings {
-  ocr: OcrSettings
-  /** Absent from a runtime from before the transcriber. */
-  transcription?: TranscriptionSettings
-}
-
-/** PATCH admin/settings, merge-patch: a member left out is unchanged. */
-export interface RuntimeSettingsPatch {
-  ocr?: {
-    /** Never null. */
-    enabled?: boolean
-    /** 1 to 8 of available_languages, no repeats; null goes back to default_languages. */
-    languages?: string[] | null
-  }
-  transcription?: TranscriptionPatch
-}
 
 /**
  * How an offer of the school's plan stands: offered to owners, turned off,
@@ -1026,186 +976,4 @@ export interface CostQuery {
   key_source?: KeySource
   limit?: number
   after?: string
-}
-
-// ---------------------------------------------------------------------------
-// The transcriber: documents' text versions (文字版), written by a model of
-// the school's plan, on the school's key (runtime-transcribe-api.md)
-// ---------------------------------------------------------------------------
-
-/** Why the transcriber cannot run here whatever the site says: the operator's TRANSCRIBE=off, or a Core without its queue. */
-export type TranscriptionUnavailableReason = 'operator_off' | 'core_too_old'
-
-/**
- * Where the offer chosen stands: usable; gone; turned off (or shadowed, or
- * its model no longer allowed); its model takes no files, so cannot
- * transcribe; or not priced today (a warning: it runs, but a daily ceiling
- * in dollars cannot hold it).
- */
-export type TranscriptionOfferStatus = 'ok' | 'not_found' | 'disabled' | 'no_file_input' | 'not_priced'
-
-export const TRANSCRIPTION_OFFER_STATUSES: readonly TranscriptionOfferStatus[] = [
-  'ok',
-  'not_found',
-  'disabled',
-  'no_file_input',
-  'not_priced',
-]
-
-/** How the credential the runtime holds for Core stands: none; accepted; not tried yet; refused (revoked or expired). */
-export type TranscriptionCredentialStatus = 'none' | 'ok' | 'untested' | 'rejected'
-
-/** What the transcriber is doing now: nothing; working; standing by while another worker claims; or on but unable to work. */
-export type TranscriptionState = 'off' | 'running' | 'standby' | 'blocked'
-
-export const TRANSCRIPTION_STATES: readonly TranscriptionState[] = ['off', 'running', 'standby', 'blocked']
-
-export type TranscriptionBlockedReason =
-  'no_credential' | 'credential_rejected' | 'no_offer' | 'offer_unavailable' | 'quota_exhausted'
-
-export const TRANSCRIPTION_BLOCKED_REASONS: readonly TranscriptionBlockedReason[] = [
-  'no_credential',
-  'credential_rejected',
-  'no_offer',
-  'offer_unavailable',
-  'quota_exhausted',
-]
-
-/** The service credential the transcriber calls Core with: never more than its prefix. */
-export interface TranscriptionCredential {
-  status: TranscriptionCredentialStatus
-  /** Such as "aissvc_ab12cd34ef56…"; null when there is none. */
-  hint: string | null
-  /** Core's credential id, when the front end gave it. */
-  credential_id: string | null
-  set_at: string | null
-  /** A Core actor id. */
-  set_by: string | null
-  /** When Core last took it, to the minute. */
-  last_ok_at: string | null
-  /** Why it was refused, in English for administrators. */
-  last_error: string | null
-}
-
-/** Today (UTC) so far, from the runtime's own records. */
-export interface TranscriptionToday {
-  pages: number
-  documents: number
-  failed: number
-  skipped: number
-  cost_usd: USD
-}
-
-/** GET admin/settings' transcription: the transcriber as the site sets it within what the operator allows. */
-export interface TranscriptionSettings {
-  /** The operator's environment lets it run (TRANSCRIBE not off, Core new enough). */
-  available: boolean
-  unavailable_reason: TranscriptionUnavailableReason | null
-  /** In English, for administrators. */
-  unavailable_detail: string | null
-  /** The site's switch; off by default. */
-  enabled: boolean
-  /** The school plan's offer that transcribes (an offer id); null: none chosen. */
-  offer: string | null
-  /** Null when offer is. */
-  offer_status: TranscriptionOfferStatus | null
-  /** Pages a document may have to be transcribed (1 to 5000; 300 by default); more are skipped. */
-  max_pages: number
-  /** Pages a UTC day across the site (1 to 1,000,000); null for no limit. */
-  per_day_pages: number | null
-  /** Documents transcribed at once (1 to 8; 2 by default). */
-  concurrency: number
-  credential: TranscriptionCredential
-  state: TranscriptionState
-  blocked_reason: TranscriptionBlockedReason | null
-  today: TranscriptionToday
-  updated_at: string | null
-  updated_by: string | null
-}
-
-/** PATCH admin/settings' transcription, merge-patch. */
-export interface TranscriptionPatch {
-  /** Never null. */
-  enabled?: boolean
-  /** An offer of the plan now; null for none. */
-  offer?: string | null
-  /** 1 to 5000; null goes back to 300. */
-  max_pages?: number | null
-  /** 1 to 1,000,000, or null for no limit. */
-  per_day_pages?: number | null
-  /** 1 to 8; null goes back to 2. */
-  concurrency?: number | null
-}
-
-/**
- * PUT admin/transcription/credential: Core's service token, which the
- * runtime tries against Core (unless skip_test) and keeps sealed; never
- * answered, logged or audited.
- */
-export interface TranscriptionCredentialPut {
-  token: string
-  /** Core's id of the credential, to match Core's list. */
-  credential_id?: string
-  skip_test?: boolean
-}
-
-/** What became of a version the transcriber claimed; dropped: staff wrote it, or the claim was lost. */
-export type TranscriptionJobStatus = 'working' | 'done' | 'failed' | 'skipped' | 'dropped'
-
-export const TRANSCRIPTION_JOB_STATUSES: readonly TranscriptionJobStatus[] = [
-  'working',
-  'done',
-  'failed',
-  'skipped',
-  'dropped',
-]
-
-/** The statuses GET admin/transcription/jobs may be asked for. */
-export type TranscriptionJobFilter = 'done' | 'failed' | 'skipped' | 'working'
-
-/**
- * One file of a version the transcriber took up, as it records it (kept 90
- * days). No title and no file name: the runtime reads none.
- */
-export interface TranscriptionJob {
-  id: string
-  version_id: string
-  /**
-   * The file of the version the job was of, and its place in it (a version
-   * holds several since AIShie-Core #49); null, or absent, from a runtime or
-   * a Core from before.
-   */
-  file_id?: string | null
-  position?: number | null
-  document_id: string
-  course_id: string
-  status: TranscriptionJobStatus
-  reason: string | null
-  backfill: boolean
-  content_type: string
-  byte_size: number
-  pages: number | null
-  /** The offer's id and its model. */
-  offer: string | null
-  model: string | null
-  /** Null: unpriced. */
-  cost_usd: USD | null
-  input_tokens: number | null
-  output_tokens: number | null
-  started_at: string
-  finished_at: string | null
-}
-
-/** GET admin/transcription/jobs: newest first, a page at a time. */
-export interface TranscriptionJobList {
-  jobs: TranscriptionJob[]
-  /** The next page's after; null after the last. */
-  next: string | null
-}
-
-export interface TranscriptionJobQuery {
-  after?: string
-  /** 1 to 200; 50 by default. */
-  limit?: number
-  status?: TranscriptionJobFilter
 }

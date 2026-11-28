@@ -118,7 +118,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(w.route).toContain('That model is deepseek-chat, from DeepSeek, on the school’s plan.')
     expect(w.route).toContain('your own model answers instead: gpt-5-mini, from OpenAI.')
     expect(w.kept).toContain('no longer sends it to Ken’s helper’s model')
-    expect(w.kept).toContain('reads from an attached image or scanned PDF is kept for up to 180 days')
+    expect(w.kept).not.toContain('reads from an attached image or scanned PDF is kept for up to 180 days')
   })
 
   it('names one provider where the school’s model and its fallback come from the same one', () => {
@@ -182,7 +182,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(w.route).toContain('This page cannot show you which provider it is.')
     for (const p of Object.values(LABELS)) expect(`${w.line} ${w.route}`).not.toContain(p)
     expect(w.kept).toContain('no longer sends it to Lab tutor’s model')
-    expect(w.kept).toContain('kept for up to 180 days')
+    expect(w.kept).not.toContain('kept for up to 180 days')
   })
 
   it('says an agent with MCP access answers from its owner’s own tools, naming no provider', () => {
@@ -229,7 +229,7 @@ describe('privacyNotice: where it goes, by how the agent is run', () => {
     expect(w.route).toContain('deepseek-chat')
     expect(w.kept).toContain(locale === 'zh-Hant' ? '匯出檔只列出檔案，不含其內容' : '导出文件只列出文件，不包含其内容')
     expect(w.kept).toContain(locale === 'zh-Hant' ? '曾等待審批而未發佈的問題或回答' : '曾等待审批而未发布的问题或回答')
-    expect(w.kept).toContain('180')
+    expect(w.kept).not.toContain('180')
   })
 })
 

@@ -48,8 +48,8 @@ for (const lang of ['en', 'zh-Hant'] as const)
       await expect(header).toBeVisible()
       await expect(page.locator('#side-bar')).toBeVisible()
       await expect(page.locator('html')).toHaveAttribute('lang', lang)
-      // Its content loaded, and the faces its words are set in, which decide where a line wraps.
-      await page.waitForLoadState('networkidle')
+      // The page's load and its fonts decide wrapping. AR's SSE is deliberately
+      // long-lived, so networkidle is not a valid readiness condition here.
       await page.evaluate(() => document.fonts.ready)
       const top = await header.evaluate((h) => Math.round(h.nextElementSibling?.getBoundingClientRect().top ?? 0))
       expect(top, `${sub || 'overview'}: something under the header`).toBeGreaterThan(0)

@@ -21,6 +21,35 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async () => ({ agents: [] })),
+      list: vi.fn(async () => ({
+        conversations: Array.from({ length: unread }, (_, i) => {
+          const c = answered(i)
+          return {
+            id: c.conversation_id,
+            course_id: c.course.course_id,
+            agent_id: c.respondent.actor_id,
+            title: (c as { title?: string }).title ?? '',
+            state: 'answered' as const,
+            revision: 1,
+            created_at: c.created_at,
+            updated_at: c.last_activity_at,
+            last_activity_at: c.last_activity_at,
+          }
+        }),
+        next: null,
+      })),
+      messages: vi.fn(),
+      stream: vi.fn(),
+    },
+  }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { useChatStore } = await import('@/stores/chat')
@@ -259,6 +288,7 @@ describe('the chat’s button', () => {
     unread = 1
     await chat.pollUnread()
     await flushPromises()
+    expect(chat.unreadCount).toBe(1)
     const badge = w.get('.app-header__chat .el-badge__content')
     expect(badge.text()).toBe('1')
     expect(badge.classes()).toContain('el-badge__content--primary')
@@ -374,8 +404,11 @@ describe('on a phone', () => {
   })
 
   it('counts the answers not read yet on the header’s button', async () => {
+    unread = 0
+    const { w, chat } = await mountAs('autonomous', { phone: true })
+    await flushPromises()
     unread = 1
-    const { w } = await mountAs('autonomous', { phone: true })
+    await chat.pollUnread()
     await flushPromises()
     expect(w.get('.app-header__chat .el-badge__content').text()).toBe('1')
     expect(w.get('#chat-panel-toggle').attributes('aria-label')).toBe('Chat with agents: 1 unread')
