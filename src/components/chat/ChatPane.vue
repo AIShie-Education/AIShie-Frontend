@@ -163,20 +163,21 @@ const conv = props.conversationId
       onRead: () => emit('read', props.conversationId!),
     })
   : null
+const selectedRespondent = props.respondent
 const view = computed<ConversationView | null>(() => {
   const current = conv?.view.value ?? null
-  if (!current || !props.respondent) return current
+  if (!current || !selectedRespondent) return current
   // AR's DTO has the actor id, not a Core display name. Preserve the agent the
   // opener just selected while the offers refresh, rather than showing a UUID.
-  const selectedId = actorIdOf(props.respondent)
+  const selectedId = actorIdOf(selectedRespondent)
   if (!selectedId || actorIdOf(current.respondent) !== selectedId) return current
   return {
     ...current,
     respondent: {
       ...current.respondent,
       actor_id: selectedId,
-      display_name: props.respondent.display_name,
-      owner_name: props.respondent.owner_name ?? current.respondent.owner_name,
+      display_name: selectedRespondent.display_name,
+      owner_name: selectedRespondent.owner_name ?? current.respondent.owner_name,
     },
   } as ConversationView
 })

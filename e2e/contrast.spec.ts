@@ -27,7 +27,9 @@ import {
 
 /** Reads the page once it has settled: past a tab's or a row's fade, or a hovered row's. */
 async function settled(page: Page): Promise<Miss[]> {
-  await page.waitForLoadState('networkidle')
+  // Long-lived AR/SSE traffic is not a page that failed to settle. Wait for
+  // fonts and the short visual transition, not for network idle.
+  await page.evaluate(() => document.fonts.ready)
   await page.waitForTimeout(400)
   return wordsBelowAA(page)
 }

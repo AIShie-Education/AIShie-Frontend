@@ -144,6 +144,7 @@ EOF
     -e 'CONFIG=/config/runtime.yaml,/config/unowned-agent.yaml' \
     -e DATABASE_URL \
     -e 'KMS_KEY_ID=local:/secrets/kek/v1' \
+    -e 'SECRETS_DIR=/secrets' \
     -e "CORE_BASE_URL=$E2E_CORE_URL" \
     -e "CORE_BASE_URL_ALLOWLIST=$E2E_CORE_URL" \
     -e "PUBLIC_URL=$E2E_CORE_URL" \

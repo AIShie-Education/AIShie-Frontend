@@ -213,7 +213,8 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     const I = demo().actors.instructor.token
     if (w.botSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.botSeat}/remove`, {})
     if (w.personSeat) await call(I, 'POST', `/v1/courses/${demo().course.id}/members/${w.personSeat}/remove`, {})
-    if (w.botId) await call(root().token, 'POST', `/v1/actors/${w.botId}/suspend`, {})
+    // The unowned bot is the CI runtime's static fixture, not one person's
+    // agent: do not suspend it before a retry or another spec.
   })
 
   test('agents as a kind take the seat icon, and a proposal’s proposer its avatar and “AI”', async ({ page }) => {
