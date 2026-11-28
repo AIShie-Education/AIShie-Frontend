@@ -10,6 +10,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { read } from '@/api/http'
+import { runtimeChat } from '@/api/runtimeChat'
 import type { ActionSummary } from '@/api/types'
 import { useAsync } from '@/composables/useAsync'
 import { useCourseStore } from '@/stores/course'
@@ -56,7 +57,7 @@ const groups = computed(() =>
 const seatedActorIds = computed(() => new Set(all.value.filter((m) => isLive(m)).map((m) => m.actor_id)))
 
 // When agents were last connected, where the caller may know: their own
-// (agent.list), and those they may ask (conversation.respondents). Neither is
+// (agent.list), and those they may ask (AR's chat agents). Neither is
 // needed for the page, so a refusal or failure only leaves presence unknown.
 const mine = useAsync(
   async () => {
@@ -69,10 +70,8 @@ const mine = useAsync(
 const askable = useAsync(
   async () => {
     if (!course.can('conversation_ask')) return new Map<string, string | null>()
-    const out = await read('conversation.respondents', { course_id: props.courseId }).catch(() => ({
-      respondents: [],
-    }))
-    return new Map((out.respondents ?? []).map((r) => [r.member_id, r.last_seen_at ?? null]))
+    const out = await runtimeChat.agents(props.courseId).catch(() => ({ agents: [] }))
+    return new Map((out.agents ?? []).map((r) => [r.agent_id, null]))
   },
   { keepData: true },
 )

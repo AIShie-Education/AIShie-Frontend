@@ -3,9 +3,7 @@
 // (the runtime's admin routes). The school's AI plan (the models the school
 // provides and pays for, their keys, and the daily quotas), pricing and
 // quotas (the price table, tenants' quotas, hosted agents' budgets, and what
-// things cost), today's use of the plan, documents: the reading of scanned
-// ones (OCR), and their text versions, written by a model of the plan (the
-// transcriber), and agent hosting: the runtime's own credential for Core,
+// things cost), today's use of the plan, and agent hosting: the runtime's own credential for Core,
 // the site service agent_runtime, by which it hosts agents by their ids.
 //
 // Platform administrators open it (router/modules/admin.ts), and the side bar
@@ -18,7 +16,7 @@
 //
 // Each tab is a part the runtime answers for apart, loaded when first shown,
 // and remembered in the address (?tab=): what comes next is one more entry,
-// or one more card in its tab (as the transcriber is, beside OCR).
+// or one more card in its tab.
 import { computed, watch, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -30,7 +28,6 @@ import AppResult from '@/components/AppResult.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import OperatorDetail from './components/OperatorDetail.vue'
 import AgentRuntimeCard from './runtime/AgentRuntimeCard.vue'
-import DocumentsPanel from './runtime/DocumentsPanel.vue'
 import PricingPanel from './runtime/PricingPanel.vue'
 import RuntimeAsync from './runtime/RuntimeAsync.vue'
 import SchoolPlanPanel from './runtime/SchoolPlanPanel.vue'
@@ -45,7 +42,6 @@ const TABS: { name: string; label: string; component: Component }[] = [
   { name: 'plan', label: 'runtimeAdmin.tabs.plan', component: SchoolPlanPanel },
   { name: 'pricing', label: 'runtimeAdmin.tabs.pricing', component: PricingPanel },
   { name: 'usage', label: 'runtimeAdmin.tabs.usage', component: UsageCard },
-  { name: 'documents', label: 'runtimeAdmin.tabs.documents', component: DocumentsPanel },
   { name: 'hosting', label: 'runtimeAdmin.tabs.hosting', component: AgentRuntimeCard },
 ]
 const tab = computed({

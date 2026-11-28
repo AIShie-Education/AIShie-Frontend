@@ -19,6 +19,15 @@ vi.mock('@/api/http', async (orig) => ({
   read: (...a: unknown[]) => read(...a),
   write: (...a: unknown[]) => write(...a),
 }))
+// The independent AR section is covered by ArApprovalsSection.spec.ts. Keep
+// these Core queue tests deterministic and free of any runtime transport.
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: { ...real.runtimeChat, approvals: vi.fn(async () => ({ approvals: [], next: null })) },
+  }
+})
 const confirm = vi.fn(async () => 'confirm')
 vi.mock('element-plus', async (orig) => {
   const real = await orig<typeof import('element-plus')>()

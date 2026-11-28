@@ -23,11 +23,10 @@
 //   the school's plan's, with the owner's own model as its fallback, or the
 //   owner's own (the runtime's design, §6 and D8); on the school's plan the
 //   fallback answers too when the school's model cannot (§5.3), so the line
-//   names both providers where they differ. The text the runtime reads by
-//   OCR from an attached image or scan it keeps 180 days, withdrawn or not
-//   (§4, OCR; §8). The owner's full model comes from GET /agents. For another
-//   agent, GET /agents/{core id}/privacy gives only safe provider labels and
-//   its fallback; a missing label, route, or old Core keeps generic wording.
+//   names both providers where they differ. The owner's full model comes from
+//   GET /agents. For another agent, GET /agents/{core id}/privacy gives only
+//   safe provider labels and its fallback; a missing label, route, or old Core
+//   keeps generic wording.
 // - An agent with MCP access is used from its owner's own tools; where they
 //   send what they read is nothing the site knows.
 //
@@ -317,11 +316,9 @@ export function privacyNotice(f: PrivacyFacts): PrivacyNotice {
       goes = { key: 'points.unknown', params: { name } }
       if (agent) route.push({ key: 'route.unknown', params: { name } })
   }
-  // The runtime sends a withdrawn message to the model no more; what it sent before stays sent. What
-  // it read by OCR of an attached image or scan it keeps, withdrawn or not.
+  // The runtime sends a withdrawn message to the model no more; what it sent before stays sent.
   if (kind === 'model' || kind === 'runtime') {
     kept.push({ key: 'kept.withdrawnModel', params: { name } })
-    kept.push({ key: 'kept.ocr', params: {} })
   }
 
   return {

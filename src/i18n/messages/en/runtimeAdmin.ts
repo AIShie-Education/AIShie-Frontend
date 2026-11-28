@@ -1,18 +1,15 @@
 // The school's agent runtime, as its administrators set it (AI and
 // documents): the school's AI plan (its models, their keys and the daily
-// quotas), today's use of it, reading scanned documents (OCR), and writing
-// documents' text versions (the transcriber). The
+// quotas), pricing and today's use of it. The
 // runtime's refusals are worded by reason; the hosting pages' words
 // (hosting.…) are shared where the two say the same.
 export default {
   title: 'AI and documents',
-  subtitle:
-    'The school’s agent service: the AI models the school provides and pays for, and how scanned documents are read.',
+  subtitle: 'The school’s agent service: its AI models, pricing, quotas and use.',
   tabs: {
     plan: 'School AI plan',
     pricing: 'Pricing',
     usage: 'Usage today',
-    documents: 'Documents',
     hosting: 'Agent hosting',
   },
   changedBy: 'Changed by {who}, {when}',
@@ -21,7 +18,7 @@ export default {
   state: {
     absentTitle: 'This server has no agent service',
     absent:
-      'The school’s AI plan and the reading of scanned documents are settings of the agent service, and nothing answers as one on this server. Its operator sets one up beside AIshie.',
+      'The school’s AI plan, pricing and agent hosting are settings of the agent service, and nothing answers as one on this server. Its operator sets one up beside AIshie.',
     unreachableTitle: 'The agent service cannot be reached',
     unreachable: 'It may be restarting, or down. Try again in a minute.',
     notAdminTitle: 'You are not one of this agent service’s administrators',
@@ -34,8 +31,6 @@ export default {
   // The runtime's refusals, by reason.
   errors: {
     not_admin: 'Only the agent service’s administrators may do this, and your account is not one of them.',
-    ocr_unavailable:
-      'OCR cannot run on this server now, so it cannot be turned on or given languages. It can still be turned off, or set back to the server’s languages.',
     offer_not_found: 'This model is no longer on the plan: someone deleted it meanwhile.',
     offer_exists: {
       config: 'The server’s settings already have a model with this ID. Choose another.',
@@ -62,185 +57,8 @@ export default {
     bad_if_match: 'The agent service did not take this change as sent. Reload the page and try again.',
     missing_field: 'The agent service did not take this: “{field}” is missing. Reload the page and try again.',
     invalid_field: 'The agent service did not take this: “{field}” is not accepted. Check it and try again.',
-    transcription_unavailable:
-      'Transcription cannot run on this server now, so it cannot be turned on. It can still be turned off, and set for when it can run.',
-    offer_no_file_input:
-      'This model reads neither PDFs nor images, so it cannot transcribe. Choose a model of the plan that reads files.',
-    credential_rejected:
-      'AIshie did not accept the credential when the agent service tried it, so the agent service did not keep it.',
     openrouter_unavailable: 'OpenRouter could not be reached. Try again in a moment.',
     openrouter_model_not_found: 'OpenRouter has no model of this ID.',
-  },
-
-  // Reading scanned files and images (OCR).
-  ocr: {
-    title: 'Reading scanned documents (OCR)',
-    intro:
-      'When a model cannot read a file itself, the agent service recognizes the text of scanned PDFs and images for it, in the languages chosen here.',
-    state: {
-      on: 'On',
-      off: 'Off',
-      unavailable: 'Not available',
-    },
-    unavailable: {
-      operator_off:
-        'The server has turned this off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
-      not_installed:
-        'OCR’s programs or languages are not installed on this server, so it cannot run. What you set is kept for when they are.',
-    },
-    details: 'Details',
-    enabled: 'Read scanned documents and images',
-    enabledHint:
-      'Off: no scanned file or image is read for a model that cannot read it itself, and no text read before is given.',
-    turnedOn: 'OCR is on.',
-    turnedOff: 'OCR is off.',
-    languages: 'Languages',
-    languagesHint: 'Up to 8. OCR reads them in the order they were chosen.',
-    order: 'Read in this order: {list}',
-    kept: 'Kept for when OCR can run: {list}',
-    serverDefault: 'Server default',
-    saveLanguages: 'Save languages',
-    useDefault: 'Use the server’s default',
-    useDefaultHint: 'The server’s languages: {list}.',
-    languagesSaved: 'OCR reads in {list}.',
-    defaultRestored: 'OCR reads in the server’s languages again.',
-    tooMany: 'Choose at most 8.',
-    none: 'Choose at least one, or use the server’s default.',
-    neverChanged: 'Not changed here: as the server’s operator set it.',
-    vertical: '{name} (vertical)',
-    special: {
-      osd: 'Orientation and script',
-      equ: 'Equations',
-    },
-  },
-
-  // Documents' text versions (文字版), written by a model of the school's plan (the transcriber).
-  transcription: {
-    title: 'Transcribing documents (text versions)',
-    intro:
-      'The agent service transcribes each version of the courses’ files (slides, PDFs, Word) into Markdown once, with a model of the school’s plan, on the school’s key: a text version every model reads, and that readers and staff see beside the file.',
-    state: {
-      off: 'Off',
-      running: 'Running',
-      standby: 'Standing by',
-      blocked: 'Blocked: {why}',
-    },
-    blocked: {
-      no_credential: 'no credential',
-      credential_rejected: 'AIshie refused its credential',
-      no_offer: 'no model chosen',
-      offer_unavailable: 'its model is not available',
-      quota_exhausted: 'today’s pages are used up',
-      other: 'see below',
-    },
-    unavailable: {
-      operator_off:
-        'The server has turned transcription off, so it never runs, whatever is set here. What you set is kept for when it is turned on; ask the server’s operator.',
-      core_too_old:
-        'The server this agent service talks to has no transcription queue yet, so it cannot run. What you set is kept for when it has one.',
-    },
-    enabled: 'Transcribe documents into text versions',
-    enabledHint:
-      'Off: nothing is transcribed, and course pages do not show what waits to be. Text versions already written stay, and staff can still write them by hand.',
-    turnedOn: 'Transcription is on.',
-    turnedOff: 'Transcription is off.',
-    offer: 'Model',
-    noOffer: 'None chosen',
-    offerHint:
-      'A model of the school’s plan that reads PDFs or images. Its costs are the school’s, as the transcription line.',
-    offerStatus: {
-      ok: 'Ready',
-      not_found: 'No longer on the plan',
-      disabled: 'Turned off on the plan',
-      no_file_input: 'Cannot read files',
-      not_priced: 'No price',
-    },
-    maxPages: 'Pages a document at most',
-    perDayPages: 'Pages a day',
-    concurrency: 'Documents at once',
-    numbersHint:
-      'A document with more pages is skipped, and so is what is claimed once the day’s pages are used up, until they start again at {reset}; staff can send it again later. Leave “Pages a day” empty for no limit.',
-    saved: 'Transcription settings saved.',
-    invalid: {
-      maxPages: 'A whole number from 1 to 5000.',
-      perDayPages: 'A whole number from 1 to 1,000,000, or empty for no limit.',
-      concurrency: 'A whole number from 1 to 8.',
-    },
-    neverChanged: 'Not changed here: as the server’s operator set it.',
-    credential: {
-      title: 'Credential with AIshie',
-      status: {
-        none: 'None',
-        ok: 'Accepted',
-        untested: 'Not tried yet',
-        rejected: 'Refused',
-      },
-      lastSeen: 'Last accepted by AIshie',
-      givenBy: 'Given to the agent service by {who}, {when}',
-      given: 'Given to the agent service {when}',
-      neverSeen: 'Not used yet',
-      rejected: 'AIshie refused this credential: it was revoked or has expired. Issue a new one.',
-      issue: 'Issue and give to the agent service',
-      replace: 'Replace',
-      withdraw: 'Revoke',
-      hint: 'Issuing makes a credential of the transcription service in AIshie and gives it straight to the agent service, which tries it first: it is never shown here, nor kept in this browser. The service’s other credentials are then revoked.',
-      replaceAllTitle: 'Replace every credential?',
-      replaceAllBody:
-        'The transcription service already has {n} credentials, as many as AIshie allows. The new one replaces them all: each stops working at once, the agent service’s too until it takes the new one.',
-      replaceAll: 'Replace them all',
-      handedOver: 'The agent service has a new credential.',
-      unrevoked:
-        'One of the service’s other credentials could not be revoked in AIshie, and may still work. | {n} of the service’s other credentials could not be revoked in AIshie, and may still work.',
-      withdrawTitle: 'Revoke the transcription credential?',
-      withdrawBody:
-        'The agent service forgets it and AIshie revokes it: nothing is transcribed until a new one is issued. Work under way stops.',
-      withdrawn: 'The credential is revoked.',
-      notRevoked:
-        'The agent service has forgotten it, but AIshie could not revoke it: it may still work. Try again from here later.',
-      refused: {
-        rejected:
-          'AIshie did not accept the credential when the agent service tried it, so the agent service did not keep it. The credential just issued was revoked.',
-        notService:
-          'AIshie did not take the credential as the transcription service’s, so the agent service did not keep it. The credential just issued was revoked.',
-      },
-    },
-    // Core's refusals of the service's credentials, by reason.
-    coreRefusal: {
-      too_many_credentials:
-        'The transcription service holds as many credentials as AIshie allows. Revoke one, or replace them all.',
-      platform_role_required: 'Only AIshie’s platform administrators issue or revoke the transcription credential.',
-    },
-    today: {
-      title: 'Today',
-      reset: 'The counts start again at {reset}.',
-      pages: 'Pages',
-      of: 'of {n}',
-      documents: 'Documents',
-      failed: 'Failed',
-      skipped: 'Skipped',
-      cost: 'Cost',
-    },
-    jobs: {
-      title: 'What it transcribed',
-      file: 'File {n}',
-      filter: 'Status',
-      all: 'All',
-      status: {
-        working: 'Transcribing',
-        done: 'Done',
-        failed: 'Failed',
-        skipped: 'Skipped',
-        dropped: 'Dropped',
-      },
-      empty: 'Nothing transcribed yet.',
-      document: 'Document',
-      pages: 'Pages',
-      pagesN: 'One page | {n} pages',
-      finished: 'Finished',
-      since: 'since',
-      unpriced: 'No price',
-      backfill: 'Earlier upload',
-    },
   },
 
   // The models of the school's plan.
@@ -633,8 +451,6 @@ export default {
   },
   // What only the server's operator acts on, named in a tooltip beside the words (OperatorDetail).
   flags: {
-    ocrOff: 'OCR=off in the agent service’s environment.',
-    transcribeOff: 'TRANSCRIBE=off in the agent service’s environment.',
     adminActorIds: 'The agent service’s ADMIN_ACTOR_IDS.',
     serverFile: 'The agent service’s runtime.yaml.',
   },

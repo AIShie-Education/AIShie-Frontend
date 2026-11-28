@@ -1109,20 +1109,6 @@ test.describe('the platform’s settings beside the side bar', () => {
     await expect.poll(() => headingsOf(page, usage)).toEqual(['Owner', 'Answers'])
     await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
     await expect.poll(() => headingsOf(page, usage)).toEqual(['Owner', 'Answers', 'Model calls', 'Cost'])
-
-    // What it transcribed: a job's pages, cost and time under its document in 900, columns of their own in 1000.
-    await page.goto('/admin/runtime?tab=documents')
-    const jobs = '.transcription-jobs__table'
-    await expect(page.locator(jobs)).toBeVisible()
-    await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
-    await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
-    expect(await noSideways(page)).toBe(true)
-    await layout(page, 1000, 800, { side: true, view: 'Administration', chat: false })
-    await expect.poll(() => headingsOf(page, jobs)).toContain('Finished')
-    await layout(page, 900, 800, { side: false, chat: false })
-    await expect.poll(() => headingsOf(page, jobs)).toContain('Finished')
-    await layout(page, 900, 800, { side: true, view: 'Administration', chat: false })
-    await expect.poll(() => headingsOf(page, jobs)).toEqual(['Document'])
   })
 })
 

@@ -1,7 +1,7 @@
 // What the runtime's administrators' page (AI and documents) works out from
 // what the runtime says: whether a section is there at all (a runtime from
-// before its routes answers 404), the words for each refusal, the names of
-// OCR's languages, and the forms for an offer of the school's plan and its
+// before its routes answers 404), the words for each refusal, and the forms
+// for an offer of the school's plan and its
 // quotas. For display only: the runtime decides, and its refusals are shown
 // by reason. The offer's model is chosen as an owner's own model is, with the
 // hosting pages' pieces (hosting.ts).
@@ -94,7 +94,6 @@ export function actorName(id: string): Promise<string | null> {
  */
 const ADMIN_REASONS: ReadonlySet<string> = new Set([
   'not_admin',
-  'ocr_unavailable',
   'offer_not_found',
   'offer_read_only',
   'offer_not_priced',
@@ -105,9 +104,6 @@ const ADMIN_REASONS: ReadonlySet<string> = new Set([
   'model_not_priced',
   'price_not_found',
   'price_read_only',
-  'transcription_unavailable',
-  'offer_no_file_input',
-  'credential_rejected',
   'openrouter_unavailable',
   'openrouter_model_not_found',
 ])
@@ -173,66 +169,6 @@ export function keyTrialDetail(trial: KeyTrial, t: T): string {
   if (trial.providerCode) parts.push(t('runtimeAdmin.offer.trialCode', { code: trial.providerCode }))
   return parts.join(t('common.sep'))
 }
-
-// --- OCR's languages -------------------------------------------------------------------
-
-/**
- * Tesseract's languages by their own names, as a language menu lists them:
- * the same in every language of the page. One not named here is shown by its
- * code; a vertical script's (chi_tra_vert) is its language's, said to be
- * vertical.
- */
-const LANGUAGE_NAMES: Record<string, string> = {
-  chi_tra: '繁體中文',
-  chi_sim: '简体中文',
-  eng: 'English',
-  jpn: '日本語',
-  kor: '한국어',
-  fra: 'Français',
-  deu: 'Deutsch',
-  spa: 'Español',
-  por: 'Português',
-  ita: 'Italiano',
-  nld: 'Nederlands',
-  rus: 'Русский',
-  ukr: 'Українська',
-  pol: 'Polski',
-  tur: 'Türkçe',
-  ara: 'العربية',
-  heb: 'עברית',
-  hin: 'हिन्दी',
-  ben: 'বাংলা',
-  tha: 'ไทย',
-  vie: 'Tiếng Việt',
-  ind: 'Bahasa Indonesia',
-  msa: 'Bahasa Melayu',
-  fil: 'Filipino',
-  lat: 'Latina',
-  ell: 'Ελληνικά',
-}
-
-/** A language of OCR's, by its name, or its code when it has none here. */
-export function languageName(code: string, t: T): string {
-  if (code === 'osd' || code === 'equ') return t(`runtimeAdmin.ocr.special.${code}`)
-  const vertical = code.endsWith('_vert')
-  const base = vertical ? code.slice(0, -'_vert'.length) : code
-  const name = LANGUAGE_NAMES[base]
-  if (!name) return code
-  return vertical ? t('runtimeAdmin.ocr.vertical', { name }) : name
-}
-
-/** Whether two lists of languages are the same, order and all (OCR reads them in that order). */
-export function sameLanguages(
-  a: readonly string[] | null | undefined,
-  b: readonly string[] | null | undefined,
-): boolean {
-  const x = a ?? []
-  const y = b ?? []
-  return x.length === y.length && x.every((v, i) => v === y[i])
-}
-
-/** At most this many languages at once. */
-export const OCR_MAX_LANGUAGES = 8
 
 // --- Offers ---------------------------------------------------------------------------
 

@@ -608,7 +608,7 @@ describe('the assertion stays secret', () => {
     expect(err.message).toBe('refused [token]')
   })
 
-  it('nor a service’s token, the transcriber’s, should the runtime repeat one', async () => {
+  it('nor a service credential, should the runtime repeat one', async () => {
     const token = 'aissvc_k7v2m4qhx3ab_' + 'Q'.repeat(43)
     runtimeAnswers.push(
       json(422, {
@@ -619,7 +619,7 @@ describe('the assertion stays secret', () => {
         },
       }),
     )
-    const err = await failure(rt.runtimeAdmin.setTranscriptionCredential({ token }))
+    const err = await failure(rt.runtimeApi.put('/agents/agt_1', { probe: true }))
     expect(err.reason).toBe('credential_rejected')
     const all = [String(err), err.message, err.stack, JSON.stringify(err), JSON.stringify(err.details)].join('\n')
     expect(all).not.toContain(token)
@@ -949,14 +949,6 @@ describe('the administrators’ calls', () => {
   }
 
   it.each([
-    ['settings', () => rt.runtimeAdmin.settings(), 'GET', '/runtime/api/v1/admin/settings', undefined],
-    [
-      'updateSettings',
-      () => rt.runtimeAdmin.updateSettings({ ocr: { languages: null } }),
-      'PATCH',
-      '/runtime/api/v1/admin/settings',
-      { ocr: { languages: null } },
-    ],
     ['plan', () => rt.runtimeAdmin.plan(), 'GET', '/runtime/api/v1/admin/school-plan', undefined],
     ['offer', () => rt.runtimeAdmin.offer('fast'), 'GET', '/runtime/api/v1/admin/school-plan/offers/fast', undefined],
     [
@@ -1089,41 +1081,6 @@ describe('the administrators’ calls', () => {
       undefined,
     ],
     [
-      'updateSettings, the transcriber',
-      () => rt.runtimeAdmin.updateSettings({ transcription: { enabled: true, per_day_pages: null } }),
-      'PATCH',
-      '/runtime/api/v1/admin/settings',
-      { transcription: { enabled: true, per_day_pages: null } },
-    ],
-    [
-      'setTranscriptionCredential',
-      () => rt.runtimeAdmin.setTranscriptionCredential({ token: 'aissvc_x', credential_id: 'cred-1' }),
-      'PUT',
-      '/runtime/api/v1/admin/transcription/credential',
-      { token: 'aissvc_x', credential_id: 'cred-1' },
-    ],
-    [
-      'deleteTranscriptionCredential',
-      () => rt.runtimeAdmin.deleteTranscriptionCredential(),
-      'DELETE',
-      '/runtime/api/v1/admin/transcription/credential',
-      undefined,
-    ],
-    [
-      'transcriptionJobs',
-      () => rt.runtimeAdmin.transcriptionJobs(),
-      'GET',
-      '/runtime/api/v1/admin/transcription/jobs',
-      undefined,
-    ],
-    [
-      'transcriptionJobs, as asked',
-      () => rt.runtimeAdmin.transcriptionJobs({ status: 'failed', limit: 50, after: 'j-9' }),
-      'GET',
-      '/runtime/api/v1/admin/transcription/jobs?status=failed&limit=50&after=j-9',
-      undefined,
-    ],
-    [
       'openRouterEndpoints',
       () => rt.runtimeAdmin.openRouterEndpoints('meta-llama/llama-3.3-70b-instruct:nitro'),
       'GET',
@@ -1140,17 +1097,6 @@ describe('the administrators’ calls', () => {
     expect(c.body === undefined ? undefined : JSON.parse(c.body)).toEqual(body)
     expect(c.headers.Authorization).toMatch(/^Bearer eyJ/)
     expect(c.credentials).toBe('omit')
-  })
-
-  it('never sends the transcriber’s credential again by itself, and sends its deletion again', async () => {
-    runtimeAnswers.push(empty(502))
-    const err = await failure(rt.runtimeAdmin.setTranscriptionCredential({ token: 'aissvc_x' }))
-    expect(err.status).toBe(502)
-    expect(runtimeCalls()).toHaveLength(1)
-
-    runtimeAnswers.push(empty(502), json(200, {}))
-    await pastRetries(rt.runtimeAdmin.deleteTranscriptionCredential())
-    expect(runtimeCalls()).toHaveLength(3)
   })
 
   it('asks OpenRouter’s upstream providers once, the runtime having waited for OpenRouter already', async () => {
@@ -1208,7 +1154,6 @@ describe('the administrators’ calls', () => {
 
   it.each([
     ['plan', () => rt.runtimeAdmin.plan()],
-    ['settings', () => rt.runtimeAdmin.settings()],
     ['usage', () => rt.runtimeAdmin.usage()],
     ['setQuotas', () => rt.runtimeAdmin.setQuotas({ per_owner_day: 1, per_asker_day: 1, per_day: 1 })],
     ['resetQuotas', () => rt.runtimeAdmin.resetQuotas()],
@@ -1234,7 +1179,6 @@ describe('the administrators’ calls', () => {
   })
 
   it.each([
-    ['updateSettings', () => rt.runtimeAdmin.updateSettings({ ocr: { enabled: false } })],
     ['createOffer', () => rt.runtimeAdmin.createOffer(CREATE)],
     ['updateOffer', () => rt.runtimeAdmin.updateOffer('fast', 2, { enabled: true })],
     ['deleteOffer', () => rt.runtimeAdmin.deleteOffer('fast', 2)],
@@ -1289,7 +1233,7 @@ describe('the administrators’ calls', () => {
     runtimeAnswers.push(
       json(404, { error: { code: 'not_found', message: 'no route', details: { reason: 'no_route' } } }),
     )
-    const err = await failure(rt.runtimeAdmin.settings())
+    const err = await failure(rt.runtimeAdmin.plan())
     expect(err.status).toBe(404)
     expect(err.reason).toBe('no_route')
   })
@@ -1342,5 +1286,33 @@ describe('runtimePath', () => {
     )
     expect(rt.runtimePath(rt.RUNTIME_ROUTES.info)).toBe('/info')
     expect(() => rt.runtimePath('/agents/{agent_id}', {})).toThrow(/agent_id is required/)
+  })
+})
+
+describe('runtimeFetch for AR chat streams and bytes', () => {
+  it('uses the assertion with no cookie and refuses redirects, without consuming the stream', async () => {
+    runtimeAnswers.push(text(200, ': connected\n\n', 'text/event-stream'))
+    const res = await rt.runtimeFetch('/courses/k1/conversations/c1/stream', { headers: { Accept: 'text/event-stream' } })
+    const call = runtimeCalls()[0]!
+    expect(call.credentials).toBe('omit')
+    expect(call.redirect).toBe('error')
+    expect(call.headers.Authorization).toBe(`Bearer ${minted[0]}`)
+    expect(call.headers.Accept).toBe('text/event-stream')
+    expect(await res.text()).toBe(': connected\n\n')
+  })
+
+  it('mints a fresh assertion once after AR’s 401 and repeats the same request', async () => {
+    runtimeAnswers.push(json(401, { error: { code: 'unauthenticated', message: 'expired' } }))
+    runtimeAnswers.push(text(200, 'abc', 'text/plain'))
+    const res = await rt.runtimeFetch('/courses/k1/attachments/a1')
+    expect(await res.text()).toBe('abc')
+    const sent = runtimeCalls()
+    expect(sent).toHaveLength(2)
+    expect(sent[0]!.headers.Authorization).not.toBe(sent[1]!.headers.Authorization)
+    expect(mintCalls()).toHaveLength(2)
+    for (const call of sent) {
+      expect(call.credentials).toBe('omit')
+      expect(call.redirect).toBe('error')
+    }
   })
 })

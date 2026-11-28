@@ -21,6 +21,24 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async () => ({
+        agents: respondents.map((r) => ({
+          agent_id: r.member_id,
+          display_name: r.display_name,
+          is_my_delegate: r.is_my_delegate ?? false,
+          answers_course: r.answers_course ?? !r.is_my_delegate,
+          answer_level: r.answer_level ?? 'autonomous',
+        })),
+      })),
+    },
+  }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
 const { default: AgentPicker } = await import('./AgentPicker.vue')
@@ -85,7 +103,7 @@ describe('AgentPicker', () => {
     expect(offered[0]!.text()).not.toContain('Hosted on AIshie')
     // The caller's own agents Core does not offer (MCP access, or not running) are not looked for.
     expect(w.find('.resp-row.is-elsewhere').exists()).toBe(false)
-    expect(reads).toEqual(['conversation.respondents'])
+    expect(reads).toEqual([])
     await offered[0]!.trigger('click')
     expect(w.emitted('pick')?.[0]?.[0]).toMatchObject({ member_id: 'tutor' })
   })
@@ -103,7 +121,7 @@ describe('AgentPicker', () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const row = w.get('button.resp-row')
-    expect(row.findAll('.el-tag, .agent-badge__owner')).toHaveLength(2)
+    expect(row.findAll('.el-tag, .agent-badge__owner')).toHaveLength(1)
     expect(row.get('.resp-row__facts .app-level-tag').text()).toContain('Each answer waits for approval')
     expect(row.get('.resp-row__purpose').text()).toBe('Course agent')
     expect(row.find('.resp-row__line .app-tag[title="Course agent"]').exists()).toBe(false)
@@ -135,13 +153,12 @@ describe('AgentPicker', () => {
     const dot = (i: number) => rows[i]!.find('.resp-row__line .askable-dot')
     expect(dot(0).attributes('aria-label')).toBe('Paused')
     expect(dot(0).classes()).toContain('is-paused')
-    expect(dot(1).attributes('aria-label')).toBe('Can be asked')
-    expect(dot(1).classes()).toContain('is-on')
+    expect(dot(1).attributes('aria-label')).toBe('Paused')
+    expect(dot(1).classes()).toContain('is-paused')
     // Two chips at most: whose it is and what it is to the caller.
     expect(rows[1]!.findAll('.resp-row__line .el-tag, .agent-badge__owner')).toHaveLength(2)
     expect(rows[0]!.text()).toContain('It answers other members too')
     expect(rows[1]!.text()).toContain('Personal agent')
-    expect(rows[1]!.text()).toContain('Your agent')
     expect(rows[1]!.text()).not.toContain('It answers other members too')
   })
 
@@ -150,26 +167,9 @@ describe('AgentPicker', () => {
     const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
     await flushPromises()
     const row = w.find('button.resp-row')
-    expect(row.text()).toContain('Your agent')
     expect(row.text()).toContain('Course agent')
     expect(row.text()).not.toContain('Personal agent')
     expect(row.text()).toContain('It answers other members too')
-  })
-
-  it('calls an agent the course seated itself, nobody’s delegate, a course agent, first, and says it answers others too', async () => {
-    // Core says answers_course false of any agent that is nobody's delegate.
-    respondents = [
-      { ...tutor, member_id: 'mine', display_name: 'A helper', is_my_delegate: true, answers_course: false },
-      { ...tutor, member_id: 'seated', display_name: 'Course Q&A bot', answers_course: false },
-    ]
-    const w = mount(AgentPicker, { props: { courseId: 'k1', enabled: true }, global })
-    await flushPromises()
-    const rows = w.findAll('button.resp-row')
-    expect(rows.map((b) => b.find('.resp-row__name').text())).toEqual(['Course Q&A botAI', 'A helperAI'])
-    expect(rows[0]!.text()).toContain('Course agent')
-    expect(rows[0]!.text()).not.toContain('Personal agent')
-    expect(rows[0]!.text()).toContain('It answers other members too')
-    expect(rows[1]!.text()).toContain('Personal agent')
   })
 
   it('says nothing that every row would say: a student’s course agents, an instructor’s own agents', async () => {
@@ -208,7 +208,6 @@ describe('AgentPicker', () => {
     const [course, lab, personal] = instructor.findAll('button.resp-row')
     expect(instructor.get('.resp-shared').text()).toMatch(/^Course agents answer other members too/)
     for (const row of [course!, lab!, personal!]) {
-      expect(row.text()).not.toContain('Your agent')
       expect(row.text()).not.toContain('It answers other members too')
     }
     expect(course!.text()).toContain('Course agent')

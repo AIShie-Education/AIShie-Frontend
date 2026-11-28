@@ -222,7 +222,8 @@ export function routeFor(courseId: string, kind: string, id: string | null | und
       return { name: 'course-overview', params: { courseId } }
     case 'conversation':
     case 'conversation_id':
-      // The address of the page conversations once had: it opens the chat panel on it, and the page stays.
+      // These ids come from Core actions. The compatibility address redirects
+      // to the explicit read-only legacy reader, never to AR's chat store.
       return { name: 'course-conversations', params: { courseId, conversationId: id } }
     case 'group_set':
     case 'set_id':

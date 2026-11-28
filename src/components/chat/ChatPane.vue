@@ -56,9 +56,9 @@
 // The ⋯ menu also downloads the conversation as a PDF (下載為 PDF): every
 // message, read back to the first, laid out for paper under who wrote it and
 // when, through the browser's print window (usePrintLayout).
-import { computed, nextTick, onMounted, ref, watch, watchEffect } from 'vue'
+import { computed, nextTick, onMounted, onScopeDispose, ref, watch, watchEffect } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ElMessage, ElMessageBox, type DropdownInstance } from 'element-plus'
+import { ElMessage, type DropdownInstance } from 'element-plus'
 import type { ConversationMessage, ConversationView, Respondent } from '@/api/types'
 import AgentAvatar from '@/components/AgentAvatar.vue'
 import AiBadge from '@/components/AiBadge.vue'
@@ -68,18 +68,19 @@ import DataFlowNotice from '@/components/DataFlowNotice.vue'
 import StatusTag from '@/components/StatusTag.vue'
 import { useBackCloses } from '@/composables/useBackCloses'
 import { useNow } from '@/composables/useNow'
-import { useWrite } from '@/composables/useWrite'
 import { notifyError } from '@/composables/useErrors'
+import { toApiError } from '@/composables/useAsync'
 import { useDropTarget } from '@/composables/useFileDrop'
 import { useSessionStore } from '@/stores/session'
 import { courseLine, dateLine, usePrintLayout, type PrintRequest } from '@/composables/usePrintLayout'
 import { formatDateTime, formatList } from '@/utils/format'
 import { entriesHtml } from '@/utils/printLayout'
 import type { ApiError } from '@/api/http'
+import { chatIdempotencyKey, runtimeChat, type ChatSubmission, type ChatSnapshot } from '@/api/runtimeChat'
+import { coreNow } from '@/api/clock'
 import {
   availabilityOf,
   bodyProblem,
-  charCount,
   chatStatus,
   cleanBody,
   closedConflict,
@@ -92,11 +93,9 @@ import {
   notAskableReason,
   offeredIn,
   questionWithdrawn,
-  REASON_MAX,
   roleIn,
   setDraft,
   titleFrom,
-  visibleToLines,
   type Availability,
   type ChatRole,
   type NotAskableReason,
@@ -168,7 +167,9 @@ const view = computed<ConversationView | null>(() => conv?.view.value ?? null)
 const messages = computed<ConversationMessage[]>(() => conv?.messages.value ?? [])
 /** The answer being written, as Core sends it while the agent writes (useConversation). */
 const answerDraft = computed(() => conv?.draft.value ?? null)
-const me = computed(() => seat.value.memberId)
+// AR's own-conversation DTO has no Core member ids; the adapter's local opener id
+// keeps authorship, withdrawal and read display consistent after the first read.
+const me = computed(() => view.value?.opener.member_id ?? seat.value.memberId)
 const role = computed<ChatRole>(() => {
   if (props.oversee) return 'overseer'
   return view.value ? roleIn(view.value, me.value) : 'opener'
@@ -256,15 +257,16 @@ const other = computed<Party | null>(() => {
   const v = view.value
   if (!v) return null
   const r = v.respondent
+  const offeredAgent = offers.items.value.find((a) => a.member_id === r.member_id)
   return {
-    name: r.display_name,
+    name: offeredAgent?.display_name ?? r.display_name,
     kind: r.kind,
     memberId: r.member_id,
     actorId: actorIdOf(r),
     ownerName: r.owner_name,
-    mine: role.value === 'opener' && r.is_delegate_of_opener,
-    lastSeenAt: r.last_seen_at,
-    answerLevel: r.answer_level,
+    mine: role.value === 'opener' && (offeredAgent?.is_my_delegate ?? r.is_delegate_of_opener),
+    lastSeenAt: offeredAgent?.last_seen_at ?? r.last_seen_at,
+    answerLevel: offeredAgent?.answer_level ?? r.answer_level,
     seatStatus: r.seat_status,
   }
 })
@@ -280,20 +282,20 @@ const answerLevel = computed(() => {
   const l = other.value?.answerLevel
   return l && l !== 'autonomous' ? l : null
 })
-/**
- * Whether the one answering answers other members too, before Core has said
- * (visible_to): so for anyone but the opener's own agent.
- */
+/** Whether this agent answers the course, independent of whether it is the caller's own delegate. */
 const answersOthers = computed(() => {
-  if (isDraft.value) return !!props.respondent && !props.respondent.is_my_delegate
+  const respondent = isDraft.value ? props.respondent : null
+  const memberId = respondent?.member_id ?? view.value?.respondent.member_id
+  const offeredAgent = memberId ? offers.items.value.find((a) => a.member_id === memberId) : undefined
+  if (typeof offeredAgent?.answers_course === 'boolean') return offeredAgent.answers_course
+  if (respondent && typeof respondent.answers_course === 'boolean') return respondent.answers_course
   const v = view.value
   return !!v && !v.respondent.is_delegate_of_opener
 })
-const visibleLines = computed(() => visibleToLines(conv?.visibleTo.value, { answersOthers: answersOthers.value }))
 /** The opener is told plainly when what they write may be repeated to others. */
-const sharedNote = computed(
-  () => role.value === 'opener' && visibleLines.value.some((l) => 'key' in l && l.key === 'respondentAnswersOthers'),
-)
+// Whether an agent answers others is a data-flow fact, not a claim that those
+// other members can read this conversation's AR visibility list.
+const sharedNote = computed(() => role.value === 'opener' && answersOthers.value)
 
 // --- Who reads it, and where it goes (privacy.ts) -------------------------------------
 /**
@@ -309,7 +311,7 @@ const hosting = computed<AnswerHosting>(() => {
   if (offer) return of(offer.hosting)
   if (notAskableWhy.value === 'mcp_agent') return 'mcp'
   if (notAskableWhy.value === 'agent_not_hosted') return 'runtime'
-  return null
+  return of((view.value?.respondent as { hosting?: string } | undefined)?.hosting)
 })
 /** The caller's own model detail, or another agent's safe asker-facing provider facts. */
 const answer = useAnswerModels({
@@ -319,6 +321,7 @@ const answer = useAnswerModels({
   actorId: () => (other.value?.kind === 'agent' ? other.value.actorId : null),
   hosting,
   mine: () => role.value === 'opener' && !!other.value?.mine && hosting.value === 'runtime',
+  ready: () => !needsOffer.value || offers.loaded.value,
 })
 const privacy = computed(() =>
   privacyNotice({
@@ -381,9 +384,7 @@ function authorName(m: ConversationMessage): string {
 }
 const fromOpener = (m: ConversationMessage) => m.author_member_id === view.value?.opener.member_id
 const canRetract = (m: ConversationMessage) =>
-  seat.value.writable &&
-  !m.retracted &&
-  (m.author_member_id === me.value || (role.value === 'overseer' && seat.value.can('action_decide')))
+  seat.value.writable && !m.retracted && role.value === 'opener' && pendingQuestion.value?.id === m.id
 /** Whether a message follows the one before it closely, by the same author: its name is not said again. */
 const grouped = (i: number) => groupedWith(messages.value[i - 1], messages.value[i]!)
 /**
@@ -397,24 +398,6 @@ const pendingQuestion = computed<ConversationMessage | null>(() => {
   if (last.author_member_id !== me.value || last.retracted || !last.body) return null
   return status.value?.state === 'awaiting_answer' ? last : null
 })
-
-/** Questions the caller asked that wait for someone's approval, shown until they appear. */
-interface Held {
-  actionId: string
-  body: string
-  at: number
-  /** The names of the files it carries. */
-  files: string[]
-}
-const held = ref<Held[]>([])
-const heldShown = computed(() =>
-  held.value.filter(
-    (h) =>
-      !messages.value.some(
-        (m) => m.author_member_id === me.value && m.body === h.body && Date.parse(m.created_at) >= h.at - 60_000,
-      ),
-  ),
-)
 
 // --- Scrolling: kept at the newest while the reader is there -----------------------
 
@@ -433,7 +416,6 @@ watch(
   () =>
     [
       lastSeq(messages.value),
-      heldShown.value.length,
       status.value?.typing,
       status.value?.notice?.kind,
       answerDraft.value?.version,
@@ -483,11 +465,16 @@ const composer = ref<InstanceType<typeof ChatComposer> | null>(null)
 /** The files attached to the draft, kept with it as its text is. */
 const files = attachmentsFor(key, props.courseId)
 
-const openWrite = useWrite('conversation.open')
-const askWrite = useWrite('conversation.ask')
-const retractWrite = useWrite('conversation.retract')
-const sending = computed(() => openWrite.pending.value || askWrite.pending.value)
-/** The new conversation is waiting for someone's approval (nothing to show until then). */
+const opening = ref(false)
+const asking = ref(false)
+const sending = computed(() => opening.value || asking.value)
+let openKey: string | null = null
+let askKey: string | null = null
+// An unanswered call is retried under the same AR key; editing starts a new intention.
+watch(draft, () => {
+  openKey = null
+  askKey = null
+})
 const openProposed = ref(false)
 
 const writeBlocked = computed(() => {
@@ -512,10 +499,6 @@ const showsComposer = computed(
 )
 const placeholder = computed(() => t('chat.composer.askPlaceholder', { name: other.value?.name ?? '' }))
 const blockText = computed(() => (seat.value.writable ? '' : t('chat.blocked.archived')))
-
-function afterWrite(out: { reviewState: string } | null) {
-  if (out?.reviewState === 'pending') ElMessage({ type: 'info', message: t('common.outcome.pendingReview') })
-}
 
 /**
  * Nobody asks the agent in the site now after all (Core refused a question
@@ -546,6 +529,22 @@ function refused(err: ApiError | null) {
   }
 }
 
+function applySnapshot(out: ChatSnapshot) {
+  conv?.accept(out)
+  emit('changed')
+}
+function noteSubmission(submission: ChatSubmission | undefined) {
+  // A proposal is a successful accepted outcome; approval, never this response,
+  // is what later schedules a question or publishes an answer.
+  if (submission?.status === 'proposed') {
+    ElMessage({ type: 'success', message: t('chat.state.questionPending') })
+  } else if (submission?.status === 'executed' && submission.approval_id && submission.review_state === 'pending') {
+    // pending_review has already executed, and separately enters the review queue.
+    ElMessage({ type: 'info', message: t('common.outcome.pendingReview') })
+  }
+}
+const toError = (e: unknown) => toApiError(e)
+
 /**
  * Sends the draft, with the files attached to it, once they are all up (the
  * composer asks for words to go with files alone, and sends nothing then).
@@ -554,64 +553,66 @@ async function send() {
   if (writeBlocked.value || sending.value || files.block.value || bodyProblem(draft.value)) return
   const body = cleanBody(draft.value)
   const attachments = files.payload()
-  const withFiles = attachments.length ? { attachments } : {}
+  const withFiles = attachments.length ? { attachment_ids: attachments.map((a) => a.upload_token) } : {}
   const sentFiles = files.files()
-  const heldFiles = attachments.map((a) => a.filename)
   if (isDraft.value) {
     const r = props.respondent
     if (!r) return
-    const title = titleFrom(body)
-    const out = await openWrite.run(
-      {
-        course_id: props.courseId,
-        respondent_member_id: r.member_id,
+    opening.value = true
+    try {
+      const title = titleFrom(body)
+      openKey ??= chatIdempotencyKey()
+      const out = await runtimeChat.create(props.courseId, {
+        agent_id: r.member_id,
         body,
         ...withFiles,
         ...(title ? { title } : {}),
-      },
-      { success: false, notify: false },
-    )
-    if (!out) {
-      const err = openWrite.lastError.value
-      if (files.refused(err)) return
-      // In the words every page has for such an agent.
-      notifyError(err)
-      const notAskable = notAskableReason(err)
-      if (notAskable) noteElsewhere(notAskable)
-      return
+        idempotency_key: openKey,
+      })
+      openKey = null
+      draft.value = ''
+      files.clear()
+      noteSent(body)
+      seenPrivacy()
+      rememberSent(out.message.id, sentFiles)
+      noteSubmission(out.submission)
+      emit('changed')
+      emit('opened', out.conversation.id)
+    } catch (e) {
+      const err = toError(e)
+      if (!files.refused(err)) {
+        notifyError(err)
+        const notAskable = notAskableReason(err)
+        if (notAskable) noteElsewhere(notAskable)
+      }
+    } finally {
+      opening.value = false
     }
-    draft.value = ''
-    files.clear()
-    noteSent(body)
-    seenPrivacy()
-    emit('changed')
-    if (out.status === 'proposed') {
-      openProposed.value = true
-      return
-    }
-    rememberSent(out.result.message_id, sentFiles)
-    afterWrite(out)
-    emit('opened', out.result.conversation_id)
     return
   }
   if (!conv || !props.conversationId || role.value !== 'opener') return
-  const out = await askWrite.run(
-    { course_id: props.courseId, conversation_id: props.conversationId, body, ...withFiles },
-    { success: false, notify: false },
-  )
-  if (!out) {
-    refused(askWrite.lastError.value)
-    return
+  asking.value = true
+  try {
+    askKey ??= chatIdempotencyKey()
+    const out = await runtimeChat.ask(props.courseId, props.conversationId, {
+      body,
+      ...withFiles,
+      idempotency_key: askKey,
+    })
+    askKey = null
+    draft.value = ''
+    files.clear()
+    noteSent(body)
+    const sent = [...out.messages].reverse().find((m) => m.role === 'user')
+    rememberSent(sent?.id, sentFiles)
+    applySnapshot(out)
+    noteSubmission(out.submission)
+    composer.value?.focus()
+  } catch (e) {
+    refused(toError(e))
+  } finally {
+    asking.value = false
   }
-  draft.value = ''
-  files.clear()
-  noteSent(body)
-  if (out.status === 'proposed')
-    held.value = [...held.value, { actionId: out.actionId, body, at: Date.now(), files: heldFiles }]
-  else rememberSent(out.result.message_id, sentFiles)
-  afterWrite(out)
-  await conv.refresh()
-  composer.value?.focus()
 }
 
 // --- Files dropped on the pane --------------------------------------------------------
@@ -626,27 +627,6 @@ const drop = useDropTarget({ enabled: () => canTakeFiles.value, onFiles: takeFil
 const dropOver = computed(() => drop.over.value && canTakeFiles.value)
 defineExpose({ canTakeFiles, takeFiles })
 
-const reasonValidator = (v: string | null) =>
-  charCount(v ?? '') <= REASON_MAX || t('chat.reasonTooLong', { max: REASON_MAX })
-
-async function askReason(message: string, title: string, confirm: string): Promise<string | null | false> {
-  try {
-    const res = await ElMessageBox.prompt(message, title, {
-      inputType: 'textarea',
-      inputPlaceholder: t('chat.reasonPlaceholder'),
-      inputValidator: reasonValidator,
-      confirmButtonText: confirm,
-      cancelButtonText: t('common.actions.cancel'),
-      confirmButtonClass: 'el-button--danger',
-      type: 'warning',
-    })
-    const v = (res as { value?: string }).value?.trim()
-    return v ? v : null
-  } catch {
-    return false
-  }
-}
-
 /**
  * Takes the question waiting for its answer back to the composer: it is
  * withdrawn (conversation.retract, as its author), which no agent answers
@@ -659,13 +639,12 @@ async function withdrawToComposer(m: ConversationMessage, why: 'edit' | 'stop') 
   if (!conv || !m.body || withdrawing.value) return
   const body = m.body
   withdrawing.value = m.id
-  const out = await retractWrite.run({ course_id: props.courseId, message_id: m.id }, { success: false })
-  withdrawing.value = null
-  if (!out) return
-  if (out.status === 'executed') {
+  try {
+    const out = await runtimeChat.withdraw(props.courseId, props.conversationId!, m.id)
     const hadFiles = !!m.attachments?.length
     const again = hadFiles ? sentFilesOf(m.id) : null
     conv.markRetracted(m.id, me.value, null)
+    applySnapshot(out)
     draft.value = cleanBody(draft.value) ? `${body}\n\n${draft.value}` : body
     // Its files come back with it where they were sent from here, uploaded again.
     if (again?.length) void files.add(again)
@@ -676,8 +655,11 @@ async function withdrawToComposer(m: ConversationMessage, why: 'edit' | 'stop') 
       duration: 6000,
     })
     void nextTick(() => composer.value?.focus())
+  } catch (e) {
+    notifyError(toError(e))
+  } finally {
+    withdrawing.value = null
   }
-  await conv.refresh()
 }
 
 /** Stops waiting: the question awaiting its answer, taken back to the composer (withdrawToComposer). */
@@ -693,6 +675,27 @@ const askedAt = computed(() => {
   const at = last ? Date.parse(last.created_at) : NaN
   return Number.isFinite(at) ? at : null
 })
+/** The one-second clock runs only while an unanswered question has no draft to show. */
+const slowNow = ref(coreNow())
+let slowTimer: ReturnType<typeof setInterval> | null = null
+const waitingWithoutDraft = () => !!pendingQuestion.value && !!status.value?.typing && !answerDraft.value
+watch(
+  waitingWithoutDraft,
+  (on) => {
+    if (slowTimer !== null) clearInterval(slowTimer)
+    slowTimer = null
+    slowNow.value = coreNow()
+    if (on) slowTimer = setInterval(() => (slowNow.value = coreNow()), 1000)
+  },
+  { immediate: true },
+)
+onScopeDispose(() => {
+  if (slowTimer !== null) clearInterval(slowTimer)
+})
+const showNoResponse = computed(
+  () => waitingWithoutDraft() && askedAt.value !== null && slowNow.value - askedAt.value >= 20_000,
+)
+
 /** The agent at work, where something runs it; else only that it is waited for. */
 const statusLabel = computed(() => {
   const n = status.value?.notice
@@ -707,23 +710,18 @@ const statusSub = computed(() => {
 
 const retracting = ref<string | null>(null)
 async function retract(m: ConversationMessage) {
-  if (!conv) return
-  const mine = m.author_member_id === me.value
-  const reason = await askReason(
-    mine ? t('chat.retract.bodyMine') : t('chat.retract.bodyStaff', { name: authorName(m) }),
-    t('chat.retract.title'),
-    t('chat.retract.confirm'),
-  )
-  if (reason === false) return
+  if (!conv || !props.conversationId || m.id !== pendingQuestion.value?.id) return
   retracting.value = m.id
-  const out = await retractWrite.run(
-    { course_id: props.courseId, message_id: m.id, ...(reason ? { reason } : {}) },
-    { success: t('chat.retract.done') },
-  )
-  retracting.value = null
-  if (!out) return
-  if (out.status === 'executed') conv.markRetracted(m.id, me.value, reason)
-  await conv.refresh()
+  try {
+    const out = await runtimeChat.withdraw(props.courseId, props.conversationId, m.id)
+    conv.markRetracted(m.id, me.value, null)
+    applySnapshot(out)
+    ElMessage({ type: 'success', message: t('chat.retract.done') })
+  } catch (e) {
+    notifyError(toError(e))
+  } finally {
+    retracting.value = null
+  }
 }
 
 /** A new conversation with the one this closed conversation was with. */
@@ -1027,7 +1025,7 @@ const closedLine = computed(() => {
             </el-button>
             <span v-if="conv.olderError.value" class="chat-pane__older-error">{{ t('chat.olderFailed') }}</span>
           </div>
-          <div v-if="conv.loaded.value && !messages.length && !heldShown.length" class="chat-pane__empty app-muted">
+          <div v-if="conv.loaded.value && !messages.length" class="chat-pane__empty app-muted">
             {{ role === 'opener' ? t('chat.empty.opener', { name: other?.name ?? '' }) : t('chat.empty.other') }}
           </div>
           <ul class="chat-pane__list" :aria-label="t('chat.messagesLabel')">
@@ -1048,27 +1046,17 @@ const closedLine = computed(() => {
                 @edit="withdrawToComposer(m, 'edit')"
               />
             </li>
-            <li v-for="h in heldShown" :key="h.actionId" class="chat-pane__held">
-              <div class="chat-pane__held-bubble">
-                <p class="chat-pane__held-text">{{ h.body }}</p>
-                <p v-if="h.files.length" class="chat-pane__held-files">
-                  <el-icon aria-hidden="true"><Paperclip /></el-icon>
-                  {{ t('chat.attach.held', { n: h.files.length, names: formatList(h.files) }, h.files.length) }}
-                </p>
-              </div>
-              <div class="chat-pane__held-note">
-                <el-icon aria-hidden="true"><Clock /></el-icon>
-                {{ t('chat.held') }}
-                <router-link :to="{ name: 'course-my-actions', params: { courseId } }">{{
-                  t('chat.myActions')
-                }}</router-link>
-              </div>
-            </li>
             <li v-if="status?.typing && answerDraft" class="chat-pane__typing chat-pane__draft">
               <ChatDraft :draft="answerDraft" :author-name="other?.name ?? ''" :since="askedAt" />
             </li>
             <li v-else-if="status?.typing" class="chat-pane__typing">
               <ChatStatusLine :label="statusLabel" :since="askedAt" :sub="statusSub" />
+              <div v-if="showNoResponse" class="chat-pane__no-response" role="status">
+                <span>{{ t('chat.noResponse') }}</span>
+                <el-button link type="primary" size="small" :loading="!!withdrawing" @click="stop">
+                  {{ t('chat.withdrawQuestion') }}
+                </el-button>
+              </div>
             </li>
           </ul>
         </AsyncState>
@@ -1453,38 +1441,12 @@ const closedLine = computed(() => {
 .chat-pane__list > li.is-grouped {
   margin-top: 0;
 }
-.chat-pane__held {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-.chat-pane__held-bubble {
-  max-width: min(100%, 680px);
-  padding: 9px 13px;
-  border-radius: var(--app-radius);
-  border: 1px dashed var(--el-color-warning-light-3);
-  background: var(--el-color-warning-light-9);
-  overflow-wrap: anywhere;
-}
-.chat-pane__held-text {
-  margin: 0;
-  white-space: pre-wrap;
-  line-height: var(--app-lh-text);
-}
-.chat-pane__held-files {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 4px 0 0;
-  font-size: var(--app-text-xs);
-  color: var(--el-text-color-secondary);
-}
-.chat-pane__held-note {
+.chat-pane__no-response {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px;
-  margin: 4px 4px 0;
+  gap: 4px 8px;
+  margin: 5px 0 0 4px;
   font-size: var(--app-text-xs);
   color: var(--el-text-color-secondary);
 }

@@ -8,6 +8,7 @@ import type { MyConversation } from '@/api/types'
 let mine: MyConversation[] = []
 let fail: Error | null = null
 const reads: { tool: string; args: Record<string, unknown> }[] = []
+const coreCalls: string[] = []
 /** Holds the answer to the next read until released. */
 let hold: Promise<void> | null = null
 /** Happens once a read has been answered (a conversation moving between two pages). */
@@ -17,30 +18,63 @@ vi.mock('@/api/http', async (orig) => {
   const real = await orig<typeof import('@/api/http')>()
   return {
     ...real,
-    read: vi.fn(async (tool: string, args: Record<string, unknown>) => {
-      reads.push({ tool, args })
-      if (tool !== 'me.conversations') throw new Error(`no answer for ${tool}`)
-      const snapshot = mine.map((c) => ({ ...c }))
-      if (hold) await hold
-      if (fail) throw fail
-      const list = snapshot.filter((c) => !args.course_id || c.course.course_id === args.course_id)
-      const from = args.after ? Number(String(args.after).slice(1)) : 0
-      const limit = (args.limit as number) ?? 50
-      const page = list.slice(from, from + limit)
-      const then = between
-      between = null
-      then?.()
-      return {
-        conversations: page,
-        ...(from + limit < list.length ? { next: `p${from + limit}` } : {}),
-      }
+    read: vi.fn(async (tool: string) => {
+      coreCalls.push(tool)
+      throw new Error(`Core chat call: ${tool}`)
     }),
+  }
+})
+
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async (courseId: string) => ({
+        agents: [
+          {
+            agent_id: 'tutor-actor',
+            display_name: mine.find((c) => c.course.course_id === courseId)?.respondent.display_name ?? 'Course tutor',
+            answers_course: true,
+            answer_level: 'autonomous',
+          },
+        ],
+      })),
+      list: vi.fn(async (courseId: string, args: { limit?: number; after?: string } = {}) => {
+        reads.push({ tool: 'ar.list', args: { course_id: courseId, ...args } })
+        const snapshot = mine.map((c) => ({ ...c }))
+        if (hold) await hold
+        if (fail) throw fail
+        const list = snapshot.filter((c) => c.course.course_id === courseId && c.respondent.kind === 'agent')
+        const from = args.after ? list.findIndex((c) => c.conversation_id === args.after) + 1 : 0
+        const limit = args.limit ?? 50
+        const page = list.slice(from, from + limit)
+        const then = between
+        between = null
+        then?.()
+        return {
+          conversations: page.map((c) => ({
+            id: c.conversation_id,
+            course_id: courseId,
+            agent_id: c.respondent.actor_id,
+            title: c.title ?? '',
+            state: c.state === 'closed' ? ('closed' as const) : ('answered' as const),
+            revision: 1,
+            created_at: c.created_at,
+            updated_at: c.last_activity_at,
+            last_activity_at: c.last_activity_at,
+            close_reason: c.closed_reason ?? undefined,
+          })),
+          next: list[from + limit]?.conversation_id ?? null,
+        }
+      }),
+    },
   }
 })
 
 const { ApiError } = await import('@/api/http')
 const { useSessionStore } = await import('./session')
-const { useChatStore, historyKey, HISTORY_PAGE, UNREAD_PAGE } = await import('./chat')
+const { useChatStore, historyKey, HISTORY_PAGE } = await import('./chat')
 
 function membership(courseId: string, perms: Record<string, string> = { conversation_ask: 'autonomous' }, over = {}) {
   return {
@@ -94,6 +128,7 @@ beforeEach(() => {
   hold = null
   between = null
   reads.length = 0
+  coreCalls.length = 0
   setActivePinia(createPinia())
 })
 
@@ -200,35 +235,25 @@ describe('the chat store', () => {
 })
 
 describe('what is unread', () => {
-  it('counts the conversations Core says the agent has written in since the caller read them, from the newest page', async () => {
+  it('counts new answers as AR activity moves, from the newest page of every course', async () => {
     const chat = signIn()
-    mine = [
-      item('c1', 'k1', { unread: true }),
-      item('c2', 'k2', { unread: true }),
-      item('c3', 'k1'),
-      // A conversation from before, with a person, closed since: never counted.
-      item('p1', 'k1', {
-        unread: true,
-        status: 'closed',
-        state: 'closed',
-        closed_reason: 'conversations_are_with_agents',
-        respondent: { member_id: 'ta', actor_id: 'ta-actor', display_name: 'Ms Wong', kind: 'human' },
-      }),
-    ]
+    mine = [item('c1', 'k1'), item('c2', 'k2'), item('c3', 'k1')]
     await chat.pollUnread()
-    expect(reads).toEqual([{ tool: 'me.conversations', args: { limit: UNREAD_PAGE } }])
+    expect(reads.filter((r) => r.tool === 'ar.list')).toHaveLength(5)
+    expect(chat.unreadCount).toBe(0)
+    mine[0] = item('c1', 'k1', { last_activity_at: '2026-09-26T11:02:00Z' })
+    mine[1] = item('c2', 'k2', { last_activity_at: '2026-09-26T11:02:00Z' })
+    await chat.pollUnread()
     expect(chat.unreadCount).toBe(2)
     expect([...chat.unreadIds].sort()).toEqual(['c1', 'c2'])
-
-    // Read on another device: the next read says so.
-    mine[0] = item('c1', 'k1', { unread: false })
-    await chat.pollUnread()
-    expect(chat.unreadCount).toBe(1)
+    expect(coreCalls).toEqual([])
   })
 
   it('stops counting one the moment it is marked read here, whatever a list asked for before then says', async () => {
     const chat = signIn()
-    mine = [item('c1', 'k1', { unread: true })]
+    mine = [item('c1', 'k1')]
+    await chat.pollUnread()
+    mine = [item('c1', 'k1', { last_activity_at: '2026-09-26T11:02:00Z' })]
     await chat.pollUnread()
     expect(chat.unreadCount).toBe(1)
 
@@ -244,13 +269,19 @@ describe('what is unread', () => {
     expect(chat.unreadCount).toBe(0)
 
     // The agent writes again, and a read asked for since says so.
+    mine = [item('c1', 'k1', { last_activity_at: '2026-09-26T11:03:00Z' })]
     await chat.pollUnread()
     expect(chat.unreadCount).toBe(1)
   })
 
   it('does not count the conversation on screen, whose answers are read as they come', async () => {
     const chat = signIn()
-    mine = [item('c1', 'k1', { unread: true }), item('c2', 'k1', { unread: true })]
+    mine = [item('c1', 'k1'), item('c2', 'k1')]
+    await chat.pollUnread()
+    mine = [
+      item('c1', 'k1', { last_activity_at: '2026-09-26T11:02:00Z' }),
+      item('c2', 'k1', { last_activity_at: '2026-09-26T11:02:00Z' }),
+    ]
     await chat.pollUnread()
     chat.showConversation('k1', 'c1', { open: true })
     expect([...chat.unreadIds]).toEqual(['c2'])
@@ -269,12 +300,12 @@ describe('the history', () => {
     ]
     const course = historyKey('course', 'k1')!
     await chat.loadHistory(course)
-    expect(reads.at(-1)!.args).toEqual({ course_id: 'k1', limit: HISTORY_PAGE })
+    expect(reads.at(-1)!.args).toMatchObject({ course_id: 'k1', limit: HISTORY_PAGE })
     expect(chat.histories[course]!.items.map((c) => c.conversation_id)).toEqual(['c1'])
     expect(chat.histories[course]!.loaded).toBe(true)
 
     await chat.loadHistory('all')
-    expect(reads.at(-1)!.args).toEqual({ limit: HISTORY_PAGE })
+    expect(reads.filter((r) => r.args.course_id === 'k2').at(-1)!.args).toMatchObject({ limit: HISTORY_PAGE })
     expect(chat.histories.all!.items.map((c) => c.conversation_id)).toEqual(['c2', 'c1'])
     expect(historyKey('course', null)).toBeNull()
   })
@@ -290,9 +321,8 @@ describe('the history', () => {
 
     reads.length = 0
     await chat.loadMoreHistory('all')
-    expect(reads.map((r) => r.args)).toEqual([
-      { limit: HISTORY_PAGE },
-      { limit: HISTORY_PAGE, after: `p${HISTORY_PAGE}` },
+    expect(reads.filter((r) => r.args.course_id === 'k1').map((r) => r.args)).toEqual([
+      { course_id: 'k1', limit: HISTORY_PAGE * 2 },
     ])
     expect(chat.histories.all!.items).toHaveLength(HISTORY_PAGE + 5)
     expect(chat.histories.all!.hasMore).toBe(false)
@@ -308,7 +338,7 @@ describe('the history', () => {
     await chat.loadHistory('all', { quiet: true })
     let ids = chat.histories.all!.items.map((c) => c.conversation_id)
     expect(new Set(ids).size).toBe(ids.length)
-    expect(ids).toHaveLength(HISTORY_PAGE + 4)
+    expect(ids).toHaveLength(HISTORY_PAGE + 5)
     // Read again from the top, it is first.
     await chat.loadHistory('all', { quiet: true })
     ids = chat.histories.all!.items.map((c) => c.conversation_id)

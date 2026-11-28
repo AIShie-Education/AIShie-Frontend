@@ -1,0 +1,25 @@
+// 独立标示、只读的v0.2.1旧对话记录。
+export default {
+  title: '旧对话（只读）',
+  subtitle: 'v0.2.1的历史对话。可阅读消息及打开附件；新聊天会分开保存。',
+  show: '显示旧对话',
+  hide: '隐藏旧对话',
+  readOnly: '此区仅供阅读，不能提问、撤回消息、创建草稿或接收实时回答。',
+  loading: '正在加载旧对话…',
+  error: '暂时无法读取旧对话，请重试。',
+  retry: '重试',
+  empty: '没有旧对话。',
+  untitled: '未命名对话',
+  loadMore: '加载更多旧对话',
+  back: '返回旧对话列表',
+  messages: {
+    loading: '正在加载消息…',
+    empty: '这段对话没有可显示的消息。',
+    older: '加载较早的消息',
+    withdrawn: '此消息已撤回。',
+    attachments: '附件',
+    openAttachment: '打开附件{name}',
+    attachmentError: '暂时无法打开附件，请重试。',
+    readOnly: '此旧对话不能回复。',
+  },
+}

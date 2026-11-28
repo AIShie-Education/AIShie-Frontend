@@ -34,9 +34,9 @@
 // as the contract's §5.14 says; this client retries accordingly.
 //
 // The runtime's administrators have routes of their own (runtimeAdmin, at
-// the end): OCR, the school's plan's offers, quotas and use, pricing, the
-// transcriber of documents' text versions, and OpenRouter's upstream
-// providers for an offer's routing.
+// the end): the school's plan's offers, quotas and use, pricing, and
+// OpenRouter's upstream providers for an offer's routing. Browser chat has
+// its own AR transport in runtimeChat.ts, on the same assertion.
 //
 // The route and field names the contract fixes are here and in
 // runtime-types.ts, and nowhere else in the app.
@@ -71,17 +71,11 @@ import type {
   RuntimeFeatures,
   RuntimeInfo,
   RuntimeMe,
-  RuntimeSettings,
-  RuntimeSettingsPatch,
   SchoolPlan,
   SchoolPlanUsage,
   TenantList,
   TenantPut,
   TenantQuota,
-  TranscriptionCredentialPut,
-  TranscriptionJobList,
-  TranscriptionJobQuery,
-  TranscriptionSettings,
 } from './runtime-types'
 
 export type { RuntimeInfo } from './runtime-types'
@@ -107,7 +101,6 @@ export const RUNTIME_ROUTES = {
   agentPause: '/agents/{id}/pause',
   agentResume: '/agents/{id}/resume',
   // The runtime's administrators' (runtimeAdmin below).
-  adminSettings: '/admin/settings',
   schoolPlan: '/admin/school-plan',
   planOffers: '/admin/school-plan/offers',
   planOffer: '/admin/school-plan/offers/{id}',
@@ -119,8 +112,6 @@ export const RUNTIME_ROUTES = {
   tenant: '/admin/tenants/{tenant_id}',
   agentBudgets: '/admin/agent-budgets',
   costs: '/admin/costs',
-  transcriptionCredential: '/admin/transcription/credential',
-  transcriptionJobs: '/admin/transcription/jobs',
   openRouterEndpoints: '/admin/openrouter/endpoints',
 } as const
 
@@ -363,6 +354,25 @@ function runtimeError(raw: RawResponse): RuntimeError {
   return new RuntimeError({ status: raw.status, code, message, details, reason })
 }
 
+/** A non-success Response as the runtime's scrubbed error, without following a redirect or exposing its bytes. */
+async function responseError(res: Response): Promise<RuntimeError> {
+  let body: unknown
+  let notJson = false
+  try {
+    const text = await res.text()
+    if (text) {
+      try {
+        body = JSON.parse(text)
+      } catch {
+        notJson = true
+      }
+    }
+  } catch {
+    notJson = true
+  }
+  return runtimeError({ status: res.status, body, notJson, headers: res.headers })
+}
+
 // ---------------------------------------------------------------------------
 // Is the runtime there?
 // ---------------------------------------------------------------------------
@@ -522,6 +532,50 @@ export function forgetRuntimeAssertion(): void {
   held = null
   minting = null
   generation++
+}
+
+export interface RuntimeFetchOptions {
+  method?: RuntimeMethod
+  headers?: Record<string, string>
+  body?: BodyInit
+  signal?: AbortSignal
+}
+
+/**
+ * Fetches an AR resource as the person signed in, for the chat transport's
+ * byte streams and attachment bodies. No cookie goes, a redirect is refused,
+ * and a 401 is answered once with a fresh Core assertion. Non-2xx responses
+ * become the same secret-scrubbed RuntimeError as runtimeRequest's. The token
+ * itself never leaves this module except in AR's Authorization header.
+ */
+export async function runtimeFetch(path: string, opts: RuntimeFetchOptions = {}): Promise<Response> {
+  const method = opts.method ?? 'GET'
+  const call = async (token: string) => {
+    try {
+      return await fetch(RUNTIME_BASE + path, {
+        method,
+        headers: { ...opts.headers, Authorization: `Bearer ${token}` },
+        body: opts.body,
+        credentials: 'omit',
+        redirect: 'error',
+        cache: 'no-store',
+        signal: opts.signal,
+      })
+    } catch (e) {
+      if ((e as Error)?.name === 'AbortError') throw e
+      throw clientError('network', 0, 'the agent runtime could not be reached')
+    }
+  }
+  let token = await assertion()
+  let res = await call(token)
+  if (res.status === 401) {
+    // Do not keep a response body (and its connection) alive while reauthenticating.
+    if (res.body) void res.body.cancel().catch(() => undefined)
+    token = await assertion(token)
+    res = await call(token)
+  }
+  if (res.status < 200 || res.status >= 300) throw await responseError(res)
+  return res
 }
 
 // ---------------------------------------------------------------------------
@@ -726,11 +780,10 @@ const pricePath = (id: string) => runtimePath(RUNTIME_ROUTES.price, { id })
 const tenantPath = (id: string) => runtimePath(RUNTIME_ROUTES.tenant, { tenant_id: id })
 
 /**
- * The runtime's administrators' calls: OCR and the transcriber
- * (admin/settings), the school's plan (admin/school-plan: its offers, its
- * quotas, today's use), the money (the price table, tenants' quotas, hosted
- * agents' budgets, and what things cost), and the transcriber's credential
- * and jobs. Anyone else is refused 403 not_admin; a runtime from before a
+ * The runtime's administrators' calls: the school's plan
+ * (admin/school-plan: its offers, its quotas, today's use) and the money
+ * (the price table, tenants' quotas, hosted agents' budgets, and what things
+ * cost). Anyone else is refused 403 not_admin; a runtime from before a
  * route answers 404.
  *
  * Retried as the runtime answers them: reads, and the PUTs and DELETEs of
@@ -743,9 +796,6 @@ const tenantPath = (id: string) => runtimePath(RUNTIME_ROUTES.tenant, { tenant_i
  * (isVersionMismatch).
  */
 export const runtimeAdmin = {
-  settings: () => runtimeRequest<RuntimeSettings>('GET', RUNTIME_ROUTES.adminSettings),
-  updateSettings: (patch: RuntimeSettingsPatch) =>
-    runtimeRequest<RuntimeSettings>('PATCH', RUNTIME_ROUTES.adminSettings, { body: patch, retry: false }),
   plan: () => runtimeRequest<SchoolPlan>('GET', RUNTIME_ROUTES.schoolPlan),
   offer: (id: string) => runtimeRequest<PlanOffer>('GET', offerPath(id)),
   /** 201 with the offer; its key tried first unless skip_key_test. The key is in the body alone. */
@@ -781,25 +831,6 @@ export const runtimeAdmin = {
     runtimeRequest<AgentBudgets>('PUT', RUNTIME_ROUTES.agentBudgets, { body: budgets, retry: true }),
   resetAgentBudgets: () => runtimeRequest<AgentBudgets>('DELETE', RUNTIME_ROUTES.agentBudgets, { retry: true }),
   costs: (query: CostQuery = {}) => runtimeRequest<CostReport>('GET', RUNTIME_ROUTES.costs, { query: { ...query } }),
-  /**
-   * Gives the transcriber Core's service token, which the runtime tries
-   * against Core first (unless skip_test) and keeps in place of the one
-   * before; the settings after. Never sent again by itself: whether a
-   * request that met no answer went through is asked (settings), not
-   * assumed, since the token must then be revoked in Core if it did not.
-   */
-  setTranscriptionCredential: (put: TranscriptionCredentialPut) =>
-    runtimeRequest<TranscriptionSettings>('PUT', RUNTIME_ROUTES.transcriptionCredential, {
-      body: put,
-      retry: false,
-    }),
-  /** Forgets it: the transcriber stops claiming. The settings after. */
-  deleteTranscriptionCredential: () =>
-    runtimeRequest<TranscriptionSettings>('DELETE', RUNTIME_ROUTES.transcriptionCredential, {
-      retry: true,
-    }),
-  transcriptionJobs: (query: TranscriptionJobQuery = {}) =>
-    runtimeRequest<TranscriptionJobList>('GET', RUNTIME_ROUTES.transcriptionJobs, { query: { ...query } }),
   /**
    * The upstream providers OpenRouter lists for one of its models
    * (author/slug), read by the runtime with no key, and the price table's

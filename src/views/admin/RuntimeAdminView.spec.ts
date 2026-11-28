@@ -73,18 +73,18 @@ describe('RuntimeAdminView', () => {
     const { w } = await page()
     expect(w.find('.page-header__title').text()).toBe('AI and documents')
     expect(s.to('GET', ADMIN.me)).toHaveLength(1)
-    expect(tabs(w)).toEqual(['School AI plan', 'Pricing', 'Usage today', 'Documents', 'Agent hosting'])
+    expect(tabs(w)).toEqual(['School AI plan', 'Pricing', 'Usage today', 'Agent hosting'])
     expect(w.find('.offers-card').exists()).toBe(true)
     // The other tabs are read only once shown.
     expect(s.to('GET', ADMIN.usage)).toHaveLength(0)
-    expect(s.to('GET', ADMIN.settings)).toHaveLength(0)
   })
 
-  it('opens the tab the address names', async () => {
+  it('leaves out the removed Documents tab, falling back to the plan when an old address names it', async () => {
     const { w } = await page('/admin/runtime?tab=documents')
-    expect(w.find('.ocr-card').exists()).toBe(true)
-    expect(w.find('.transcription-card').exists()).toBe(true)
-    expect(w.find('.offers-card').exists()).toBe(false)
+    expect(tabs(w)).not.toContain('Documents')
+    expect(w.find('.ocr-card').exists()).toBe(false)
+    expect(w.find('.transcription-card').exists()).toBe(false)
+    expect(w.find('.offers-card').exists()).toBe(true)
     expect(s.to('GET', ADMIN.usage)).toHaveLength(0)
   })
 
@@ -150,7 +150,6 @@ describe('RuntimeAdminView', () => {
   describe('on a runtime from before the plan’s routes', () => {
     beforeEach(() => {
       s.on('GET', ADMIN.plan, () => noRoute())
-      s.on('GET', ADMIN.settings, () => noRoute())
     })
 
     it('says so in the plan’s tab', async () => {
@@ -163,18 +162,12 @@ describe('RuntimeAdminView', () => {
       const { w } = await page('/admin/runtime?tab=usage')
       expect(w.find('.usage-card__table').exists()).toBe(true)
     })
-
-    it('says so in the documents’ tab', async () => {
-      const { w } = await page('/admin/runtime?tab=documents')
-      expect(w.find('.runtime-async__not-offered').exists()).toBe(true)
-      expect(w.find('.el-alert--error').exists()).toBe(false)
-    })
   })
 
   it('reads in Traditional Chinese', async () => {
     setLocale('zh-Hant')
     const { w } = await page()
     expect(w.find('.page-header__title').text()).toBe('AI 與文件')
-    expect(tabs(w)).toEqual(['學校 AI 方案', '計價與額度', '今日用量', '文件', '代理託管'])
+    expect(tabs(w)).toEqual(['學校 AI 方案', '計價與額度', '今日用量', '代理託管'])
   })
 })

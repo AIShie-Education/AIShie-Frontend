@@ -4,18 +4,25 @@ import { useChatStore } from '@/stores/chat'
 import groupRoutes from './groups'
 
 /**
- * An old link to a course's conversations: the chat opens on the
- * conversation named, or on the course. From a page of the app the
- * navigation goes no further (the page stays, the chat's pane beside it); coming
- * from outside it (a bookmark, a new tab, signing in first), the course's
- * overview is shown.
+ * The pre-AR conversation address belongs to Core history. An id goes to the
+ * explicit read-only legacy page, never to the AR chat store. With no id the
+ * link names the course's chat rather than an old conversation, so it still
+ * opens a new AR chat beside the current page (or the overview on arrival).
  */
 export const openChatFromLink: NavigationGuardWithThis<undefined> = (to, from) => {
   const courseId = String(to.params.courseId)
   const id = typeof to.params.conversationId === 'string' ? to.params.conversationId : ''
+  if (id) {
+    return {
+      name: 'course-legacy-conversation',
+      params: { courseId, conversationId: id },
+      query: to.query,
+      hash: to.hash,
+      replace: true,
+    }
+  }
   const chat = useChatStore()
-  if (id) chat.showConversation(courseId, id, { open: true })
-  else chat.showCourse(courseId)
+  chat.showCourse(courseId)
   const inApp = from.matched[0]?.path === '/'
   return inApp ? false : { name: 'course-overview', params: { courseId }, replace: true }
 }
@@ -155,12 +162,19 @@ const routes: RouteRecordRaw[] = [
     meta: { title: 'courseAgents.title' },
   },
   {
-    // Where a course's conversations were once a page of their own: the chat
-    // is a panel beside every page now. A link here (a bookmark, a
-    // notification, a proposal's conversation) opens the panel on the
-    // conversation, or on the course when none is named; followed from a
-    // page of the app, that page stays, and otherwise the course's overview
-    // is shown beside it.
+    // A Core conversation id has an unambiguous read-only address. This works
+    // for its opener and for staff allowed by conversation.messages; it does
+    // not depend on me.conversations or AR's own-conversation list.
+    path: 'legacy-conversations/:conversationId',
+    name: 'course-legacy-conversation',
+    component: () => import('@/views/course/conversations/LegacyConversationPage.vue'),
+    props: true,
+    meta: { title: 'legacyChat.title' },
+  },
+  {
+    // Compatibility for bookmarks, activity and answer-proposal links written
+    // before AR chat: an id is redirected to Core's read-only archive above.
+    // Only the no-id form opens the course's new AR chat panel.
     path: 'conversations/:conversationId?',
     name: 'course-conversations',
     component: { render: () => null },

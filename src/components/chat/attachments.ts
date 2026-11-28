@@ -21,7 +21,13 @@
 // (index.html, img-src 'self' data: blob:) would refuse an object store's
 // origin, which is where download URLs point with S3.
 import { computed, ref, shallowRef, type ComputedRef, type Ref } from 'vue'
-import { ApiError, blobUrl, FILE_TOO_LARGE, fetchBlob, read, uploadLimits, type UploadLimits } from '@/api/http'
+import { ApiError, FILE_TOO_LARGE, type UploadLimits } from '@/api/http'
+import {
+  CHAT_ATTACHMENT_MAX_FILES,
+  CHAT_IMAGE_MAX_BYTES,
+  downloadChatAttachmentBytes,
+  uploadChatAttachment,
+} from '@/api/runtimeChat'
 import type { MessageAttachment } from '@/api/types'
 import { createUploadQueue, type UploadFn, type UploadItem, type UploadQueue } from '@/composables/useUploadQueue'
 import { i18n } from '@/i18n'
@@ -30,8 +36,8 @@ import { formatBytes } from '@/utils/format'
 const t = (key: string, args?: Record<string, unknown>, plural?: number) =>
   plural === undefined ? i18n.global.t(key, args ?? {}) : i18n.global.t(key, args ?? {}, plural)
 
-/** The most files a message carries where Core has not said how many (its ATTACHMENT_MAX_PER_MESSAGE by default). */
-export const DEFAULT_MAX_FILES = 10
+/** AR takes at most four image/text attachments on a message. */
+export const DEFAULT_MAX_FILES = CHAT_ATTACHMENT_MAX_FILES
 
 /** What a message's attachments are sent as. */
 export interface AttachmentRef {
@@ -57,6 +63,7 @@ export const ATTACHMENT_REASONS = [
   'conversation_attachments_full',
   'upload_too_old',
   'no_file_storage',
+  'unsupported_media_type',
 ] as const
 export type AttachmentReason = (typeof ATTACHMENT_REASONS)[number]
 
@@ -118,7 +125,10 @@ export interface ChatAttachmentsOptions {
 
 /** The files being attached to one draft: its upload queue, what Core takes, and what to say. */
 export function createChatAttachments(opts: ChatAttachmentsOptions) {
-  const askLimits = opts.limits ?? ((courseId: string) => uploadLimits(courseId, 'conversation'))
+  const askLimits =
+    opts.limits ??
+    ((_courseId: string) =>
+      Promise.resolve({ maxBytes: CHAT_IMAGE_MAX_BYTES, maxFiles: CHAT_ATTACHMENT_MAX_FILES, maxConversationBytes: null }))
   /** What Core takes, once known; null while it is not (or cannot be). */
   const limits = shallowRef<UploadLimits | null>(null)
   let asked: Promise<UploadLimits | null> | null = null
@@ -142,7 +152,7 @@ export function createChatAttachments(opts: ChatAttachmentsOptions) {
   const queue: UploadQueue = createUploadQueue({
     courseId: opts.courseId,
     kind: 'conversation',
-    upload: opts.upload,
+    upload: opts.upload ?? uploadChatAttachment,
     limit: () => ensureLimits().then((l) => l?.maxBytes ?? null),
   })
   const notice = ref<AttachNotice | null>(null)
@@ -370,9 +380,8 @@ export function thumbnailOf(courseId: string, attachmentId: string): Promise<str
     thumbnails.set(attachmentId, kept)
     return kept
   }
-  const made = read('conversation.attachment', { course_id: courseId, attachment_id: attachmentId })
-    .then((a) => fetchBlob(a.download_url))
-    .then((blob) => URL.createObjectURL(blob))
+  const made = downloadChatAttachmentBytes(courseId, attachmentId)
+    .then((a) => URL.createObjectURL(a.blob))
     .catch(() => {
       thumbnails.delete(attachmentId)
       return null
@@ -384,6 +393,11 @@ export function thumbnailOf(courseId: string, attachmentId: string): Promise<str
     void url.then((u) => u && URL.revokeObjectURL(u))
   }
   return made
+}
+
+/** An AR attachment as an object URL for the preview's ordinary fetchBlob path, cached and bounded with thumbnails. */
+export function attachmentObjectUrl(courseId: string, attachmentId: string): Promise<string | null> {
+  return thumbnailOf(courseId, attachmentId)
 }
 
 /** Forgets the thumbnails fetched (tests). */
@@ -400,18 +414,16 @@ export function forgetThumbnails() {
  * attribute names it too and no tab is left open; an object store's URL
  * opens in a new tab, which saves it and closes.
  */
-export async function downloadAttachment(courseId: string, attachmentId: string): Promise<void> {
-  const a = await read('conversation.attachment', { course_id: courseId, attachment_id: attachmentId })
+export async function downloadAttachment(courseId: string, attachmentId: string, filename?: string): Promise<void> {
+  const a = await downloadChatAttachmentBytes(courseId, attachmentId, { filename })
+  const url = URL.createObjectURL(a.blob)
   const link = document.createElement('a')
-  link.href = blobUrl(a.download_url)
-  if (new URL(link.href, window.location.href).origin === window.location.origin) {
-    link.download = a.filename
-  } else {
-    link.rel = 'noopener'
-    link.target = '_blank'
-  }
+  link.href = url
+  link.download = a.filename
   link.style.display = 'none'
   document.body.appendChild(link)
   link.click()
   link.remove()
+  // The click has taken the object URL by then; release it on the next task.
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }

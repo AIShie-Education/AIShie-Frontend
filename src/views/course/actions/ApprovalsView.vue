@@ -29,6 +29,7 @@ import LoadMore from '@/components/LoadMore.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import RefreshButton from '@/components/RefreshButton.vue'
 import ActionCard from './components/ActionCard.vue'
+import ArApprovalsSection from './ArApprovalsSection.vue'
 import ActionTarget from './components/ActionTarget.vue'
 import OutcomeAlert from './components/OutcomeAlert.vue'
 import { invalidateAfter, isAboutAction, typeLabel, useJudgeRules, type ActionRow } from './components/actionText'
@@ -291,6 +292,9 @@ function toggleRules() {
         </template>
       </i18n-t>
     </AppNote>
+
+    <!-- AR chat has its own reviewer API and ids; keep its queue outside the Core action tabs. -->
+    <ArApprovalsSection :course-id="courseId" />
 
     <section v-if="recent.length" class="app-card approvals__recent">
       <h2 class="app-card__title">

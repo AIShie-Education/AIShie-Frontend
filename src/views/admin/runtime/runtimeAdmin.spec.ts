@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { LOCALES, i18n, setLocale } from '@/i18n'
 import { ApiError } from '@/api/http'
 import { RuntimeError } from '@/api/runtime'
-import { KEY_TRIAL_FAILURES, OCR_UNAVAILABLE_REASONS, OFFER_STATUSES } from '@/api/runtime-types'
+import { KEY_TRIAL_FAILURES, OFFER_STATUSES } from '@/api/runtime-types'
 import { OFFERS } from '@/views/account/components/agents/hostingFakes'
 import { defaultsFor, emptyModelForm } from '@/views/account/components/agents/hosting'
 import {
@@ -30,14 +30,12 @@ import {
   keyTrialDetail,
   keyTrialOf,
   keyTrialText,
-  languageName,
   offerCreateFrom,
   offerFieldOf,
   offerPatchFrom,
   offerProblems,
   quotaProblem,
   retestsKey,
-  sameLanguages,
 } from './runtimeAdmin'
 import { OPENROUTER, configOffer, newToken, priceRow, siteOffer } from './adminFakes'
 
@@ -86,10 +84,6 @@ describe('whether a section is there', () => {
 describe('the words for the administrators’ refusals', () => {
   const OWN: Record<string, [Record<string, unknown>, string]> = {
     not_admin: [{}, 'Only the agent service’s administrators may do this, and your account is not one of them.'],
-    ocr_unavailable: [
-      { field: '/ocr/enabled' },
-      'OCR cannot run on this server now, so it cannot be turned on or given languages. It can still be turned off, or set back to the server’s languages.',
-    ],
     offer_not_found: [{}, 'This model is no longer on the plan: someone deleted it meanwhile.'],
     offer_read_only: [{}, 'The server’s operator set this model in the server’s settings, so it cannot be changed here.'],
     offer_not_priced: [
@@ -167,13 +161,12 @@ describe('the words for the administrators’ refusals', () => {
     )
   })
 
-  it('has words for every status, why, OCR’s reasons and a trial’s failures, in every language', () => {
+  it('has words for every status, why and a trial’s failures, in every language', () => {
     for (const s of OFFER_STATUSES) {
       expect(te(`runtimeAdmin.offers.statuses.${s}`), s).toBe(true)
       expect(OFFER_STATUS_TAG[s], s).toBeTruthy()
       if (s !== 'offered') expect(te(`runtimeAdmin.offers.why.${s}`), s).toBe(true)
     }
-    for (const r of OCR_UNAVAILABLE_REASONS) expect(te(`runtimeAdmin.ocr.unavailable.${r}`), r).toBe(true)
     for (const r of KEY_TRIAL_FAILURES) expect(te(`hosting.keyTest.${r}`), r).toBe(true)
   })
 })
@@ -220,26 +213,6 @@ describe('a key’s trial that failed', () => {
   it('is no trial for any other refusal', () => {
     expect(keyTrialOf(err('key_malformed'))).toBeNull()
     expect(keyTrialOf(new Error('x'))).toBeNull()
-  })
-})
-
-describe('OCR’s languages', () => {
-  it('are named by their own names, a vertical script’s as vertical, and an unknown one by its code', () => {
-    expect(languageName('chi_tra', t)).toBe('繁體中文')
-    expect(languageName('chi_sim', t)).toBe('简体中文')
-    expect(languageName('eng', t)).toBe('English')
-    expect(languageName('chi_tra_vert', t)).toBe('繁體中文 (vertical)')
-    expect(languageName('osd', t)).toBe('Orientation and script')
-    expect(languageName('xyz', t)).toBe('xyz')
-    setLocale('zh-Hant')
-    expect(languageName('eng', t)).toBe('English')
-    expect(languageName('chi_tra_vert', t)).toBe('繁體中文（直排）')
-  })
-
-  it('are the same only in the same order', () => {
-    expect(sameLanguages(['eng', 'chi_tra'], ['eng', 'chi_tra'])).toBe(true)
-    expect(sameLanguages(['chi_tra', 'eng'], ['eng', 'chi_tra'])).toBe(false)
-    expect(sameLanguages(null, [])).toBe(true)
   })
 })
 

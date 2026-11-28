@@ -125,6 +125,11 @@ describe('mergeMessages', () => {
     expect(sameMessages(a, mergeMessages(a, [msg(2)]))).toBe(true)
     expect(sameMessages(a, mergeMessages(a, [msg(3)]))).toBe(false)
     expect(sameMessages(a, mergeMessages(a, [msg(2, { retracted: { at: 'x' }, body: null })]))).toBe(false)
+    expect(sameMessages(a, mergeMessages(a, [msg(2, { body: 'a corrected body' })]))).toBe(false)
+    expect(
+      sameMessages(a, mergeMessages(a, [msg(2, { attachments: [{ id: 'a1', filename: 'a.txt', content_type: 'text/plain', byte_size: 3, created_at: 'x' }] })])),
+    ).toBe(false)
+    expect(sameMessages(a, mergeMessages(a, [{ ...msg(2), ar_status: 'posted' } as never]))).toBe(false)
   })
 })
 

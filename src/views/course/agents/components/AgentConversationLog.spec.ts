@@ -74,8 +74,52 @@ vi.mock('@/api/http', async (orig) => {
   }
 })
 
+vi.mock('@/api/runtimeChat', async (orig) => {
+  const real = await orig<typeof import('@/api/runtimeChat')>()
+  const asAr = (c: ConversationView) => ({
+    id: c.id,
+    course_id: 'k1',
+    agent_id: c.respondent.member_id,
+    title: c.title ?? '',
+    state: 'answered' as const,
+    revision: 1,
+    created_at: c.created_at,
+    updated_at: c.last_message_at ?? c.created_at,
+    last_activity_at: c.last_message_at ?? c.created_at,
+  })
+  return {
+    ...real,
+    runtimeChat: {
+      agents: vi.fn(async () => ({
+        agents: [
+          { agent_id: 'tutor', display_name: 'Course tutor', answers_course: true, answer_level: 'autonomous' },
+          { agent_id: 'other', display_name: 'Other agent', answers_course: true, answer_level: 'autonomous' },
+        ],
+      })),
+      list: vi.fn(async (_course: string, _opts: { after?: string } = {}) => ({
+        conversations: list.map(asAr),
+        next: null,
+      })),
+      messages: vi.fn(async (_course: string, id: string) => {
+        const c = list.find((x) => x.id === id)!
+        return {
+          conversation: asAr(c),
+          more: false,
+          draft: null,
+          messages: [
+            { id: 'm1', conversation_id: id, seq: 1, role: 'user' as const, status: 'posted' as const, body: 'When is it due?', created_at: c.created_at },
+            { id: 'm2', conversation_id: id, seq: 2, role: 'assistant' as const, status: 'posted' as const, body: 'On Friday.', created_at: c.created_at },
+          ],
+        }
+      }),
+      stream: vi.fn(() => new Promise<void>(() => undefined)),
+    },
+  }
+})
+
 const { i18n, setLocale } = await import('@/i18n')
 const { useSessionStore } = await import('@/stores/session')
+const { runtimeChat } = await import('@/api/runtimeChat')
 const { default: AgentConversationLog } = await import('./AgentConversationLog.vue')
 
 const Passthrough = (name: string) =>
@@ -119,7 +163,7 @@ afterEach(() => {
 })
 
 describe('AgentConversationLog', () => {
-  it('lists the agent’s conversations that its reader oversees, newest first, and shows one read-only', async () => {
+  it('uses Core overseer rows rather than AR own conversations, and shows one read-only', async () => {
     const w = mount(AgentConversationLog, {
       props: { modelValue: true, courseId: 'k1', agent: { id: 'tutor', display_name: 'Course tutor' } },
       attachTo: document.body,
@@ -135,31 +179,36 @@ describe('AgentConversationLog', () => {
       },
     })
     await flushPromises()
-    // Core is asked for this agent's conversations alone.
-    expect(reads[0]).toEqual({
-      tool: 'conversation.list',
-      args: { course_id: 'k1', as: 'overseer', limit: 100, respondent_member_id: 'tutor' },
-    })
+    expect(reads).toEqual([
+      {
+        tool: 'conversation.list',
+        args: {
+          course_id: 'k1',
+          as: 'overseer',
+          respondent_member_id: 'tutor',
+          after: undefined,
+          limit: 50,
+        },
+      },
+    ])
+    expect(runtimeChat.list).not.toHaveBeenCalled()
     const drawer = document.body.querySelector('.agent-log')!
     expect(drawer.textContent).toContain('Conversation log: Course tutor')
     const rows = [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
     expect(rows.map((r) => r.querySelector('.log-row__name')!.textContent)).toEqual(['Ken', 'Yuki'])
-    // Each opens its conversation, as the › at its end says: a row between rules, without a box to say it.
     expect(rows.map((r) => !!r.querySelector('.log-row__go'))).toEqual([true, true])
     expect(drawer.textContent).not.toContain('Other agent')
 
     rows[1]!.click()
     await flushPromises()
-    expect(drawer.querySelector('.chat-pane__name')!.textContent!.trim()).toBe('Yuki → Course tutor')
-    expect(drawer.querySelector('.chat-pane textarea')).toBeNull()
-    expect(drawer.textContent).toContain('You are reading this as course staff.')
-    // Someone who decides actions may withdraw a message.
-    expect([...drawer.querySelectorAll('.chat-msg__retract')].map((b) => b.textContent!.trim())).toEqual([
-      'Withdraw',
-      'Withdraw',
-    ])
+    expect(drawer.querySelector('.legacy-chat__detail-head h2')!.textContent).toBe('About c1')
+    expect(drawer.textContent).toContain('When is it due?')
+    expect(drawer.textContent).toContain('On Friday.')
+    expect(drawer.querySelector('textarea')).toBeNull()
+    expect(drawer.textContent).toContain('Read-only archive')
+    expect(reads.at(-1)).toMatchObject({ tool: 'conversation.messages', args: { course_id: 'k1', conversation_id: 'c1' } })
+    expect(runtimeChat.messages).not.toHaveBeenCalled()
     expect(w.emitted('update:modelValue')).toBeUndefined()
-    // Staff reading it mark nothing read.
     expect(writes).toEqual([])
   })
 
@@ -199,7 +248,7 @@ describe('AgentConversationLog', () => {
     })
     await flushPromises()
     const drawer = document.body.querySelector('.agent-log')!
-    const conversation = () => drawer.querySelector('.chat-pane__name')
+    const conversation = () => drawer.querySelector('.legacy-chat__detail')
     const rows = () => [...drawer.querySelectorAll<HTMLButtonElement>('.log-row')]
     await settled(() => expect(depth()).toBe(1))
 
@@ -259,7 +308,19 @@ describe('AgentConversationLog', () => {
     reads.length = 0
     await w.setProps({ agent: { id: 'other', display_name: 'Other agent' } })
     await flushPromises()
-    expect(reads.map((r) => r.args.respondent_member_id)).toEqual(['other'])
+    expect(reads).toEqual([
+      {
+        tool: 'conversation.list',
+        args: {
+          course_id: 'k1',
+          as: 'overseer',
+          respondent_member_id: 'other',
+          after: undefined,
+          limit: 50,
+        },
+      },
+    ])
+    expect(runtimeChat.list).not.toHaveBeenCalled()
     const drawer = document.body.querySelector('.agent-log')!
     expect([...drawer.querySelectorAll('.log-row__name')].map((r) => r.textContent)).toEqual(['Ken'])
     expect(drawer.textContent).toContain('Conversation log: Other agent')
