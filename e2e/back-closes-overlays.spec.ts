@@ -8,6 +8,8 @@ import {
   demo,
   hostOnRuntime,
   hostARAgent,
+  modelRules,
+  releaseARAgent,
   openChat,
   openCourseTab,
   signIn,
@@ -319,9 +321,10 @@ test.describe('on a phone, back', () => {
     // A course agent of this run's, which Yuki asks with her notes attached.
     const name = `Back tutor ${tag}`
     const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    let hostedId = ''
     try {
       await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
-      await hostARAgent(d.actors.instructor, agent)
+      hostedId = (await hostARAgent(d.actors.instructor, agent)).id
       const notes: FileSpec = {
         name: `back-notes-${tag}.md`,
         mimeType: 'text/markdown',
@@ -340,7 +343,8 @@ test.describe('on a phone, back', () => {
       await expect(panel.locator('.chat-chip.is-done')).toHaveCount(1)
       const composer = panel.locator('textarea')
       await composer.fill(`${title}\nAre my notes right?`)
-      await composer.press('Enter')
+      modelRules([{ match: 'Are my notes right?', answer: 'The stack unwinds from the top.', delayMs: 60_000 }])
+      await panel.getByRole('button', { name: 'Send', exact: true }).click()
       await expect(panel.locator('.chat-msg').filter({ hasText: 'Are my notes right?' })).toBeVisible()
       const history = panel.getByRole('button', { name: 'History', exact: true })
       const row = panel.locator('.hist-row').filter({ hasText: title })
@@ -359,22 +363,21 @@ test.describe('on a phone, back', () => {
       await expect(card).toBeVisible()
       expect(page.url()).toBe(course)
 
-      // A message box asked over the chat is on top of it: back dismisses the box alone.
-      const mine = panel.locator('.chat-msg').filter({ hasText: 'Are my notes right?' })
+      // AR withdraw is a direct action, not a confirmation dialog. Its file is
+      // hidden immediately, without adding a browser-history overlay entry.
+      const mine = panel.locator('.chat-msg.is-person').first()
       await mine.hover()
       await mine.getByRole('button', { name: 'Withdraw' }).click()
-      const box = page.getByRole('dialog', { name: 'Withdraw this message?' })
-      await expect(box).toBeVisible()
-      await page.goBack()
-      await expect(box).toBeHidden()
-      await expect(card).toBeVisible()
+      await expect(mine.locator('.chat-msg__retracted')).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Withdraw this message?' })).toHaveCount(0)
+      await expect(card).toHaveCount(0)
       expect(page.url()).toBe(course)
 
       // So is who can read the conversation, asked from its ⋯ menu: back closes that alone too.
       const readers = await openReaders(page, panel)
       await page.goBack()
       await expect(readers).toBeHidden()
-      await expect(card).toBeVisible()
+      await expect(card).toHaveCount(0)
       expect(page.url()).toBe(course)
 
       await page.goBack()
@@ -384,6 +387,7 @@ test.describe('on a phone, back', () => {
       await page.goBack()
       await expect(page).toHaveURL(/\/$/)
     } finally {
+      await releaseARAgent(d.actors.instructor, hostedId)
       // A person may have five agents at once: this run's is suspended, for the specs after it.
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
     }

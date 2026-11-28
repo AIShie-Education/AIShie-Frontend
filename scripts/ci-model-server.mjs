@@ -15,7 +15,9 @@ const textOf = (content) => {
   if (!Array.isArray(content)) return ''
   return content.map((part) => part?.text ?? part?.content ?? '').join('\n')
 }
-const userText = (body) => (body.messages ?? []).filter((m) => m.role === 'user').map((m) => textOf(m.content)).join('\n')
+// Match the current turn only; older questions remain in the conversation
+// history and must not select their previous answer again.
+const userText = (body) => textOf((body.messages ?? []).filter((m) => m.role === 'user').at(-1)?.content)
 const ruleFor = (body) => {
   let rules = []
   try { rules = JSON.parse(readFileSync(rulesFile, 'utf8')) } catch { return null }
@@ -94,7 +96,9 @@ const server = createServer((req, res) => {
       }
       const rule = ruleFor(body)
       if (rule?.delayMs) await new Promise((resolve) => setTimeout(resolve, rule.delayMs))
-      if (req.destroyed || res.destroyed) return
+      // IncomingMessage.destroyed may be true after a normal request body is
+      // consumed. Only a closed response means the answer cannot be sent.
+      if (res.destroyed || res.writableEnded) return
       send(res, body, rule)
     })().catch(() => {
       if (!res.headersSent) res.writeHead(500, { 'Content-Type': 'application/json' })

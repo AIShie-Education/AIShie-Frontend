@@ -50,7 +50,10 @@ export function chatAgentView(a: ChatAgent): Respondent {
     hosting: 'runtime',
     answer_level: a.answer_level,
     last_seen_at: null,
-  } as Respondent
+    // AR's positive check_ask/list result is the availability signal; it has
+    // no Core last_seen_at. This flag is intentionally not added to legacy DTOs.
+    available: a.answer_level !== 'denied',
+  } as Respondent & { available?: boolean }
 }
 
 /** AR conversations are one's own: the synthetic local opener id keeps author/role display independent of Core seats. */

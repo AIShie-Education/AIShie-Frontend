@@ -7,6 +7,7 @@ import {
   demo,
   expectToasted,
   hostARAgent,
+  releaseARAgent,
   arList,
   arMessages,
   arCall,
@@ -38,6 +39,9 @@ const ANSWER = `HW1 is due next Friday at noon (${STAMP}).`
 const TUTOR = `CS101 tutor ${STAMP}`
 
 let agentId = ''
+let agentHostedId = ''
+let tutorActorId = ''
+let tutorHostedId = ''
 
 /** The chat, opened from its round button: on a course page, it asks in that course. */
 async function openChat(page: Page) {
@@ -139,7 +143,7 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
       return out.body.agents.map((x) => x.display_name)
     }
     expect(await respondents()).not.toContain(AGENT)
-    await hostARAgent(d.actors.mei, agentId)
+    agentHostedId = (await hostARAgent(d.actors.mei, agentId)).id
     expect(await respondents()).toContain(AGENT)
 
     await signIn(page, d.actors.mei)
@@ -206,7 +210,8 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     )
     const names = before.body.agents.map((x) => x.display_name)
     expect(names).not.toContain(TUTOR)
-    await hostARAgent(d.actors.instructor, seat.actor_id)
+    tutorActorId = seat.actor_id
+    tutorHostedId = (await hostARAgent(d.actors.instructor, tutorActorId)).id
 
     const page = await browser.newPage()
     await signIn(page, d.actors.mei)
@@ -230,5 +235,10 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     const r = resp.body.agents.find((x) => x.display_name === TUTOR)
     expect(r?.answers_course).toBe(true)
     await page.close()
+  })
+
+  test.afterAll(async () => {
+    await releaseARAgent(demo().actors.mei, agentHostedId)
+    await releaseARAgent(demo().actors.instructor, tutorHostedId)
   })
 })

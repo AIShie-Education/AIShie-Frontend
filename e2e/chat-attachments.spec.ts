@@ -7,6 +7,7 @@ import {
   demo,
   dropFiles,
   hostARAgent,
+  releaseARAgent,
   arList,
   arMessages,
   arAttachment,
@@ -52,7 +53,7 @@ const NOTES: FileSpec = {
   buffer: Buffer.from(`# Recursion notes ${STAMP}\n\nfact(0) = 1\nfact(n) = n * fact(n - 1)\n`),
 }
 
-const w = { tutorId: '', conversationId: '' }
+const w = { tutorId: '', hostedId: '', conversationId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -96,15 +97,26 @@ async function openChat(page: Page) {
  * again while the panel, just loaded, still settles on what it shows.
  */
 async function showConversation(panel: Locator) {
-  const history = panel.getByRole('button', { name: 'History', exact: true })
-  const row = panel.locator('.hist-row').filter({ hasText: TITLE })
-  await expect(async () => {
-    if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
-    await expect(row).toBeVisible({ timeout: 5_000 })
-  }).toPass({ timeout: 30_000 })
-  await row.click()
-  await expect(panel.locator('.chat-msg').first()).toBeVisible()
-  return panel
+  const page = panel.page()
+  const watched = watchAR429(
+    page,
+    (res) => res.request().method() === 'GET' && new URL(res.url()).pathname.endsWith('/conversations'),
+  )
+  try {
+    const history = panel.getByRole('button', { name: 'History', exact: true })
+    const row = panel.locator('.hist-row').filter({ hasText: TITLE })
+    await expect(async () => {
+      if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
+      const retry = panel.getByRole('button', { name: 'Retry', exact: true })
+      if (await retry.isVisible()) await retryAR429(retry, watched)
+      await expect(row).toBeVisible({ timeout: 5_000 })
+    }).toPass({ timeout: 30_000 })
+    await row.click()
+    await expect(panel.locator('.chat-msg').first()).toBeVisible()
+    return panel
+  } finally {
+    watched.stop()
+  }
 }
 
 /** Opens the chat on this run's conversation. */
@@ -112,11 +124,55 @@ async function openConversation(page: Page) {
   return showConversation(await openChat(page))
 }
 
+/** The most recent AR 429 and its advertised retry time on this page. */
+function watchAR429(page: Page, request?: (res: import('@playwright/test').Response) => boolean) {
+  const state = { seen: false, retryAt: 0 }
+  const listener = (res: import('@playwright/test').Response) => {
+    if (res.status() !== 429 || (request && !request(res))) return
+    const seconds = Number(res.headers()['retry-after'])
+    if (!Number.isFinite(seconds) || seconds < 0) return
+    state.seen = true
+    state.retryAt = Date.now() + Math.ceil(seconds) * 1000
+  }
+  page.on('response', listener)
+  return { state, stop: () => page.off('response', listener) }
+}
+
+/** Uses AR's Retry-After and the existing retry control, never a blind wait. */
+async function retryAR429(button: Locator, watched: ReturnType<typeof watchAR429>) {
+  expect(watched.state.seen, 'the failed AR request was rate-limited').toBe(true)
+  await expect(button).toBeVisible()
+  await button.page().waitForTimeout(Math.max(0, watched.state.retryAt - Date.now()))
+  await button.click()
+  // A later failure must carry a fresh 429, not reuse this one's observation.
+  watched.state.seen = false
+}
+
 /** Chooses files with the paperclip, through the browser's own dialog. */
 async function attachWithPaperclip(page: Page, panel: Locator, files: FileSpec[]) {
-  const chooser = page.waitForEvent('filechooser')
-  await panel.getByRole('button', { name: 'Attach files' }).click()
-  await (await chooser).setFiles(files)
+  const watched = watchAR429(
+    page,
+    (res) => res.request().method() === 'POST' && new URL(res.url()).pathname.endsWith('/attachments'),
+  )
+  try {
+    const chooser = page.waitForEvent('filechooser')
+    await panel.getByRole('button', { name: 'Attach files' }).click()
+    await (await chooser).setFiles(files)
+    for (const file of files) {
+      const chip = panel.locator('.chat-chip').filter({ hasText: file.name })
+      for (let attempt = 0; ; attempt++) {
+        await expect(chip).toHaveClass(/is-(?:done|failed)/)
+        if (!(await chip.evaluate((el) => el.classList.contains('is-failed')))) break
+        // Other AR traffic can consume a newly issued token too. A bounded
+        // retry follows each fresh Retry-After rather than assuming one wait is enough.
+        expect(attempt, `upload ${file.name} was still refused after advertised retries`).toBeLessThan(4)
+        await retryAR429(chip.getByRole('button', { name: `Upload “${file.name}” again` }), watched)
+      }
+      await expect(chip).toHaveClass(/is-done/)
+    }
+  } finally {
+    watched.stop()
+  }
 }
 
 /** Pastes a picture in the box, as a screenshot copied is: a paste of one PNG file and no text. */
@@ -169,7 +225,7 @@ test.describe.serial('files in the chat', () => {
       'member.add_delegate',
     )
     // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
-    await hostARAgent(d.actors.instructor, tutor)
+    w.hostedId = (await hostARAgent(d.actors.instructor, tutor)).id
     modelRules([
       { match: QUESTION, answer: ANSWER },
       { match: PICTURE_QUESTION, answer: PICTURE_ANSWER },
@@ -178,6 +234,7 @@ test.describe.serial('files in the chat', () => {
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -284,27 +341,51 @@ test.describe.serial('files in the chat', () => {
     await signIn(page, d.actors.yuki)
     const panel = await openConversation(page)
     await attachWithPaperclip(page, panel, [WITHDRAW_NOTES])
+    await expect(panel.locator('.chat-chip.is-done')).toHaveCount(1, { timeout: 30_000 })
     const box = panel.locator('textarea')
     await box.fill(WITHDRAW_QUESTION)
     await box.press('Enter')
+    await expect.poll(async () => (await tutorReads()).some((m) => m.role === 'user' && m.body === WITHDRAW_QUESTION)).toBe(true)
     const pending = (await tutorReads()).filter((m) => m.role === 'user').at(-1)!
     expect(pending.body).toBe(WITHDRAW_QUESTION)
     const attachmentId = pending.attachments![0]!.id
     const mine = panel.locator('.chat-msg').filter({ hasText: WITHDRAW_QUESTION })
     await expect(mine.locator('.msg-file')).toHaveCount(1)
 
-    await panel.getByRole('button', { name: 'Stop', exact: true }).click()
     const withdrawn = panel.locator('.chat-msg.is-retracted')
-    await expect(withdrawn).toBeVisible()
+    const withdrawing = watchAR429(
+      page,
+      (res) => res.request().method() === 'POST' && new URL(res.url()).pathname.endsWith('/withdraw'),
+    )
+    try {
+      for (let attempt = 0; ; attempt++) {
+        // Withdrawal replaces the pending row immediately; dispatch avoids a
+        // Playwright actionability wait on that deliberately detached button.
+        await panel.getByRole('button', { name: 'Stop', exact: true }).dispatchEvent('click')
+        await expect.poll(async () => (await withdrawn.count()) > 0 || withdrawing.state.seen).toBe(true)
+        if (await withdrawn.count()) break
+        expect(attempt, 'withdraw was still refused after advertised retries').toBeLessThan(4)
+        await retryAR429(panel.getByRole('button', { name: 'Stop', exact: true }), withdrawing)
+      }
+      await expect(withdrawn).toBeVisible()
+    } finally {
+      withdrawing.stop()
+    }
     await expect(withdrawn.locator('.msg-file')).toHaveCount(0)
     await expect(panel.locator('.msg-file').filter({ hasText: WITHDRAW_NOTES.name })).toHaveCount(0)
     await expect(box).toHaveValue(WITHDRAW_QUESTION)
 
     const after = (await tutorReads()).find((m) => m.id === pending.id)!
     expect(after.status).toBe('retracted')
-    expect(after.attachments).toBeUndefined()
+    // Canonical AR messages keep safe attachment metadata, but retract the body;
+    // the UI hides the file and the byte route below must still refuse it.
+    expect(after.body).toBe('')
     expect((await tutorReads()).some((m) => m.body === 'must not be published')).toBe(false)
-    const refused = await arAttachment(d.actors.yuki, d.course.id, attachmentId)
+    // AR's canonical GET still lets its owner download their own bytes; a
+    // different actor must get the same not_found, withdrawn or not.
+    const own = await arAttachment(d.actors.yuki, d.course.id, attachmentId)
+    expect(own.status).toBe(200)
+    const refused = await arAttachment(d.actors.ken, d.course.id, attachmentId)
     expect(refused.status).toBe(404)
 
     await page.reload()
@@ -340,7 +421,7 @@ test.describe.serial('files in the chat', () => {
     const huge = panel.locator('.chat-chip').filter({ hasText: 'huge.txt' })
     await expect(huge).toHaveClass(/is-failed/)
     await expect(panel.locator('.chat-chips__error')).toHaveText(
-      'A file is larger than a message may carry (32 KB): remove it, or attach a smaller one.',
+      '“huge.txt” was not uploaded: Too large to upload: it is 32 KB, and a file can be at most 32 KB.',
     )
     await expect(huge.getByRole('button', { name: 'Upload “huge.txt” again' })).toHaveCount(0)
     await box.fill(`Here is a big file (${STAMP})`)

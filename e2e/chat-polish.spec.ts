@@ -5,6 +5,7 @@ import {
   coursePath,
   demo,
   hostARAgent,
+  releaseARAgent,
   arList,
   arMessages,
   modelRules,
@@ -54,7 +55,7 @@ const ANSWER = [
   `1. 寫出 \`c_to_f\`\n2. 用表中的值測試\n3. 交上程式碼與說明 (${STAMP})`,
 ].join('\n')
 
-const w = { tutorId: '' }
+const w = { tutorId: '', hostedId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -113,7 +114,7 @@ test.describe.serial('the chat, as an agent chat', () => {
       }),
       'member.add_delegate',
     )
-    await hostARAgent(d.actors.instructor, tutor)
+    w.hostedId = (await hostARAgent(d.actors.instructor, tutor)).id
     // The first test holds the provider long enough to exercise Stop. A later
     // test replaces this with the immediate Markdown answer.
     modelRules([{ match: QUESTION, answer: 'not published while withdrawn', delayMs: 60_000 }])
@@ -121,6 +122,7 @@ test.describe.serial('the chat, as an agent chat', () => {
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -146,12 +148,18 @@ test.describe.serial('the chat, as an agent chat', () => {
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
 
-    // The working line: the glyph, 思考中…, and the seconds since the question.
+    // AR may already have a steps draft by the time the browser renders;
+    // either that or the waiting line is the working state.
     const line = panel.locator('.chat-pane__typing .chat-status')
-    await expect(line.locator('.chat-status__label')).toHaveText(`正在等待${TUTOR}…`)
-    await expect(line.locator('.chat-status__time')).toHaveText(/^\d+s$/)
+    await expect(panel.locator('.chat-pane__typing .chat-status, .chat-pane__draft .chat-draft')).toBeVisible()
+    if (await line.count()) {
+      await expect(line.locator('.chat-status__label')).toHaveText(`正在等待${TUTOR}…`)
+      await expect(line.locator('.chat-status__time')).toHaveText(/^\d+s$/)
+    }
     await page.waitForTimeout(2200)
-    await expect(line.locator('.chat-status__time')).not.toHaveText('0s')
+    const statusTime = line.locator('.chat-status__time')
+    if (await statusTime.count()) await expect(statusTime).not.toHaveText('0s')
+    else await expect(panel.locator('.chat-pane__draft .chat-draft')).toBeVisible()
     await expect(panel.locator('.chat-pane__dots')).toHaveCount(0)
     // With nothing written, the send button stops the wait.
     const stop = panel.getByRole('button', { name: '停止', exact: true })
@@ -168,9 +176,11 @@ test.describe.serial('the chat, as an agent chat', () => {
     const conv = (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === TITLE)!
     const stored = await arMessages(d.actors.yuki, d.course.id, conv.id)
     expect(stored.messages.filter((m) => m.role === 'user').at(-1)?.status).toBe('retracted')
-    // Sent again, it is asked again.
+    // Sent again, once the AR withdrawal has finished and the composer is
+    // actually sendable again, not merely visually populated.
+    await expect(panel.getByRole('button', { name: '傳送', exact: true })).toBeEnabled()
     await composer.press('Enter')
-    await expect(panel.locator('.chat-pane__typing .chat-status')).toBeVisible()
+    await expect(panel.locator('.chat-pane__typing .chat-status, .chat-pane__draft .chat-draft')).toBeVisible()
     await expect(panel.getByRole('button', { name: '停止', exact: true })).toBeVisible()
     await composer.fill('再補充一點')
     await expect(panel.getByRole('button', { name: '停止', exact: true })).toHaveCount(0)

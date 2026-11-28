@@ -222,7 +222,7 @@ async function download(id: string, filename: string) {
     <section v-if="answer" class="ar-approval-card__message ar-approval-card__answer" :aria-label="t('actions.arApprovals.answer')">
       <h5>{{ t('actions.arApprovals.answer') }}</h5>
       <MarkdownView :source="answer.body" code-tools />
-      <el-tooltip v-if="sourceCount" :content="t('actions.answer.sourcesTip')" placement="top">
+      <el-tooltip v-if="sourceCount" :content="t('actions.answer.sourcesTip')" placement="top" :trigger="['hover', 'focus']">
         <p class="answer-sources ar-approval-card__source-count" tabindex="0">
           {{ t('actions.answer.sources', sourceCount) }}
         </p>

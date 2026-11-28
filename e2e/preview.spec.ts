@@ -11,6 +11,7 @@ import {
   expectNoLineEndsInADot,
   expectToasted,
   hostARAgent,
+  releaseARAgent,
   inTraditionalChinese,
   keepToasts,
   modelRules,
@@ -468,9 +469,10 @@ test.describe.serial('the file viewer', () => {
     const C = `/v1/courses/${d.course.id}`
     const name = `Viewer tutor ${tag}`
     const agent = (await done(I, '/v1/me/agents', { display_name: name, hosting: 'runtime' })).actor_id as string
+    let hostedId = ''
     try {
       await done(I, `${C}/delegates`, { actor_id: agent, preset: 'course_tutor', answers_course: true })
-      await hostARAgent(d.actors.instructor, agent)
+      hostedId = (await hostARAgent(d.actors.instructor, agent)).id
       const notes: FileSpec = {
         name: `my-tree-notes-${tag}.md`,
         mimeType: 'text/markdown',
@@ -528,6 +530,7 @@ test.describe.serial('the file viewer', () => {
       // The chat is as it was under it.
       await expect(card).toBeVisible()
     } finally {
+      await releaseARAgent(d.actors.instructor, hostedId)
       // A person may have five agents at once: this run's is suspended, for the specs after it.
       await call(I, 'POST', `/v1/me/agents/${agent}/suspend`, {})
     }

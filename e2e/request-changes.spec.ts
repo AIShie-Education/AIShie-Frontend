@@ -8,6 +8,7 @@ import {
   demo,
   expectToasted,
   hostARAgent,
+  releaseARAgent,
   keepToasts,
   modelRules,
   openCourseTab,
@@ -388,7 +389,7 @@ test.describe.serial('the owner of the agent that revises, who decides nothing e
 test.describe('an AR pending answer sent back for changes', () => {
   test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
 
-  const w = { tutorId: '', conversationId: '', answerId: '', revisionId: '', beforeRevision: 0 }
+  const w = { tutorId: '', hostedId: '', conversationId: '', answerId: '', revisionId: '', beforeRevision: 0 }
 
   async function settle(id: string) {
     if (!id) return
@@ -432,6 +433,7 @@ test.describe('an AR pending answer sent back for changes', () => {
   test.afterAll(async () => {
     await settle(w.answerId)
     await settle(w.revisionId)
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -457,7 +459,7 @@ test.describe('an AR pending answer sent back for changes', () => {
       }),
       'member.update_perms',
     )
-    await hostARAgent(d.actors.instructor, w.tutorId)
+    w.hostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
 
     // The first prompt has only the question. A revised generation also carries
     // the reviewer's note, so the first matching rule proves that AR used it.

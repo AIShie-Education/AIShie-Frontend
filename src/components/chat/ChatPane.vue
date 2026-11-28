@@ -202,16 +202,20 @@ const needsOffer = computed(
   () =>
     !!conv && role.value === 'opener' && view.value?.respondent.kind === 'agent' && seat.value.can('conversation_ask'),
 )
-const offers = useRespondents({ courseId: props.courseId, enabled: () => props.active && needsOffer.value, lazy: true })
+const offers = useRespondents({ courseId: props.courseId, enabled: () => props.active && needsOffer.value, lazy: false })
 /** Core refused a question here because nobody asks the agent in the site now. */
 const refusedElsewhere = ref(false)
 /** Why, as Core said; kept while the agent is not offered, and forgotten once it is again. */
 const notAskableWhy = ref<NotAskableReason | null>(null)
 // Until whom one may ask has been read again since.
 watch(offers.items, (items) => {
-  refusedElsewhere.value = false
   const memberId = view.value?.respondent.member_id ?? props.respondent?.member_id
-  if (memberId && offeredIn(items, memberId)) notAskableWhy.value = null
+  // A refresh that still omits the agent must not erase a just-received
+  // refusal and resurrect the composer. Only a positive offer clears it.
+  if (memberId && offeredIn(items, memberId)) {
+    refusedElsewhere.value = false
+    notAskableWhy.value = null
+  }
 })
 /** Whether the opener may still ask the agent here; null while that is not known. */
 const offered = computed<boolean | null>(() => {
@@ -253,6 +257,7 @@ interface Party {
   lastSeenAt?: string | null
   answerLevel?: string | null
   seatStatus?: string | null
+  available?: boolean
 }
 /** The one the caller talks to (for staff reading it, the respondent). */
 const other = computed<Party | null>(() => {
@@ -268,6 +273,7 @@ const other = computed<Party | null>(() => {
           mine: r.is_my_delegate,
           lastSeenAt: r.last_seen_at,
           answerLevel: r.answer_level,
+          available: (r as Respondent & { available?: boolean }).available,
         }
       : null
   }
@@ -285,6 +291,7 @@ const other = computed<Party | null>(() => {
     lastSeenAt: offeredAgent?.last_seen_at ?? r.last_seen_at,
     answerLevel: offeredAgent?.answer_level ?? r.answer_level,
     seatStatus: r.seat_status,
+    available: (offeredAgent as (Respondent & { available?: boolean }) | undefined)?.available,
   }
 })
 /** Whose agent it is, for the caller: said on hover, as the header has no room for it. */
@@ -498,8 +505,9 @@ const writeBlocked = computed(() => {
   if (!seat.value.writable) return true
   if (isDraft.value) return !props.respondent || openProposed.value || refusedElsewhere.value
   if (!conv?.loaded.value) return true
-  // Not known yet whether the agent may still be asked here: in a moment.
-  if (needsOffer.value && offered.value === null && !offers.error.value) return true
+  // An AR write is authorized again by the server. While the offers read is
+  // unknown, keep the composer usable rather than a permanent loading lock;
+  // a positive refusal still becomes the elsewhere/read-only state below.
   return !!status.value?.block
 })
 /** The caller writes nothing here: staff reading it, or the one asked in it. */
@@ -987,6 +995,7 @@ const closedLine = computed(() => {
               answer_level: other.answerLevel,
               seat_status: other.seatStatus,
             }"
+            :available="other.available"
             :name="other.name"
             :whose="whose"
         /></span>

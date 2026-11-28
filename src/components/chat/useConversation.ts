@@ -107,7 +107,19 @@ export function useConversation(opts: UseConversationOptions) {
   }
 
   function takeMessages(page: ConversationMessage[]): boolean {
-    const next = mergeMessages(messages.value, page)
+    const previous = new Map(messages.value.map((m) => [m.id, m]))
+    const next = mergeMessages(messages.value, page).map((m) => {
+      const old = previous.get(m.id)
+      if (!old) return m
+      const current = m as ConversationMessage & { ar_sources?: unknown[]; ar_sources_stated?: boolean }
+      const before = old as ConversationMessage & { ar_sources?: unknown[]; ar_sources_stated?: boolean }
+      // AR source pointers are immutable. A later partial SSE/page copy may
+      // omit them; do not replace a known source list with an empty one.
+      if (before.ar_sources?.length && !current.ar_sources?.length) {
+        return { ...m, ar_sources: before.ar_sources, ar_sources_stated: before.ar_sources_stated }
+      }
+      return m
+    })
     if (sameMessages(messages.value, next)) return false
     messages.value = next
     return true
@@ -119,7 +131,14 @@ export function useConversation(opts: UseConversationOptions) {
     if (!next && draft.value === null) return false
     if (next && draft.value?.version === next.version) return false
     draftVersion = next?.version ?? draftVersion
-    draft.value = chatDraftView(next)
+    const mapped = chatDraftView(next)
+    if (mapped) {
+      const level = agent.value?.answer_level ?? view.value?.respondent.answer_level
+      // Until AR's answer level is known, do not expose a possible pending
+      // answer's text. Only an explicit autonomous grant reveals the stream.
+      mapped.text_hidden = level !== 'autonomous'
+    }
+    draft.value = mapped
     return true
   }
 
@@ -154,6 +173,7 @@ export function useConversation(opts: UseConversationOptions) {
           },
         }
       }
+      if (draft.value) draft.value = { ...draft.value, text_hidden: agent.value?.answer_level !== 'autonomous' }
     } catch {
       // The conversation remains readable; its id is used until the agents read succeeds.
     }

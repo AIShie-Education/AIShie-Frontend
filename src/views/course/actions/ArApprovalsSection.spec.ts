@@ -172,6 +172,12 @@ describe('ArApprovalsSection list and detail', () => {
   it('reads AR only and shows the question, attachments, pending answer and sources', async () => {
     const detail = fixture('a1')
     queue([detail])
+    api.coreRead.mockResolvedValue({
+      title: 'Week 4',
+      kind: 'material',
+      published_version_id: 'v1',
+      version: { id: 'v1', seq: 1, files: [{ id: 'f1', filename: 'week.pdf', content_type: 'application/pdf', byte_size: 10 }] },
+    })
     const w = await mountSection()
 
     expect(api.approvals).toHaveBeenCalledWith(COURSE, {
@@ -184,13 +190,13 @@ describe('ArApprovalsSection list and detail', () => {
     expect(w.text()).toContain('How does binary search work? (a1)')
     expect(w.text()).toContain('notes-a1.txt')
     expect(w.text()).toContain('Compare the middle element first. (a1)')
-    expect(w.text()).toContain('Course material · page 2')
+    expect(w.text()).toContain('Based on: “Week 4” · week.pdf · page 2')
     expect(w.text()).toContain('The person who asked cannot see this answer unless it is approved.')
     expect(w.find('[data-action="approve"]').exists()).toBe(true)
     expect(w.find('[data-action="review"]').exists()).toBe(false)
     // A source location is useful without exposing its private document id.
     expect(w.text()).not.toContain('private-document-a1')
-    expect(api.coreRead).not.toHaveBeenCalled()
+    expect(api.coreRead).toHaveBeenCalledWith('document.get', expect.objectContaining({ document_id: 'private-document-a1' }))
     expect(api.coreWrite).not.toHaveBeenCalled()
   })
 
@@ -205,7 +211,8 @@ describe('ArApprovalsSection list and detail', () => {
 
     expect(api.download).toHaveBeenCalledWith('a1', 'attachment-a1', { filename: 'notes-a1.txt' })
     expect(api.ownerDownload).not.toHaveBeenCalled()
-    expect(api.coreRead).not.toHaveBeenCalled()
+    // Resolving a source is a separate Core read, never an owner attachment fallback.
+    expect(api.coreRead).toHaveBeenCalled()
     expect(api.coreWrite).not.toHaveBeenCalled()
     expect(w.find('.ar-approval-card__error').text()).toContain('The attachment could not be downloaded')
     expect(w.text()).not.toContain('non-reviewer detail')

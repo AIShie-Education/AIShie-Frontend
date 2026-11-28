@@ -116,7 +116,7 @@ export const useChatStore = defineStore('chat', () => {
   })
   const screen = ref<ChatScreen>('new')
   /** The conversation shown (or last shown), and its course. */
-  const conversation = ref<{ courseId: string; id: string } | null>(null)
+  const conversation = ref<{ courseId: string; id: string; respondent?: Respondent } | null>(null)
   /** The agent a new conversation is being written to, in a course. */
   const draft = ref<{ courseId: string; agent: Respondent } | null>(null)
   /** The history lists the course asked in, or every course. */
@@ -165,8 +165,8 @@ export const useChatStore = defineStore('chat', () => {
   }
 
   /** Shows a conversation (and the panel, when opened from elsewhere). */
-  function showConversation(id: string, conversationId: string, opts: { open?: boolean } = {}) {
-    conversation.value = { courseId: id, id: conversationId }
+  function showConversation(id: string, conversationId: string, opts: { open?: boolean; respondent?: Respondent } = {}) {
+    conversation.value = { courseId: id, id: conversationId, respondent: opts.respondent }
     if (courseIds.value.includes(id)) {
       chosenCourseId.value = id
       useCourse(id)
@@ -245,7 +245,7 @@ export const useChatStore = defineStore('chat', () => {
       const id = c.id
       const previous = activityOf.get(id)
       // A conversation first appearing on a later read is new activity too.
-      let unread = c.state === 'answered' && wasRead && previous !== c.last_activity_at
+      let unread = unreadOf.value.get(id) === true || (c.state === 'answered' && wasRead && previous !== c.last_activity_at)
       if (readActivity.get(id) === c.last_activity_at) unread = false
       activityOf.set(id, c.last_activity_at)
       return chatHistoryView(c, membership, agents.get(c.agent_id), unread)

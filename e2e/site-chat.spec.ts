@@ -8,6 +8,7 @@ import {
   demo,
   expectCourseAgentRow,
   hostARAgent,
+  releaseARAgent,
   modelRules,
   photograph,
   signIn,
@@ -162,6 +163,7 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.
   test.afterAll(async () => {
     const d = demo()
+    await releaseARAgent(d.actors.instructor, w.hostedId)
     if (w.tutorId) await call(d.actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
     if (w.helperId) await call(d.actors.ken.token, 'POST', `/v1/me/agents/${w.helperId}/suspend`, {})
   })

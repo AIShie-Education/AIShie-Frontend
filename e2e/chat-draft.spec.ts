@@ -8,6 +8,7 @@ import {
   coursePath,
   demo,
   hostARAgent,
+  releaseARAgent,
   inTraditionalChinese,
   modelRules,
   photograph,
@@ -27,7 +28,7 @@ const QUESTION = `攝氏怎樣換成華氏？ (${STAMP})`
 const HIDDEN_QUESTION = `幫我檢查我的思路 (${STAMP})`
 const HIDDEN_ANSWER = 'This text is not for the asker to see yet.'
 
-const w = { tutorId: '', seatId: '', pending: new Set<string>() }
+const w = { tutorId: '', hostedId: '', seatId: '', pending: new Set<string>() }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -50,7 +51,7 @@ async function seatTutor(name: string) {
     }),
     'member.add_delegate',
   ).member_id as string
-  await hostARAgent(d.actors.instructor, w.tutorId)
+  w.hostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
 }
 
 /** Core still owns the seat's answer level; AR owns the answer and its approval. */
@@ -132,6 +133,7 @@ test.describe.serial('an AR answer in the making', () => {
   test.afterAll(async () => {
     for (const id of [...w.pending]) await rejectIfPending(id)
     if (w.seatId) await answersAt('autonomous')
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -149,7 +151,7 @@ test.describe.serial('an AR answer in the making', () => {
 
     // The first delta has not arrived yet: this is AR's own working step.
     await expect(draft).toBeVisible()
-    await expect(draft.locator('.chat-steps__text').first()).toHaveText('思考中…')
+    await expect(draft.locator('.chat-steps__text').filter({ hasText: '思考中…' }).first()).toBeVisible()
     await expect(draft.locator('.chat-steps__step.is-running .chat-spinner')).toBeVisible()
     await expect(panel.locator('.chat-pane__typing .chat-status')).toHaveCount(0)
     await page.mouse.move(900, 200)
@@ -175,7 +177,7 @@ test.describe.serial('an AR answer in the making', () => {
     const draft = panel.locator('.chat-pane__draft .chat-draft')
 
     await expect(draft.locator('.chat-draft__hidden')).toHaveText('答案需經確認後才會顯示。')
-    await expect(draft.locator('.chat-steps__text').first()).toHaveText('思考中…')
+    await expect(draft.locator('.chat-steps__text').filter({ hasText: '思考中…' }).first()).toBeVisible()
     await expect(panel).not.toContainText('not for the asker')
     await page.mouse.move(900, 200)
     await photograph(page, 'draft-ar-hidden')

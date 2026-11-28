@@ -173,6 +173,28 @@ export function useRespondents(opts: { courseId: string; enabled?: Enabled; lazy
     immediate: false,
     enabled: () => on(opts.enabled) && list.loaded.value,
   })
+  // A transient first-read failure must not leave an AR conversation blocked
+  // forever. Permission refusals stay fail-closed and are not retried.
+  let retry: ReturnType<typeof setTimeout> | null = null
+  let failures = 0
+  const stopRetry = () => {
+    if (retry !== null) clearTimeout(retry)
+    retry = null
+  }
+  watch(list.error, (err) => {
+    stopRetry()
+    if (!err) {
+      failures = 0
+      return
+    }
+    if (!on(opts.enabled) || (err.status !== 0 && err.status !== 429 && err.status < 500)) return
+    const delay = Math.min(250 * 2 ** failures++, 5_000)
+    retry = setTimeout(() => {
+      retry = null
+      if (on(opts.enabled)) void list.load()
+    }, delay)
+  })
+  onScopeDispose(stopRetry)
   const started = startWhenEnabled(list.load, opts.lazy ? opts.enabled : true)
   return { ...list, reload: list.load, refresh: () => (started() ? polling.pollNow() : Promise.resolve()) }
 }

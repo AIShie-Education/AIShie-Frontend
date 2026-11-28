@@ -50,13 +50,15 @@ describe('ArMessageSources', () => {
       props: { courseId: 'k1', sources: [{ document_id: 'private-id', version_id: 'v1', file_id: 'f1', slide: 3 }] },
       global,
     })
+    await flushPromises()
     const button = w.get('button')
-    expect(button.text()).toBe('Course material · slide 3')
+    expect(button.text()).toContain('Resolved title')
+    expect(button.text()).toContain('slide 3')
     expect(w.text()).not.toContain('private-id')
-    expect(reads).toEqual([])
+    expect(reads.map((r) => r.tool)).toEqual(['document.get'])
     await button.trigger('click')
     await flushPromises()
-    expect(reads.map((r) => r.tool)).toEqual(['document.get'])
+    expect(reads.map((r) => r.tool)).toEqual(['document.get', 'document.get'])
     expect(previewState().open).toBe(true)
     expect(previewState().index).toBe(0)
     expect(previewState().page).toBe(3)
@@ -67,10 +69,11 @@ describe('ArMessageSources', () => {
       props: { courseId: 'k1', sources: [{ document_id: 'd1', version_id: 'v1', file_id: 'f1', part: 2 }] },
       global,
     })
+    await flushPromises()
     await w.get('button').trigger('click')
     await flushPromises()
-    expect(reads.map((r) => r.tool)).toEqual(['document.get', 'document.text'])
-    expect(reads[1]!.args).toMatchObject({ document_id: 'd1', version_id: 'v1', file_id: 'f1', part: 2 })
+    expect(reads.map((r) => r.tool)).toEqual(['document.get', 'document.get', 'document.text'])
+    expect(reads[2]!.args).toMatchObject({ document_id: 'd1', version_id: 'v1', file_id: 'f1', part: 2 })
     expect(router.currentRoute.value.name).toBe('course-document')
     expect(router.currentRoute.value.query).toMatchObject({ version: 'v1', tab: 'text', file: 'f1' })
   })

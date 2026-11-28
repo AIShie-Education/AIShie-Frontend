@@ -1073,7 +1073,7 @@ describe('ChatPane', () => {
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
     const row = w.find('.chat-pane__name-row')
-    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Paused$/)
+    expect(row.text()).toMatch(/^Course tutor\s*AI\s*Can be asked$/)
     expect(row.attributes('title')).toBe('Loops')
     // An open conversation shows no state; nothing but the row and the menu in the header.
     expect(row.find('.status-tag, .el-tag').exists()).toBe(false)
@@ -1091,14 +1091,15 @@ describe('ChatPane', () => {
     expect(readers.textContent).toContain('The two taking part')
   })
 
-  it('says an answer is awaited in one quiet line, not that the agent thinks when nothing runs it', async () => {
+  it('says an answer is awaited in one quiet line, with AR availability beside the agent', async () => {
     seat('student')
     server.view = view({ respondent: { ...view().respondent, last_seen_at: '2026-09-26T09:00:00Z' } })
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    // Nothing runs it now: it is waited for, not "thinking", and the line above the composer says nothing more.
+    // The AR offer, not Core's last_seen_at, says this agent can be asked;
+    // the answer itself is still awaited in one quiet line.
     expect(w.find('.chat-pane__notice').exists()).toBe(false)
-    expect(w.find('.chat-pane__presence').text()).toBe('Paused')
+    expect(w.find('.chat-pane__presence').text()).toBe('Can be asked')
     expect(w.find('.chat-pane__typing .chat-status__label').text()).toBe('Waiting for Course tutor…')
     expect(w.find('textarea').exists()).toBe(true)
   })
@@ -1160,7 +1161,7 @@ describe('ChatPane', () => {
     }
     const w = mount(ChatPane, { props: { courseId: 'k1', conversationId: 'c1' }, global })
     await flushPromises()
-    expect(w.find('.chat-pane__presence').text()).toBe('Paused')
+    expect(w.find('.chat-pane__presence').text()).toBe('Can be asked')
     const ta = await type(w, 'One more question')
     await ta.trigger('keydown', { key: 'Enter' })
     await flushPromises()

@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { arList, arMessages, call, coursePath, demo, hostARAgent, modelRules, photograph, signIn, type CoreReply } from './support'
+import { arList, arMessages, call, coursePath, demo, hostARAgent, releaseARAgent, modelRules, photograph, signIn, type CoreReply } from './support'
 
 test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
 
@@ -30,7 +30,7 @@ const ZH_READERS = new Intl.ListFormat('zh-Hans', { type: 'conjunction' }).forma
   '网站及部门管理员',
 ])
 
-const w = { tutorId: '' }
+const w = { tutorId: '', hostedId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -66,11 +66,12 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
       }),
       'member.add_delegate',
     )
-    await hostARAgent(d.actors.instructor, w.tutorId)
+    w.hostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 

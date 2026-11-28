@@ -1,123 +1,88 @@
 <script setup lang="ts">
-// AR sources are minimal locations, not Core's already-resolved SourceView.
-// Show only a safe material/position label first. A click then asks Core for
-// the document (and a text part where named), so no unreadable id, title or
-// target is invented in the chat.
-import { ref } from 'vue'
+// AR stores minimal source locations. Resolve each through Core's live
+// document.get as this reader may read it now, then use the established source
+// presentation (title, file/page, current/other version, or restricted).
+import { onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRouter } from 'vue-router'
 import { read } from '@/api/http'
 import type { ChatSource } from '@/api/runtimeChat'
-import { notifyError } from '@/composables/useErrors'
-import { documentPreviewFiles, openPreview } from '@/components/preview/viewer'
-import { versionFilesOf } from '@/utils/documentFiles'
-import { joinParts } from '@/utils/parts'
+import type { MessageSource } from '@/api/types'
+import ChatMessageSources from './ChatMessageSources.vue'
 
 const props = defineProps<{ courseId: string; sources: ChatSource[] }>()
 const { t } = useI18n()
-const router = useRouter()
-const opening = ref<number | null>(null)
+const resolved = ref<MessageSource[] | null>(null)
+let generation = 0
 
-function label(s: ChatSource): string {
-  return joinParts([
-    t('chat.sources.material'),
-    s.page ? t('chat.sources.page', { n: s.page }) : s.slide ? t('chat.sources.slide', { n: s.slide }) : null,
-    s.part ? t('chat.sources.part', { n: s.part }) : null,
-  ])
-}
-
-async function open(s: ChatSource, index: number) {
-  if (opening.value !== null || !s.document_id) return
-  opening.value = index
+async function resolveOne(source: ChatSource): Promise<MessageSource> {
   try {
     const doc = await read('document.get', {
       course_id: props.courseId,
-      document_id: s.document_id,
-      ...(s.version_id ? { version_id: s.version_id } : {}),
+      document_id: source.document_id,
+      ...(source.version_id ? { version_id: source.version_id } : {}),
     })
-    const versionId = s.version_id ?? doc.version?.id ?? undefined
-    const route = {
-      name: 'course-document',
-      params: { courseId: props.courseId, documentId: s.document_id },
-      query: versionId ? { version: versionId } : {},
+    const currentVersion = doc.published_version_id ?? null
+    const otherVersion = !!source.version_id && !!currentVersion && source.version_id !== currentVersion
+    if (otherVersion) {
+      // The reader may open the material, but not the version the answer read.
+      // Deliberately omit that version's file, page and part.
+      return { document_id: source.document_id, title: doc.title, other_version: true }
     }
-    if (!s.file_id) {
-      await router.push(route)
-      return
+    const version = doc.version
+    const versionID = version?.id ?? source.version_id ?? currentVersion ?? null
+    const file = version?.files?.find((f) => f.id === source.file_id)
+    return {
+      document_id: source.document_id,
+      version_id: versionID,
+      file_id: source.file_id ?? null,
+      filename: file?.filename ?? null,
+      kind: doc.kind ?? null,
+      title: doc.title ?? null,
+      page: source.page ?? null,
+      slide: source.slide ?? null,
+      part: source.part ?? null,
+      published: true,
+      seq: version?.seq ?? null,
     }
-    const files = versionFilesOf(doc.version)
-    const fileIndex = files.findIndex((f) => f.id === s.file_id)
-    if (fileIndex < 0 || !versionId) {
-      await router.push(route)
-      return
+  } catch {
+    if (source.version_id) {
+      try {
+        // The version may no longer be readable while the document is. Core's
+        // current read supplies the title and the safe "another version" link.
+        const current = await read('document.get', {
+          course_id: props.courseId,
+          document_id: source.document_id,
+        })
+        return { document_id: source.document_id, title: current.title, other_version: true }
+      } catch {
+        // Fall through to the fully restricted answer.
+      }
     }
-    if (s.part) {
-      // Resolve the named part as the reader may read it before sending them to its text tab.
-      await read('document.text', {
-        course_id: props.courseId,
-        document_id: s.document_id,
-        version_id: versionId,
-        file_id: s.file_id,
-        part: s.part,
-      })
-      await router.push({ ...route, query: { ...route.query, tab: 'text', file: s.file_id } })
-      return
-    }
-    openPreview({
-      files: documentPreviewFiles(props.courseId, s.document_id, versionId, files, doc.version?.created_at),
-      index: fileIndex,
-      title: doc.title,
-      courseId: props.courseId,
-      page: s.page ?? s.slide ?? null,
-    })
-  } catch (e) {
-    notifyError(e, t('chat.sources.material'))
-  } finally {
-    opening.value = null
+    // No title, id or link is exposed when the reader may not open it now.
+    return { restricted: true }
   }
 }
+
+async function resolveAll() {
+  const mine = ++generation
+  resolved.value = null
+  const next = await Promise.all(props.sources.map(resolveOne))
+  if (mine === generation) resolved.value = next
+}
+
+onMounted(() => void resolveAll())
 </script>
 
 <template>
-  <div class="ar-sources" :aria-label="t('chat.sources.label')">
-    <button
-      v-for="(s, i) in sources"
-      :key="`${s.document_id}:${s.file_id ?? ''}:${s.part ?? s.page ?? s.slide ?? ''}`"
-      type="button"
-      class="ar-sources__link"
-      :aria-busy="opening === i ? 'true' : undefined"
-      @click="open(s, i)"
-    >
-      <span>{{ label(s) }}</span>
-      <el-icon v-if="opening === i" class="is-loading" aria-hidden="true"><Loading /></el-icon>
-    </button>
-  </div>
+  <ChatMessageSources v-if="resolved" :course-id="courseId" :sources="resolved" />
+  <p v-else class="chat-sources ar-sources__loading" aria-busy="true">{{ t('common.labels.loading') }}</p>
 </template>
 
 <style scoped>
-.ar-sources {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 10px;
-  margin-top: 6px;
-  padding: 0 2px;
-  font-size: var(--app-text-sm);
-}
-.ar-sources__link {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+.ar-sources__loading {
+  margin: 6px 2px 0;
   padding: 0;
-  border: none;
-  background: transparent;
+  font-size: var(--app-text-sm);
   color: var(--app-ink-3);
-  font: inherit;
-  text-decoration: underline;
-  text-decoration-color: var(--app-line-strong);
-  text-underline-offset: 2px;
-  cursor: pointer;
-}
-.ar-sources__link:hover {
-  color: var(--el-color-primary);
 }
 </style>

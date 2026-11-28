@@ -8,6 +8,7 @@ import {
   demo,
   expectToasted,
   hostARAgent,
+  releaseARAgent,
   hostOnRuntime,
   inTraditionalChinese,
   keepToasts,
@@ -39,11 +40,12 @@ const MCP_AGENT = `Hana's tools ${STAMP}`
 const RT_AGENT = `Hana's tutor ${STAMP}`
 const NOT_FIXED = 'This cannot be changed after it is created.'
 
-const w: { hana: DemoActor | null; hanaMember: string; mcpId: string; rtId: string } = {
+const w: { hana: DemoActor | null; hanaMember: string; mcpId: string; rtId: string; hostedId: string } = {
   hana: null,
   hanaMember: '',
   mcpId: '',
   rtId: '',
+  hostedId: '',
 }
 const hana = () => w.hana!
 
@@ -526,7 +528,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await photograph(page, 'hosting-runtime-running')
     // The browser's hosting UI is mocked above; actual askability is not.
     // Host through the real AR before asserting against its chat agents list.
-    await hostARAgent(hana(), w.rtId)
+    w.hostedId = (await hostARAgent(hana(), w.rtId)).id
     expect(done(await call(hana().token, 'GET', `/v1/me/agents/${w.rtId}`), 'agent.get').site_chat).toBe(true)
     expect(await respondentNames(hana())).toContain(RT_AGENT)
     // Core's history may include the replaced mock token and AR's current one;
@@ -614,6 +616,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
   // A person may have five agents at once: Hana's are suspended when they are done with.
   test.afterAll(async () => {
     if (!w.hana) return
+    await releaseARAgent(hana(), w.hostedId)
     for (const id of [w.mcpId, w.rtId]) if (id) await call(hana().token, 'POST', `/v1/me/agents/${id}/suspend`, {})
   })
 })

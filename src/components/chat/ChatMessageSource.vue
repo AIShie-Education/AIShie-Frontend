@@ -74,6 +74,21 @@ async function openFile() {
       await router.push(to.value)
       return
     }
+    if (v.part && !v.page && !v.slide && v.file_id) {
+      await read('document.text', {
+        course_id: props.courseId,
+        document_id: v.document_id,
+        version_id: v.version_id,
+        file_id: v.file_id,
+        part: v.part,
+      })
+      await router.push({
+        name: 'course-document',
+        params: { courseId: props.courseId, documentId: v.document_id },
+        query: { version: v.version_id, tab: 'text', file: v.file_id ?? undefined },
+      })
+      return
+    }
     openPreview({
       files: documentPreviewFiles(props.courseId, v.document_id, v.version_id, files, doc.version?.created_at),
       index,

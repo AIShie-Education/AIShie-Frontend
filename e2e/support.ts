@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -174,7 +174,8 @@ export async function openCourseTab(page: Page, name: string) {
  * agents: 1 unread"): at the header's right end, at every width, always there.
  */
 export function chatButton(page: Page) {
-  return page.locator('.app-chat-entry').getByRole('button', { name: /^Chat with agents/ })
+  // The accessible name is localized; the control's stable id is not.
+  return page.locator('#chat-panel-toggle')
 }
 
 /** The count of unread answers on the chat's button. */
@@ -470,13 +471,13 @@ let runtimeService: Promise<string> | undefined
  * may have left one. It is never printed.
  */
 function runtimeCredential(): Promise<string> {
+  // ci-runtime.sh passes the very credential AR holds. Every Playwright worker
+  // reuses it; issuing one per worker would hit Core's five-credential ceiling
+  // and replacing it would knock the live AR off Core.
+  if (process.env.E2E_SERVICE_CREDENTIAL) return Promise.resolve(process.env.E2E_SERVICE_CREDENTIAL)
   runtimeService ??= call(root().token, 'POST', '/v1/services/agent_runtime/credentials', {
     label: `e2e runtime ${demo().tag}`,
-    // A live AR already holds a service credential from ci-runtime.sh. The
-    // legacy helper may not replace and revoke it mid-run; its separate test
-    // credential coexists with AR's. Only an isolated legacy run replaces one
-    // left by a previous run.
-    replace: !process.env.E2E_RUNTIME_URL,
+    replace: true,
   }).then((r) => {
     const token = r.body.result?.token
     if (r.body.status !== 'executed' || typeof token !== 'string')
@@ -535,17 +536,25 @@ async function arRaw(
   if (!base) throw new Error('real AR chat requires scripts/ci-runtime.sh start')
   const assertion = await arAssertion(who)
   const raw = body === undefined ? undefined : JSON.stringify(body)
-  const res = await fetch(`${base}/runtime/api/v1${path}`, {
-    method,
-    headers: {
-      Authorization: `Bearer ${assertion}`,
-      Accept: 'application/json',
-      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(ifMatch ? { 'If-Match': ifMatch } : {}),
-    },
-    body: raw,
-  })
-  return res
+  for (let attempt = 0; ; attempt++) {
+    const res = await fetch(`${base}/runtime/api/v1${path}`, {
+      method,
+      headers: {
+        Authorization: `Bearer ${assertion}`,
+        Accept: 'application/json',
+        ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(ifMatch ? { 'If-Match': ifMatch } : {}),
+      },
+      body: raw,
+    })
+    if (res.status !== 429 || attempt >= 3) return res
+    // Respect the server's throttle instead of turning a transient management
+    // call into a false test failure. No request body or assertion is logged.
+    await res.arrayBuffer().catch(() => {})
+    const advertised = Number(res.headers.get('retry-after'))
+    const delay = Number.isFinite(advertised) && advertised >= 0 ? advertised * 1000 : Math.min(250 * 2 ** attempt, 2000)
+    await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 30_000)))
+  }
 }
 
 export async function arCall<T = any>(
@@ -570,11 +579,18 @@ export async function hostARAgent(owner: Pick<DemoActor, 'token'>, agentId: stri
     owner,
     'PATCH',
     `/agents/${hosted.body.id}`,
-    { model: { school: { offer: 'e2e' } } },
+    { model: { school: { offer: process.env.E2E_MODEL_OFFER ?? 'e2e' } } },
     etag,
   )
   expect(changed.status, 'AR selects the deterministic model').toBe(200)
   return hosted.body
+}
+
+/** Deletes a dynamic AR hosted row before Core suspends its actor. No assertion or token is logged. */
+export async function releaseARAgent(owner: Pick<DemoActor, 'token'>, hostedId: string) {
+  if (!hostedId) return
+  const res = await arCall(owner, 'DELETE', `/agents/${hostedId}`)
+  expect([200, 404], 'release AR hosted agent').toContain(res.status)
 }
 
 export async function arMessages(who: Pick<DemoActor, 'token'>, courseId: string, conversationId: string) {
@@ -609,7 +625,9 @@ export interface ModelRule {
 export function modelRules(rules: ModelRule[]) {
   const file = process.env.E2E_MODEL_RULES
   if (!file) throw new Error('the deterministic model requires scripts/ci-runtime.sh start')
-  writeFileSync(file, `${JSON.stringify(rules)}\n`, { mode: 0o600 })
+  const temp = `${file}.${process.pid}.${crypto.randomUUID()}.tmp`
+  writeFileSync(temp, `${JSON.stringify(rules)}\n`, { mode: 0o600 })
+  renameSync(temp, file)
 }
 
 /** Stops hosting an agent as the site's runtime does: its token is revoked, and nobody may ask it. */

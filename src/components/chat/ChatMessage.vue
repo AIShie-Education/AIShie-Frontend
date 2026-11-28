@@ -135,7 +135,7 @@ async function copy() {
       :files="files"
       :retry-renditions="canRetract"
     />
-    <ArMessageSources v-if="ar.sources.length && courseId" :course-id="courseId" :sources="ar.sources" />
+    <ArMessageSources v-if="(ar.sources.length || ar.sourcesStated) && courseId" :course-id="courseId" :sources="ar.sources" />
     <ChatMessageSources v-else-if="sources" :course-id="courseId!" :sources="sources" />
     <footer class="chat-msg__foot">
       <TimeText :value="message.created_at" class="chat-msg__time" />

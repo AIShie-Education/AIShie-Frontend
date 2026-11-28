@@ -405,6 +405,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
           :type="inHistory ? 'primary' : undefined"
           :aria-pressed="inHistory ? 'true' : 'false'"
           :aria-label="t('chat.panel.history')"
+          data-action="history"
           @click="chat.toggleHistory()"
         >
           <el-icon aria-hidden="true"><Clock /></el-icon>
@@ -434,6 +435,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         class="chat-panel__pane"
         :course-id="chat.conversation.courseId"
         :conversation-id="chat.conversation.id"
+        :respondent="chat.conversation.respondent"
         :course-label="labelOf(chat.conversation.courseId)"
         :active="chat.open"
         @read="(id: string) => chat.markedRead(id)"
@@ -466,7 +468,7 @@ usePolling(() => chat.pollUnread(), { intervalMs: UNREAD_POLL_MS, enabled: () =>
         :respondent="chat.draft.agent"
         :course-label="labelOf(chat.draft.courseId)"
         :active="chat.open"
-        @opened="(id: string) => chat.showConversation(chat.draft!.courseId, id)"
+        @opened="(id: string) => chat.showConversation(chat.draft!.courseId, id, { respondent: chat.draft!.agent })"
         @new="chat.startNew()"
         @history="chat.showHistory()"
       >

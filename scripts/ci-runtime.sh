@@ -109,6 +109,9 @@ agent:
     base_url: http://127.0.0.1:$MODEL_PORT/v1
     key_ref: secret://school/keys/e2e
     key_source: school
+  budgets:
+    per_agent_day: {answers: 100}
+    per_asker_day: {answers: 20}
   tools:
     writes: false
 EOF
@@ -125,7 +128,6 @@ EOF
   rm -f "$DIR/credential.json"
   if in_actions; then echo "::add-mask::$token"; fi
   export E2E_SERVICE_CREDENTIAL=$token
-  unset token
 
   if [ "$(psql -X -At -d "$maint" -c "SELECT 1 FROM pg_database WHERE datname = '$dbname'")" != 1 ]; then
     psql -X -q -v ON_ERROR_STOP=1 -d "$maint" -c "CREATE DATABASE \"$dbname\""
@@ -168,16 +170,18 @@ EOF
   done
   (
     umask 077
-    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\nexport E2E_UNOWNED_AGENT_ID='%s'\n" \
-      "http://127.0.0.1:$PORT" "$DIR/model-rules.json" "$unowned" >> "$CORE_DIR/env"
+    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\nexport E2E_UNOWNED_AGENT_ID='%s'\nexport E2E_SERVICE_CREDENTIAL='%s'\n" \
+      "http://127.0.0.1:$PORT" "$DIR/model-rules.json" "$unowned" "$token" >> "$CORE_DIR/env"
   )
   if in_actions; then
     {
       printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT"
       printf 'E2E_MODEL_RULES=%s\n' "$DIR/model-rules.json"
       printf 'E2E_UNOWNED_AGENT_ID=%s\n' "$unowned"
+      printf 'E2E_SERVICE_CREDENTIAL=%s\n' "$token"
     } >> "$GITHUB_ENV"
   fi
+  unset token
   echo "Runtime is up on http://127.0.0.1:$PORT; its scratch database is $dbname"
 }
 

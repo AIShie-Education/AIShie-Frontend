@@ -8,6 +8,7 @@ import {
   coursePath,
   demo,
   hostARAgent,
+  releaseARAgent,
   modelRules,
   openChat,
   inTraditionalChinese,
@@ -53,6 +54,8 @@ const PDF_NAME = `lists-${STAMP}.pdf`
 const NOTES = `COMP1001_Lecture04_Lists_Tuples_and_Dictionaries_${STAMP}`
 const Q = (n: number) => `Question ${n} about lists (${STAMP})`
 const A = (n: number) => `Answer ${n}: a list keeps its order (${STAMP}).`
+const PAGE_MARK = (n: number) => ['amber', 'cobalt', 'violet'][n - 1] ?? 'other'
+const NOTES_MARK = 'quartz'
 
 type Catalogue = { tools?: { name: string; input_schema?: { properties?: Record<string, unknown> } }[] }
 /** Whether a catalogue's conversation.answer takes the sources an answer relied on. */
@@ -66,6 +69,7 @@ const pinTakesSources = takesSources(
 const w = {
   sources: false,
   tutorId: '',
+  hostedId: '',
   tutorSeat: '',
   student: null as (DemoActor & { member_id?: string }) | null,
   lectureId: '',
@@ -110,14 +114,20 @@ function pdfOf(pages: number): Buffer {
 
 /** The deterministic model's search/read steps for the sources this answer needs. */
 function sourceSteps(n: number, sources: Record<string, unknown>[] | undefined) {
-  if (sources === undefined) return undefined
-  if (!sources.length) return [{ query: `no matching course material ${STAMP} ${n}` }]
+  // Undefined: a search glimpse without a read is not a source statement.
+  if (sources === undefined) return [{ query: LECTURE }]
+  // No search/read at all is the runner's explicit empty stated list.
+  if (!sources.length) return undefined
   return sources.map((source) => {
     let query = String(source.document_id)
     if (source.document_id === w.rubricId) query = w.rubricTitle
     else if (source.document_id === w.lectureId) {
-      query = typeof source.page === 'number' ? `Lists, page ${source.page}` : `Revised: the slides are now in the notes (${STAMP})`
-    } else query = NOTES
+      query = typeof source.page === 'number'
+        ? PAGE_MARK(source.page)
+        : source.version_id === w.lectureVersion
+          ? LECTURE
+          : `Revised: the slides are now in the notes (${STAMP})`
+    } else query = NOTES_MARK
     return { query, read: true }
   })
 }
@@ -162,7 +172,7 @@ async function answerQuestion(n: number, sources: Record<string, unknown>[] | un
     .poll(
       async () => {
         const snapshot = await arMessages(w.student!, course, w.conversationId)
-        if (response.body.submission?.status === 'proposed') return snapshot.conversation.state === 'reply_pending_approval'
+        if (snapshot.conversation.state === 'reply_pending_approval') return true
         const answer = snapshot.messages.find((m: { body?: string; status?: string; error?: { kind?: string } }) => m.body === A(n))
         if (answer?.status === 'failed') throw new Error(`AR model answer failed: ${answer.error?.kind ?? 'failed'}`)
         return answer?.status === 'posted'
@@ -195,7 +205,7 @@ async function perms(memberId: string, levels: Record<string, string>) {
 async function openConversation(page: Page) {
   await page.goto(coursePath())
   const panel = await openChat(page)
-  const history = panel.getByRole('button', { name: 'History', exact: true })
+  const history = panel.locator('[data-action="history"]')
   const row = panel.locator('.hist-row').filter({ hasText: Q(1) })
   await expect(async () => {
     if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
@@ -239,7 +249,7 @@ test.describe.serial('what an answer relied on', () => {
       }),
       'member.add_delegate',
     ).member_id
-    await hostARAgent(d.actors.instructor, w.tutorId)
+    w.hostedId = (await hostARAgent(d.actors.instructor, w.tutorId)).id
 
     // A student of this run, who may read rubrics for now; and so may the agent, which stays within her seat.
     const student = await registerPerson(`Sources student ${STAMP}`, { email: `sources+${STAMP}@e2e.test` })
@@ -277,6 +287,15 @@ test.describe.serial('what an answer relied on', () => {
     w.lectureVersion = lecture.version_id
     w.lectureFile = lecture.file_ids[0]
     done(await call(I, 'POST', `/v1/courses/${c}/documents/${w.lectureId}/publish`, {}), 'document.publish')
+    // A staff-written text version gives Core's real FTS deterministic page
+    // passages even in a minimal local/CI image with no OCR worker.
+    done(
+      await call(I, 'POST', `/v1/courses/${c}/documents/${w.lectureId}/versions/${w.lectureVersion}/text`, {
+        file_id: w.lectureFile,
+        body: `## Page 1\nLists, page 1 ${PAGE_MARK(1)}\n## Page 2\nLists, page 2 ${PAGE_MARK(2)}\n## Page 3\nLists, page 3 ${PAGE_MARK(3)}`,
+      }),
+      'document.text_update (the lecture)',
+    )
 
     // HW1's rubric, as published.
     const hw1 = done(await call(I, 'GET', `/v1/courses/${c}/assignments/${d.course.assignments.hw1}`), 'assignment.get')
@@ -297,6 +316,7 @@ test.describe.serial('what an answer relied on', () => {
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    await releaseARAgent(demo().actors.instructor, w.hostedId)
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
@@ -315,12 +335,12 @@ test.describe.serial('what an answer relied on', () => {
     await expect(answerIn(panel, 2).locator('.chat-sources')).toHaveText('No course material cited')
     await expect(answerIn(panel, 2).locator('.chat-sources .el-tag--info')).toBeVisible()
     await expect(answerIn(panel, 3)).toBeVisible()
-    await expect(answerIn(panel, 3).locator('.chat-sources')).toHaveCount(0)
+    await expect(answerIn(panel, 3).locator('.chat-sources')).toBeHidden()
     // While she may read rubrics, the rubric is named, and the line opens on both.
     const summary = answerIn(panel, 4).locator('.chat-sources__summary')
     await expect(summary).toHaveText(`Based on: “${w.rubricTitle}” · 2 items`)
     await summary.click()
-    await expect(answerIn(panel, 4).locator('.chat-sources__item')).toHaveText([`“${w.rubricTitle}”`, `“${LECTURE}”`])
+    await expect(answerIn(panel, 4).locator('.chat-sources__item')).toHaveText([`“${w.rubricTitle}”`, `“${LECTURE}” · ${PDF_NAME}`])
     await page.mouse.move(0, 400)
     await photograph(page, 'answer-sources')
 
@@ -335,10 +355,10 @@ test.describe.serial('what an answer relied on', () => {
     await page.keyboard.press('Escape')
     await expect(viewer).toBeHidden()
 
-    // A source with no file leads to the version it read.
-    await expect(answerIn(panel, 4).locator('.chat-sources__item a').nth(1)).toHaveAttribute(
+    // The rubric has no file: it leads to the version the answer read.
+    await expect(answerIn(panel, 4).locator('.chat-sources__item a').nth(0)).toHaveAttribute(
       'href',
-      `${coursePath(`documents/${w.lectureId}`)}?version=${w.lectureVersion}`,
+      `${coursePath(`documents/${w.rubricId}`)}?version=${w.rubricVersion}`,
     )
 
     // The pill says why on focus, not only on hover: the agent said so.
@@ -416,7 +436,7 @@ test.describe.serial('what an answer relied on', () => {
         await call(I, 'POST', `/v1/courses/${c}/documents`, {
           kind: 'material',
           title: NOTES,
-          body_md: `Lists keep their order (${STAMP}).`,
+          body_md: `Lists keep their order (${STAMP}). ${NOTES_MARK}`,
         }),
         'document.create',
       )
@@ -477,8 +497,15 @@ test.describe.serial('what an answer relied on', () => {
     // Its answers now wait for someone's approval.
     await perms(w.tutorSeat, { conversation_answer: 'confirm_required' })
     const proposed = await answerQuestion(5, [lecturePage2(), { ...lecturePage2(), page: 3 }])
-    expect(proposed.status, JSON.stringify(proposed.body)).toBe(202)
-    const approvalId = proposed.body.submission?.approval_id as string
+    // An append is accepted while the model is still running; the approval is
+    // created when the answer finishes. Read its real AR queue entry.
+    const approvals = await arCall<{ approvals: { id: string; conversation_id: string; state: string }[] }>(
+      d.actors.instructor,
+      'GET',
+      `/chat/approvals?course_id=${d.course.id}&state=pending&limit=50`,
+    )
+    const approvalId = proposed.body.submission?.approval_id ??
+      approvals.body.approvals.find((a) => a.conversation_id === w.conversationId)?.id
     expect(approvalId).toBeTruthy()
     try {
       await signIn(page, d.actors.instructor)
@@ -506,6 +533,9 @@ test.describe.serial('what an answer relied on', () => {
     page,
   }) => {
     await perms(w.student!.member_id!, { rubric_read: 'denied' })
+    // Keep the agent within the student's current reach; otherwise AR's fresh
+    // check_ask correctly makes the whole conversation unavailable instead.
+    await perms(w.tutorSeat, { rubric_read: 'denied' })
     // AR keeps the two minimal source pointers; the reader's current Core
     // permission is applied by the on-demand source resolver, not by a legacy
     // Core message write or a title embedded in AR.
@@ -522,13 +552,10 @@ test.describe.serial('what an answer relied on', () => {
     await expect(summary).toHaveText(`依據：《${LECTURE}》· 2項`)
     await summary.click()
     const items = msg.locator('.chat-sources__item')
-    await expect(items).toHaveText(['一份你無法開啟的課程教材', `《${LECTURE}》`])
+    await expect(items).toHaveText(['一份你無法開啟的課程教材', `《${LECTURE}》· ${PDF_NAME}`])
     await expect(items.nth(0).locator('a, button')).toHaveCount(0)
     await expect(msg).not.toContainText(w.rubricTitle)
-    await expect(items.nth(1).locator('a')).toHaveAttribute(
-      'href',
-      `${coursePath(`documents/${w.lectureId}`)}?version=${w.lectureVersion}`,
-    )
+    await expect(items.nth(1).locator('button')).toBeVisible()
     // The others as before, in her language.
     await expect(answerIn(panel, 1).locator('.chat-sources')).toHaveText(`依據：《${LECTURE}》· ${PDF_NAME} · 第2頁`)
     await expect(answerIn(panel, 2).locator('.chat-sources')).toHaveText('未引用課程教材')
