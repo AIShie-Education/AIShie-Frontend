@@ -99,6 +99,7 @@ agent:
   display_name: E2E unowned course bot
   tenant_id: ten_e2e
   core:
+    base_url: $E2E_CORE_URL
     agent_id: $unowned
   model:
     adapter: openai_chat
