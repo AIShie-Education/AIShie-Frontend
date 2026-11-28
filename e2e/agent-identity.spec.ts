@@ -5,7 +5,6 @@ import {
   courseTab,
   demo,
   expectCourseAgentRow,
-  hostARAgent,
   hostOnRuntime,
   inTraditionalChinese,
   openChat,
@@ -191,12 +190,10 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       'conversation.open',
     )
 
-    // The course seats an agent nobody owns to tutor him, hosted on AIshie: nobody's delegate, so Core
-    // says it answers no course (answers_course is a delegate's), though it is the course's.
-    w.botId = done(
-      await call(root().token, 'POST', '/v1/actors', { kind: 'agent', display_name: BOT, hosting: 'runtime' }),
-      'actor.register',
-    ).actor_id
+    // CI registered this agent with no owner and gave its operator-owned YAML
+    // to AR, whose token manager hosts it. No root owner/inspect path is used.
+    w.botId = process.env.E2E_UNOWNED_AGENT_ID ?? ''
+    if (!w.botId) throw new Error('E2E_UNOWNED_AGENT_ID is required: run scripts/ci-runtime.sh start')
     w.botSeat = done(
       await call(I, 'POST', `/v1/courses/${c}/members`, {
         actor_id: w.botId,
@@ -206,7 +203,6 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       }),
       'member.add (bot)',
     ).member_id
-    await hostARAgent({ token: root().token }, w.botId)
   })
 
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.

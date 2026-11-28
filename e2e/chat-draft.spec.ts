@@ -118,7 +118,7 @@ async function ask(page: Page, agent: string, question: string) {
   await composer.fill(question)
   await composer.press('Enter')
   await expect(panel.locator('.chat-msg').filter({ hasText: question })).toBeVisible()
-  await expect(panel.locator('.chat-pane__typing')).toBeVisible()
+  await expect(panel.locator('.chat-pane__draft .chat-draft')).toBeVisible()
   return panel
 }
 

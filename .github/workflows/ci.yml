@@ -248,7 +248,7 @@ jobs:
       # that had failed: test-results/ then holds the failed attempt's trace
       # (trace: retain-on-failure), the only record of what a flaky test met.
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        if: ${{ failure() || (!cancelled() && hashFiles('test-results/**/trace.zip') != '') }}
+        if: ${{ always() && (failure() || cancelled() || hashFiles('test-results/**/trace.zip') != '') }}
         with:
           name: e2e-${{ github.sha }}-${{ github.run_attempt }}
           path: |
@@ -261,8 +261,8 @@ jobs:
           retention-days: 14
 
   # The provider disclosure, through a real Runtime API beside the pinned Core.
-  # This is separate from the main E2E job, which has no runtime and therefore
-  # also covers the generic fallback on an older Core or unavailable route.
+  # This is separate from the main E2E job, which starts AR for the real chat
+  # suite; unavailable-service branches use explicit, narrow network fixtures.
   provider-e2e:
     name: provider privacy, against Core and Runtime
     needs: check

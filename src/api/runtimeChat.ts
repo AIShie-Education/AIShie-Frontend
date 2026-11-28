@@ -298,7 +298,11 @@ export async function uploadChatAttachment(
   progress('sending', 0)
   const res = await runtimeFetch(path(routes.attachments, courseId) + queryString({ filename }), {
     method: 'POST',
-    headers: { Accept: 'application/json', 'Content-Type': file.type || 'application/octet-stream' },
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': file.type || 'application/octet-stream',
+      'Idempotency-Key': newIdempotencyKey(),
+    },
     body: file,
     signal: opts.signal,
   })

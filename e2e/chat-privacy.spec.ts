@@ -18,8 +18,10 @@ const DEFAULT_READERS = new Intl.ListFormat('en', { type: 'conjunction' }).forma
   'other members it answers',
   'site and department administrators',
 ])
-const DRAFT_LINE = `${DEFAULT_READERS} can read this; ${TUTOR} sends it to OpenAI.`
-const AR_LINE = `The two taking part can read this; ${TUTOR} sends it to OpenAI.`
+// The deterministic provider uses a custom local endpoint: it deliberately
+// does not borrow an official OpenAI label.
+const DRAFT_LINE = `${DEFAULT_READERS} can read this; ${TUTOR} sends it to its AI model’s provider.`
+const AR_LINE = `The two taking part can read this; ${TUTOR} sends it to its AI model’s provider.`
 const ZH_READERS = new Intl.ListFormat('zh-Hans', { type: 'conjunction' }).format([
   '对话双方',
   '课程教职员',
@@ -84,7 +86,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.locator('.data-flow__icon')).toBeVisible()
     await expect(first.locator('li')).toHaveText([
       `${DEFAULT_READERS} can read this conversation; the site’s and the department’s administrators may export it for audit.`,
-      `${TUTOR} sends what you write here to OpenAI, its AI model’s provider, to answer it.`,
+      `${TUTOR} sends what you write here to its AI model’s provider to answer it.`,
       'Nothing here is deleted: a message you withdraw is hidden, but kept.',
     ])
     await expect(panel.locator('.chat-pane__privacy')).toHaveCount(0)
@@ -101,8 +103,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(notice).toContainText('The two taking part')
     await expect(notice).toContainText('who may export it for audit, withdrawn messages included')
     await expect(notice).toContainText(`${TUTOR} is hosted on AIshie.`)
-    await expect(notice).toContainText('That model is from OpenAI, on the school’s plan.')
-    await expect(notice).not.toContainText('This page cannot show you which provider it is.')
+    await expect(notice).toContainText('That model is on the school’s plan; this page cannot name its AI model’s provider.')
     await expect(notice).toContainText('Conversations are never deleted.')
     await expect(notice).toContainText(
       'A question or answer that waited for approval and was not posted is also kept, with its text, in the action record and in exports for audit.',
@@ -152,7 +153,7 @@ test.describe.serial('the chat says who reads a conversation and where it goes',
     await expect(first.getByRole('heading', { name: '提问之前' })).toBeVisible()
     await first.getByRole('button', { name: '知道了' }).click()
     await expect(panel.locator('.chat-pane__privacy-text')).toHaveText(
-      `${ZH_READERS}可阅读这段对话；${TUTOR}会把内容发送给OpenAI生成回答。`,
+      `${ZH_READERS}可阅读这段对话；${TUTOR}会把内容发送给其 AI 模型的供应商生成回答。`,
     )
     await panel.locator('.chat-pane__privacy').getByRole('button', { name: /^详情/ }).click()
     await expect(page.getByRole('dialog', { name: '谁会阅读，内容会发送到哪里' })).toContainText('对话永远不会被删除。')

@@ -133,7 +133,11 @@ describe('AR attachment bytes', () => {
     const out = await uploadChatAttachment('k1', 'conversation', file)
     expect(out).toEqual({ uploadToken: 'a1', fileName: 'notes.txt', contentType: 'text/plain', size: 3 })
     expect(fetches[0]!.path).toBe('/courses/k1/attachments?filename=notes.txt')
-    expect(fetches[0]!.opts).toMatchObject({ method: 'POST', body: file, headers: { 'Content-Type': 'text/plain' } })
+    expect(fetches[0]!.opts).toMatchObject({
+      method: 'POST',
+      body: file,
+      headers: { 'Content-Type': 'text/plain', 'Idempotency-Key': expect.any(String) },
+    })
   })
 
   it('refuses non-image/text and over-limit bytes before any request', async () => {

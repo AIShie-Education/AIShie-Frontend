@@ -40,6 +40,16 @@ maint=${base%/*}/postgres$query
 [[ $dbname =~ ^[a-z_][a-z0-9_]*$ ]] || fail "database name is not a plain lower-case name: $dbname"
 [ "$dbname" != postgres ] || fail "use a scratch runtime database, not postgres"
 
+unowned_agent() {
+  curl -fsS --max-time 30 \
+    -H "Authorization: Bearer $E2E_ROOT_TOKEN" \
+    -H 'Content-Type: application/json' \
+    -H "Idempotency-Key: ci-runtime-agent-$(openssl rand -hex 16)" \
+    --data '{"kind":"agent","display_name":"E2E unowned course bot","hosting":"runtime"}' \
+    "$E2E_CORE_URL/v1/actors" > "$DIR/unowned-agent.json"
+  node -e 'const fs=require("fs"); const r=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); if(r.status!=="executed"||typeof r.result?.actor_id!=="string") process.exit(1); process.stdout.write(r.result.actor_id)' "$DIR/unowned-agent.json"
+}
+
 credential() {
   curl -fsS --max-time 30 \
     -H "Authorization: Bearer $E2E_ROOT_TOKEN" \
@@ -55,6 +65,11 @@ start() {
   local rc=0
   curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$PORT/runtime/api/v1/info" || rc=$?
   [ "$rc" = 7 ] || fail "something already listens on 127.0.0.1:$PORT"
+  # Root registers an agent with no owner; AR's owner-only API is never used
+  # for it. The token manager hosts this operator-owned YAML agent normally.
+  mkdir -p "$DIR"
+  local unowned
+  unowned=$(unowned_agent) || fail "Core did not register the unowned runtime agent"
   mkdir -p "$DIR/secrets/kek"
   : > "$DIR/runtime.log"
   # No static agents: tests host them through the API. One operator-owned,
@@ -64,6 +79,9 @@ start() {
   printf '[]\n' > "$DIR/model-rules.json"
   cat > "$DIR/runtime.yaml" <<EOF
 runtime:
+  tenants:
+    ten_e2e:
+      per_day: {answers: 1000}
   school:
     offers:
       - id: e2e
@@ -74,6 +92,24 @@ runtime:
         base_url: http://127.0.0.1:$MODEL_PORT/v1
         key_ref: secret://school/keys/e2e
         capabilities: {file_input: true}
+EOF
+  cat > "$DIR/unowned-agent.yaml" <<EOF
+agent:
+  id: e2e-unowned
+  display_name: E2E unowned course bot
+  tenant_id: ten_e2e
+  core:
+    agent_id: $unowned
+  model:
+    adapter: openai_chat
+    provider: openai
+    model: e2e-model
+    offer: e2e
+    base_url: http://127.0.0.1:$MODEL_PORT/v1
+    key_ref: secret://school/keys/e2e
+    key_source: school
+  tools:
+    writes: false
 EOF
   (umask 077 && openssl rand -base64 32 > "$DIR/secrets/kek/v1")
   local model_rc=0
@@ -103,7 +139,8 @@ EOF
   docker run -d --name "$CONTAINER" --network host --user "$(id -u):$(id -g)" \
     -v "$DIR/secrets:/secrets" \
     -v "$DIR/runtime.yaml:/config/runtime.yaml:ro" \
-    -e 'CONFIG=/config/runtime.yaml' \
+    -v "$DIR/unowned-agent.yaml:/config/unowned-agent.yaml:ro" \
+    -e 'CONFIG=/config/runtime.yaml,/config/unowned-agent.yaml' \
     -e DATABASE_URL \
     -e 'KMS_KEY_ID=local:/secrets/kek/v1' \
     -e "CORE_BASE_URL=$E2E_CORE_URL" \
@@ -129,11 +166,15 @@ EOF
   done
   (
     umask 077
-    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\n" "http://127.0.0.1:$PORT" "$DIR/model-rules.json" >> "$CORE_DIR/env"
+    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\nexport E2E_UNOWNED_AGENT_ID='%s'\n" \
+      "http://127.0.0.1:$PORT" "$DIR/model-rules.json" "$unowned" >> "$CORE_DIR/env"
   )
   if in_actions; then
-    printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT" >> "$GITHUB_ENV"
-    printf 'E2E_MODEL_RULES=%s\n' "$DIR/model-rules.json" >> "$GITHUB_ENV"
+    {
+      printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT"
+      printf 'E2E_MODEL_RULES=%s\n' "$DIR/model-rules.json"
+      printf 'E2E_UNOWNED_AGENT_ID=%s\n' "$unowned"
+    } >> "$GITHUB_ENV"
   fi
   echo "Runtime is up on http://127.0.0.1:$PORT; its scratch database is $dbname"
 }
@@ -156,7 +197,7 @@ stop() {
     kill "$model_pid" >/dev/null 2>&1 || true
     rm -f "$DIR/model.pid"
   fi
-  rm -f "$DIR/credential.json"
+  rm -f "$DIR/credential.json" "$DIR/unowned-agent.json"
 }
 
 case ${1:-} in

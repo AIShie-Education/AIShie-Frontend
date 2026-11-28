@@ -82,11 +82,12 @@ async function tutorAnswers(body: string, title = TITLE) {
   const d = demo()
   const conv = await yukisConversation(title)
   await expect
-    .poll(async () =>
-      (await arMessages(d.actors.yuki, d.course.id, conv.id)).messages.some(
-        (m) => m.role === 'assistant' && m.body === body,
-      ),
-    )
+    .poll(async () => {
+      const messages = (await arMessages(d.actors.yuki, d.course.id, conv.id)).messages
+      const failed = messages.find((m) => m.status === 'failed')
+      if (failed) throw new Error(`AR model answer failed: ${failed.error?.kind ?? 'failed'}`)
+      return messages.some((m) => m.role === 'assistant' && m.status === 'posted' && m.body === body)
+    })
     .toBe(true)
 }
 
