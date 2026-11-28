@@ -6,10 +6,16 @@ import {
   openCourseTab,
   demo,
   expectToasted,
-  hostOnRuntime,
+  hostARAgent,
+  arList,
+  arMessages,
+  arCall,
+  modelRules,
   keepToasts,
   signIn,
 } from './support'
+
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
 
 // Agents a person owns, told through the app: a student makes an agent hosted
 // on AIshie (for good: she is given no token for it), and asks to bring it
@@ -32,7 +38,6 @@ const ANSWER = `HW1 is due next Friday at noon (${STAMP}).`
 const TUTOR = `CS101 tutor ${STAMP}`
 
 let agentId = ''
-let agentToken = ''
 
 /** The chat, opened from its round button: on a course page, it asks in that course. */
 async function openChat(page: Page) {
@@ -123,13 +128,17 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     const d = demo()
     // Until AIshie's runtime hosts it, nobody is offered to ask it. The runtime is issued its one
     // token, and answers as the agent with it.
-    const respondents = async () =>
-      (
-        (await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)).body.result
-          ?.respondents ?? []
-      ).map((x: { display_name: string }) => x.display_name)
+    const respondents = async () => {
+      const out = await arCall<{ agents: { display_name: string }[] }>(
+        d.actors.mei,
+        'GET',
+        `/courses/${d.course.id}/chat/agents`,
+      )
+      expect(out.status).toBe(200)
+      return out.body.agents.map((x) => x.display_name)
+    }
     expect(await respondents()).not.toContain(AGENT)
-    agentToken = await hostOnRuntime(agentId)
+    await hostARAgent(d.actors.mei, agentId)
     expect(await respondents()).toContain(AGENT)
 
     await signIn(page, d.actors.mei)
@@ -140,46 +149,27 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await expect(row).toContainText('Your agent')
     await expect(row).toContainText('Personal agent')
     await row.click()
+    modelRules([{ match: QUESTION, answer: ANSWER }])
     const composer = panel.locator('textarea')
     await composer.fill(QUESTION)
     await composer.press('Enter')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
-    // The agent at work (something runs it): the working line, counting the seconds.
-    await expect(panel.locator('.chat-pane__typing .chat-status')).toContainText('Thinking…')
+    // Generation is scheduled by AR; the deterministic provider may answer at once.
 
-    // The agent's runtime: what waits in its inbox, and the answer to the latest message.
     const c = d.course.id
-    let conv: { id: string; latest_opener_message_id?: string } | undefined
     await expect
       .poll(async () => {
-        const inbox = await call(agentToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
-        conv = (inbox.body.result?.conversations ?? [])[0]
-        return conv?.latest_opener_message_id ?? null
+        const mine = await arList(d.actors.mei, c)
+        const conv = mine.find((x) => x.title === QUESTION)
+        return conv?.id ?? null
       })
       .not.toBeNull()
-    const msgs = await call(agentToken, 'GET', `/v1/courses/${c}/conversations/${conv!.id}/messages`)
-    expect(msgs.body.result.messages.at(-1).body).toBe(QUESTION)
-    const answer = await fetch(`${d.core}/v1/courses/${c}/conversations/${conv!.id}/answer`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${agentToken}`,
-        'Content-Type': 'application/json',
-        'Idempotency-Key': `answer:${conv!.id}:${conv!.latest_opener_message_id}:1`,
-      },
-      body: JSON.stringify({ in_reply_to_message_id: conv!.latest_opener_message_id, body: ANSWER }),
-    })
-    const out = await answer.json()
-    expect(out.status, JSON.stringify(out)).toBe('executed')
+    const conv = (await arList(d.actors.mei, c)).find((x) => x.title === QUESTION)!
+    const msgs = await arMessages(d.actors.mei, c, conv.id)
+    expect(msgs.messages.at(-1)?.body).toBe(QUESTION)
 
-    // A second answer to the same message is refused, and says why.
-    const again = await call(agentToken, 'POST', `/v1/courses/${c}/conversations/${conv!.id}/answer`, {
-      in_reply_to_message_id: conv!.latest_opener_message_id,
-      body: 'Once more.',
-    })
-    expect(again.status).toBe(409)
-    expect(again.body.error?.details?.reason).toBe('already_answered')
-
-    // Nothing is pushed: the panel finds the answer by polling.
+    // The real AR TS Runner calls the deterministic local provider and AR's
+    // SSE stream publishes the answer; no Core conversation.answer is called.
     await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible({ timeout: 20_000 })
     await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
   })
@@ -208,10 +198,14 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await instructor.close()
 
     // Nothing runs it yet, so no student is offered to ask it. AIshie's runtime hosts it.
-    const before = await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)
-    const names = (before.body.result.respondents ?? []).map((x: { display_name: string }) => x.display_name)
+    const before = await arCall<{ agents: { display_name: string }[] }>(
+      d.actors.mei,
+      'GET',
+      `/courses/${d.course.id}/chat/agents`,
+    )
+    const names = before.body.agents.map((x) => x.display_name)
     expect(names).not.toContain(TUTOR)
-    await hostOnRuntime(seat.actor_id)
+    await hostARAgent(d.actors.instructor, seat.actor_id)
 
     const page = await browser.newPage()
     await signIn(page, d.actors.mei)
@@ -227,8 +221,12 @@ test.describe.serial('an agent of one’s own, and a course agent', () => {
     await row.click()
     await expect(panel.locator('.chat-pane__shared')).toContainText('may repeat to them')
 
-    const resp = await call(d.actors.mei.token, 'GET', `/v1/courses/${d.course.id}/conversations/respondents`)
-    const r = (resp.body.result.respondents ?? []).find((x: { display_name: string }) => x.display_name === TUTOR)
+    const resp = await arCall<{ agents: { display_name: string; answers_course: boolean }[] }>(
+      d.actors.mei,
+      'GET',
+      `/courses/${d.course.id}/chat/agents`,
+    )
+    const r = resp.body.agents.find((x) => x.display_name === TUTOR)
     expect(r?.answers_course).toBe(true)
     await page.close()
   })

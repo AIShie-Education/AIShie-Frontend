@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -18,6 +18,38 @@ export interface DemoActor {
    */
   token: string
 }
+export interface ARMessage {
+  id: string
+  conversation_id: string
+  seq: number
+  role: 'user' | 'assistant'
+  status: 'posted' | 'pending' | 'retracted' | 'failed'
+  body: string
+  created_at: string
+  attachments?: { id: string; filename: string; media_type: string; size: number }[]
+  sources?: { document_id: string; version_id?: string; file_id?: string; page?: number; slide?: number; part?: number }[]
+  sources_stated?: boolean
+  usage?: { input: number; output: number; reasoning: number; cache_read: number; cache_write: number }
+  finish_reason?: string
+  error?: { kind: string; retryable: boolean }
+}
+export interface ARConversation {
+  id: string
+  course_id: string
+  agent_id: string
+  title: string
+  state: 'queued' | 'answering' | 'answered' | 'reply_pending_approval' | 'failed' | 'closed'
+  revision: number
+  last_activity_at: string
+}
+export interface ARSnapshot {
+  conversation: ARConversation
+  messages: ARMessage[]
+  more: boolean
+  draft: unknown
+  submission?: { status: 'executed' | 'proposed'; approval_id?: string; review_state?: string | null }
+}
+
 export interface Demo {
   core: string
   tag: string
@@ -473,6 +505,107 @@ export async function hostOnRuntime(agentId: string): Promise<string> {
   const me = await call(token, 'GET', '/v1/me')
   expect(me.status, 'the runtime connects as the agent').toBe(200)
   return token
+}
+
+// --- Real AR chat and its deterministic CI model -----------------------------------------
+
+async function arAssertion(who: Pick<DemoActor, 'token'>): Promise<string> {
+  const base = process.env.E2E_RUNTIME_URL
+  const audience = process.env.E2E_RUNTIME_AUDIENCE
+  if (!base || !audience) throw new Error('real AR chat requires scripts/ci-runtime.sh start')
+  const reply = await call(who.token, 'POST', '/v1/auth/assertion', { audience })
+  const assertion = (reply.body as { assertion?: unknown }).assertion
+  if (reply.status !== 200 || typeof assertion !== 'string') throw new Error('Core did not issue the AR assertion')
+  return assertion
+}
+
+/** An authenticated AR request, with no cookie and no assertion in errors or logs. */
+async function arRaw(
+  who: Pick<DemoActor, 'token'>,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+  ifMatch?: string,
+): Promise<Response> {
+  const base = process.env.E2E_RUNTIME_URL
+  if (!base) throw new Error('real AR chat requires scripts/ci-runtime.sh start')
+  const assertion = await arAssertion(who)
+  const raw = body === undefined ? undefined : JSON.stringify(body)
+  const res = await fetch(`${base}/runtime/api/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${assertion}`,
+      Accept: 'application/json',
+      ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      ...(ifMatch ? { 'If-Match': ifMatch } : {}),
+    },
+    body: raw,
+  })
+  return res
+}
+
+export async function arCall<T = any>(
+  who: Pick<DemoActor, 'token'>,
+  method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+  path: string,
+  body?: unknown,
+  ifMatch?: string,
+): Promise<{ status: number; body: T; headers: Headers }> {
+  const res = await arRaw(who, method, path, body, ifMatch)
+  return { status: res.status, body: (await res.json()) as T, headers: res.headers }
+}
+
+/** Hosts an agent through AR and selects the deterministic operator-owned school offer. */
+export async function hostARAgent(owner: Pick<DemoActor, 'token'>, agentId: string) {
+  const inspected = await arCall<{ id: string }>(owner, 'POST', '/agents/inspect', { agent_id: agentId })
+  expect(inspected.status, 'AR agent.inspect').toBe(200)
+  const hosted = await arCall<{ id: string; version: number }>(owner, 'POST', '/agents', { agent_id: agentId })
+  expect(hosted.status, 'AR agent.host').toBeLessThan(300)
+  const etag = hosted.headers.get('etag') ?? `"${hosted.body.version}"`
+  const changed = await arCall(
+    owner,
+    'PATCH',
+    `/agents/${hosted.body.id}`,
+    { model: { school: { offer: 'e2e' } } },
+    etag,
+  )
+  expect(changed.status, 'AR selects the deterministic model').toBe(200)
+  return hosted.body
+}
+
+export async function arMessages(who: Pick<DemoActor, 'token'>, courseId: string, conversationId: string) {
+  const res = await arCall<ARSnapshot>(who, 'GET', `/courses/${courseId}/conversations/${conversationId}/messages?limit=100`)
+  expect(res.status, 'AR messages').toBe(200)
+  return res.body
+}
+
+export async function arList(who: Pick<DemoActor, 'token'>, courseId: string) {
+  const res = await arCall<{ conversations: ARConversation[]; next: string | null }>(
+    who,
+    'GET',
+    `/courses/${courseId}/conversations?limit=100`,
+  )
+  expect(res.status, 'AR conversations').toBe(200)
+  return res.body.conversations
+}
+
+/** Downloads one's own attachment bytes from AR, with an assertion rather than a signed Core URL. */
+export async function arAttachment(who: Pick<DemoActor, 'token'>, courseId: string, attachmentId: string) {
+  return arRaw(who, 'GET', `/courses/${courseId}/attachments/${attachmentId}`)
+}
+
+export interface ModelRule {
+  match: string
+  answer: string
+  delayMs?: number
+  steps?: { query: string; read?: boolean; hit?: number }[]
+}
+
+/** Replaces the deterministic model's rules; request text and credentials are not logged. */
+export function modelRules(rules: ModelRule[]) {
+  const file = process.env.E2E_MODEL_RULES
+  if (!file) throw new Error('the deterministic model requires scripts/ci-runtime.sh start')
+  writeFileSync(file, `${JSON.stringify(rules)}\n`, { mode: 0o600 })
 }
 
 /** Stops hosting an agent as the site's runtime does: its token is revoked, and nobody may ask it. */

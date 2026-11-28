@@ -39,6 +39,7 @@ const question = computed(() => arApprovalQuestion(props.detail))
 const answer = computed(() => (target.value?.role === 'assistant' ? target.value : null))
 const mode = computed(() => arApprovalMode(props.detail))
 const files = computed(() => question.value?.attachments ?? [])
+const sourceCount = computed(() => new Set((answer.value?.sources ?? []).map((s) => s.document_id)).size)
 
 const choice = ref<Decision | null>(null)
 const reason = ref('')
@@ -221,6 +222,11 @@ async function download(id: string, filename: string) {
     <section v-if="answer" class="ar-approval-card__message ar-approval-card__answer" :aria-label="t('actions.arApprovals.answer')">
       <h5>{{ t('actions.arApprovals.answer') }}</h5>
       <MarkdownView :source="answer.body" code-tools />
+      <el-tooltip v-if="sourceCount" :content="t('actions.answer.sourcesTip')" placement="top">
+        <p class="answer-sources ar-approval-card__source-count" tabindex="0">
+          {{ t('actions.answer.sources', sourceCount) }}
+        </p>
+      </el-tooltip>
       <ArMessageSources
         v-if="answer.sources?.length"
         :course-id="courseId"

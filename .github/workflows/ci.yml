@@ -216,24 +216,30 @@ jobs:
             echo "::error::api/catalogue.json is not the tool catalogue of the Core pinned in .github/core-image ($pin). Refresh it from that Core, with its types, or pin the Core it came from (README, Moving the Core pin)."
             exit 1
           fi
+      - id: runtime
+        name: Start Runtime and its deterministic model (.github/runtime-image)
+        run: scripts/ci-runtime.sh start
       # The tests run even when the catalogue differs: both are worth knowing.
       - id: playwright
         name: Playwright's version
-        if: ${{ !cancelled() && steps.core.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.core.outcome == 'success' && steps.runtime.outcome == 'success' }}
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        if: ${{ !cancelled() && steps.core.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.core.outcome == 'success' && steps.runtime.outcome == 'success' }}
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}
       # The browser comes from the cache when it can; the system libraries it
       # needs are checked every time.
       - name: Install Chromium
-        if: ${{ !cancelled() && steps.core.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.core.outcome == 'success' && steps.runtime.outcome == 'success' }}
         run: npx playwright install --with-deps chromium
       - name: Playwright
-        if: ${{ !cancelled() && steps.core.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.core.outcome == 'success' && steps.runtime.outcome == 'success' }}
         run: npx playwright test
+      - name: Stop Runtime
+        if: always()
+        run: scripts/ci-runtime.sh stop
       - name: Stop Core
         if: always()
         run: scripts/ci-core.sh stop
@@ -249,6 +255,8 @@ jobs:
             playwright-report/
             test-results/
             ${{ runner.temp }}/aishie-ci-core/core.log
+            ${{ runner.temp }}/aishie-ci-runtime/runtime.log
+            ${{ runner.temp }}/aishie-ci-runtime/model.log
           if-no-files-found: ignore
           retention-days: 14
 

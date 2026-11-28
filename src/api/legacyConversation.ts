@@ -35,6 +35,12 @@ export interface LegacyMessagePage {
   more: boolean
 }
 
+/** Core's authoritative reader list, with its live draft left at the boundary. */
+export interface LegacyConversationInfo {
+  conversation: ConversationMessagesPage['conversation']
+  visibleTo: string[] | null
+}
+
 export interface LegacyListOptions extends ReadOptions {
   courseId?: string | null
   after?: string | null
@@ -61,6 +67,7 @@ export interface LegacyMessagesOptions extends ReadOptions {
 export interface LegacyConversationReader {
   list(opts?: LegacyListOptions): Promise<LegacyConversationList>
   overseerList(courseId: string, opts: LegacyOverseerListOptions): Promise<LegacyOverseerList>
+  get(courseId: string, conversationId: string, opts?: ReadOptions): Promise<LegacyConversationInfo>
   messages(courseId: string, conversationId: string, opts?: LegacyMessagesOptions): Promise<LegacyMessagePage>
   attachment(courseId: string, attachmentId: string, opts?: ReadOptions): Promise<ConversationAttachment>
 }
@@ -92,6 +99,14 @@ export const legacyConversation: LegacyConversationReader = Object.freeze({
       { signal: opts.signal },
     )
     return { conversations: out.conversations ?? [], next: out.next ?? null }
+  },
+
+  async get(courseId: string, conversationId: string, opts: ReadOptions = {}): Promise<LegacyConversationInfo> {
+    const out = await read('conversation.get', { course_id: courseId, conversation_id: conversationId }, { signal: opts.signal })
+    const conversation = Object.fromEntries(
+      Object.entries(out).filter(([key]) => key !== 'draft' && key !== 'visible_to'),
+    ) as ConversationMessagesPage['conversation']
+    return { conversation, visibleTo: out.visible_to ?? null }
   },
 
   async messages(

@@ -3,12 +3,15 @@
 // for an opener following a bookmark and for staff whose conversation.messages
 // mayRead comes from oversight; it never requires the id to occur in the
 // caller's own me.conversations or AR list. Reads are finite and write-free.
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { blobUrl } from '@/api/http'
 import { legacyConversation, type LegacyMessagePage } from '@/api/legacyConversation'
 import type { ConversationMessage, MessageAttachment } from '@/api/types'
 import MarkdownView from '@/components/MarkdownView.vue'
+import ChatPrivacyNotice from './ChatPrivacyNotice.vue'
+import { privacyNotice } from './privacy'
+import { useBackCloses } from '@/composables/useBackCloses'
 import { formatBytes, formatDateTime } from '@/utils/format'
 import { joinParts } from '@/utils/parts'
 
@@ -26,6 +29,9 @@ const emit = defineEmits<{ back: [] }>()
 const { t } = useI18n()
 
 const detail = ref<LegacyMessagePage['conversation'] | null>(null)
+const visibleTo = ref<string[] | null>(null)
+const privacyReady = ref(false)
+const privacyOpen = ref(false)
 const messages = ref<ConversationMessage[]>([])
 const hasOlder = ref(false)
 const messagesLoading = ref(false)
@@ -35,6 +41,23 @@ const openingAttachment = ref<string | null>(null)
 const attachmentError = ref(false)
 let messageRead = 0
 let messageController: AbortController | null = null
+
+// The reader list comes only from conversation.get. No AR visibility is
+// inferred, and no hosting/model/provider lookup is made for this old record.
+const privacy = computed(() =>
+  privacyNotice({
+    name: detail.value?.respondent.display_name ?? '',
+    agent: detail.value?.respondent.kind === 'agent',
+    visibleTo: visibleTo.value,
+    answersOthers: !!visibleTo.value?.includes('respondent_answers_others'),
+    hosting: null,
+    models: null,
+  }),
+)
+useBackCloses(privacyOpen, () => (privacyOpen.value = false))
+function onMenu(command: string) {
+  if (command === 'readers' && privacyReady.value) privacyOpen.value = true
+}
 
 async function readMessages(older = false) {
   if (messagesLoading.value || olderLoading.value) return
@@ -48,12 +71,19 @@ async function readMessages(older = false) {
   if (older) olderLoading.value = true
   else messagesLoading.value = true
   try {
-    const out = await legacyConversation.messages(courseId, conversationId, {
-      beforeSeq: older ? (messages.value[0]?.seq ?? null) : null,
-      signal: controller.signal,
-    })
+    const [out, info] = await Promise.all([
+      legacyConversation.messages(courseId, conversationId, {
+        beforeSeq: older ? (messages.value[0]?.seq ?? null) : null,
+        signal: controller.signal,
+      }),
+      older ? Promise.resolve(null) : legacyConversation.get(courseId, conversationId, { signal: controller.signal }),
+    ])
     if (read !== messageRead || props.courseId !== courseId || props.conversationId !== conversationId) return
     detail.value = out.conversation
+    if (info) {
+      visibleTo.value = info.visibleTo
+      privacyReady.value = true
+    }
     if (older) {
       const byId = new Map(messages.value.map((m) => [m.id, m]))
       for (const message of out.messages) byId.set(message.id, message)
@@ -107,6 +137,9 @@ watch(
     messageRead++
     messageController?.abort()
     detail.value = null
+    visibleTo.value = null
+    privacyReady.value = false
+    privacyOpen.value = false
     messages.value = []
     hasOlder.value = false
     messagesLoading.value = false
@@ -122,21 +155,54 @@ watch(
 onBeforeUnmount(() => {
   messageRead++
   messageController?.abort()
+  privacyOpen.value = false
 })
 </script>
 
 <template>
   <article class="legacy-chat__detail" :data-legacy-conversation-id="conversationId">
     <div class="legacy-chat__detail-head">
-      <button v-if="showBack" type="button" class="legacy-chat__back" @click="emit('back')">
-        {{ t('legacyChat.back') }}
-      </button>
-      <div>
-        <h2>{{ detail?.title || title || t('legacyChat.untitled') }}</h2>
-        <p v-if="subtitle">{{ subtitle }}</p>
-        <p v-else-if="detail">{{ joinParts([detail.opener.display_name, detail.respondent.display_name]) }}</p>
+      <div class="legacy-chat__detail-heading">
+        <button v-if="showBack" type="button" class="legacy-chat__back" @click="emit('back')">
+          {{ t('legacyChat.back') }}
+        </button>
+        <div>
+          <h2>{{ detail?.title || title || t('legacyChat.untitled') }}</h2>
+          <p v-if="subtitle">{{ subtitle }}</p>
+          <p v-else-if="detail">{{ joinParts([detail.opener.display_name, detail.respondent.display_name]) }}</p>
+        </div>
       </div>
+      <el-dropdown trigger="click" placement="bottom-end" popper-class="chat-pane__menu" @command="onMenu">
+        <el-button
+          text
+          size="small"
+          class="chat-pane__more app-icon-button"
+          :disabled="!privacyReady"
+          :aria-label="t('chat.menu.label')"
+          :title="t('chat.menu.label')"
+        >
+          <el-icon aria-hidden="true"><MoreFilled /></el-icon>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="readers" :disabled="!privacyReady">
+              <el-icon aria-hidden="true"><View /></el-icon>{{ t('chat.visibleTo.button') }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
+
+    <el-dialog
+      v-model="privacyOpen"
+      :title="t('chat.visibleTo.title')"
+      width="min(440px, calc(100vw - 32px))"
+      append-to-body
+      align-center
+      class="chat-pane__readers"
+    >
+      <ChatPrivacyNotice :notice="privacy" :show-readers-heading="false" />
+    </el-dialog>
 
     <p class="legacy-chat__notice">{{ t('legacyChat.readOnly') }}</p>
     <button
@@ -159,17 +225,18 @@ onBeforeUnmount(() => {
       <li
         v-for="message in messages"
         :key="message.id"
-        class="legacy-chat__message"
-        :class="{ 'is-opener': fromOpener(message) }"
+        class="legacy-chat__message chat-msg"
+        :class="{ 'is-opener': fromOpener(message), 'is-person': fromOpener(message), 'is-agent': !fromOpener(message) }"
         :data-legacy-message-id="message.id"
       >
-        <header>
-          <span class="legacy-chat__author">{{ authorName(message) }}</span>
-          <time :datetime="message.created_at">{{ formatDateTime(message.created_at) }}</time>
+        <header class="chat-msg__head">
+          <span class="legacy-chat__author chat-msg__author">{{ authorName(message) }}</span>
         </header>
-        <p v-if="message.retracted" class="legacy-chat__withdrawn">{{ t('legacyChat.messages.withdrawn') }}</p>
-        <MarkdownView v-else-if="!fromOpener(message)" :source="message.body" />
-        <p v-else class="legacy-chat__text">{{ message.body }}</p>
+        <div class="chat-msg__body">
+          <p v-if="message.retracted" class="legacy-chat__withdrawn">{{ t('legacyChat.messages.withdrawn') }}</p>
+          <MarkdownView v-else-if="!fromOpener(message)" :source="message.body" class="chat-msg__markdown" />
+          <p v-else class="legacy-chat__text chat-msg__text">{{ message.body }}</p>
+        </div>
 
         <div v-if="!message.retracted && message.attachments?.length" class="legacy-chat__files">
           <h3>{{ t('legacyChat.messages.attachments') }}</h3>
@@ -188,6 +255,9 @@ onBeforeUnmount(() => {
             </li>
           </ul>
         </div>
+        <footer class="chat-msg__foot">
+          <time class="chat-msg__time" :datetime="message.created_at">{{ formatDateTime(message.created_at) }}</time>
+        </footer>
       </li>
     </ol>
     <p v-else-if="!messagesLoading && !messagesError" class="legacy-chat__status">
@@ -205,8 +275,15 @@ onBeforeUnmount(() => {
 .legacy-chat__detail-head {
   display: flex;
   align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
+}
+.legacy-chat__detail-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
 }
 .legacy-chat__detail-head h2 {
   margin: 0;
@@ -284,6 +361,10 @@ onBeforeUnmount(() => {
   padding-bottom: 12px;
   border-bottom: var(--app-rule);
 }
+.legacy-chat__message .chat-msg__body {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .legacy-chat__message > header {
   display: flex;
   align-items: baseline;
@@ -296,6 +377,13 @@ onBeforeUnmount(() => {
 .legacy-chat__author {
   color: var(--app-ink-2);
   font-weight: var(--app-weight-strong);
+}
+.legacy-chat__message .chat-msg__foot {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: var(--app-text-xs);
 }
 .legacy-chat__text {
   margin: 0;

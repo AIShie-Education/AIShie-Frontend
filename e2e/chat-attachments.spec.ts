@@ -6,15 +6,22 @@ import {
   coursePath,
   demo,
   dropFiles,
-  hostOnRuntime,
+  hostARAgent,
+  arList,
+  arMessages,
+  arAttachment,
+  modelRules,
   photograph,
   signIn,
   type CoreReply,
+  type ARMessage,
   type FileSpec,
 } from './support'
 
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
+
 // Files in the chat, with the real Core: Yuki, a student, asks a course
-// agent made for this run with a PDF attached (the paperclip), which uploads
+// agent made for this run with a NOTES attached (the paperclip), which uploads
 // as soon as it is chosen; with nothing written, sending asks for a line to
 // go with it. Her message shows the file, which she downloads; the agent's
 // runtime, played here through Core's API as the respondent, lists it and
@@ -33,64 +40,45 @@ const QUESTION = `Can you check my notes on recursion? (${STAMP})`
 const ANSWER = `Your base case is right; the recursive step needs n - 1 (${STAMP}).`
 const PICTURE_QUESTION = `And is this call tree right? (${STAMP})`
 const PICTURE_ANSWER = `Yes: each call waits for the one below it (${STAMP}).`
-const PDF: FileSpec = {
-  name: `recursion-notes-${STAMP}.pdf`,
-  mimeType: 'application/pdf',
-  // Not a real PDF: Core keeps what it is given, as it is.
-  buffer: Buffer.from(`%PDF-1.4\n% recursion notes ${STAMP}\nfact(0) = 1\nfact(n) = n * fact(n - 1)\n`),
+const WITHDRAW_QUESTION = `Withdraw this pending notes question (${STAMP})`
+const WITHDRAW_NOTES: FileSpec = {
+  name: `withdraw-notes-${STAMP}.md`,
+  mimeType: 'text/markdown',
+  buffer: Buffer.from(`# Withdraw these notes ${STAMP}\n`),
+}
+const NOTES: FileSpec = {
+  name: `recursion-notes-${STAMP}.md`,
+  mimeType: 'text/markdown',
+  buffer: Buffer.from(`# Recursion notes ${STAMP}\n\nfact(0) = 1\nfact(n) = n * fact(n - 1)\n`),
 }
 
-const w = { tutorToken: '', tutorId: '', conversationId: '' }
+const w = { tutorId: '', conversationId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
   return r.body.result
 }
 
-/** A message as the respondent reads it (conversation.messages), with its files. */
-interface Message {
-  id: string
-  body?: string
-  retracted?: unknown
-  attachments?: { id: string; filename: string; content_type: string; byte_size: number; checksum?: string }[]
-}
-
-/** The conversation's messages, as the course agent's runtime reads them. */
-async function tutorReads(): Promise<Message[]> {
-  const c = demo().course.id
-  const r = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/${w.conversationId}/messages?limit=50`)
-  return done(r, 'conversation.messages').messages ?? []
-}
-
-/** The course agent's runtime: the latest question waiting for it, answered. */
-async function tutorAnswers(body: string) {
-  const c = demo().course.id
-  let conv: { id: string; latest_opener_message_id?: string } | undefined
-  await expect
-    .poll(async () => {
-      const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
-      conv = (inbox.body.result?.conversations ?? [])[0]
-      return conv?.latest_opener_message_id ?? null
-    })
-    .not.toBeNull()
+/** Reads this run's AR conversation, never a Core conversation with the same title. */
+async function tutorReads(): Promise<ARMessage[]> {
+  const d = demo()
+  const conv = (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === TITLE)
+  expect(conv, `AR conversation ${TITLE}`).toBeTruthy()
   w.conversationId = conv!.id
-  done(
-    await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${conv!.id}/answer`, {
-      in_reply_to_message_id: conv!.latest_opener_message_id,
-      body,
-    }),
-    'conversation.answer',
-  )
+  return (await arMessages(d.actors.yuki, d.course.id, conv!.id)).messages
 }
 
-/** Whether Yuki has read everything in this run's conversation, as Core keeps it (the other chat specs count her unread). */
+/** The deterministic provider has already answered; this only waits for AR's stored message. */
+async function tutorAnswers(body: string) {
+  await expect.poll(async () => (await tutorReads()).some((m) => m.role === 'assistant' && m.body === body)).toBe(true)
+}
+
+/** The conversation is answered in AR; there is no Core unread flag to consult. */
 async function yukiHasReadIt() {
+  const d = demo()
   await expect
-    .poll(async () => {
-      const r = await call(demo().actors.yuki.token, 'GET', `/v1/me/conversations?course_id=${demo().course.id}`)
-      return (r.body.result?.conversations ?? []).find((x: { title?: string }) => x.title === TITLE)?.unread
-    })
-    .toBe(false)
+    .poll(async () => (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === TITLE)?.state)
+    .toBe('answered')
 }
 
 const panelOf = (page: Page) => page.locator('#chat-panel')
@@ -151,13 +139,15 @@ async function pastePicture(box: Locator, name: string) {
   }, name)
 }
 
-/** The PUTs of files to Core's store. */
-function blobPuts(page: Page): string[] {
-  const puts: string[] = []
+/** Raw attachment posts to AR. */
+function attachmentPosts(page: Page): string[] {
+  const posts: string[] = []
   page.on('request', (r) => {
-    if (r.method() === 'PUT' && new URL(r.url()).pathname.startsWith('/v1/blobs/')) puts.push(r.url())
+    if (r.method() === 'POST' && /\/runtime\/api\/v1\/courses\/[^/]+\/attachments$/.test(new URL(r.url()).pathname)) {
+      posts.push(r.url())
+    }
   })
-  return puts
+  return posts
 }
 
 test.describe.serial('files in the chat', () => {
@@ -179,7 +169,11 @@ test.describe.serial('files in the chat', () => {
       'member.add_delegate',
     )
     // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
-    w.tutorToken = await hostOnRuntime(tutor)
+    await hostARAgent(d.actors.instructor, tutor)
+    modelRules([
+      { match: QUESTION, answer: ANSWER },
+      { match: PICTURE_QUESTION, answer: PICTURE_ANSWER },
+    ])
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
@@ -187,7 +181,7 @@ test.describe.serial('files in the chat', () => {
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
-  test('a student asks with a PDF attached; the agent reads it; she downloads it; withdrawn, it is gone', async ({
+  test('a student asks with notes attached; the real AR Runner answers; she downloads the original bytes', async ({
     page,
   }) => {
     const d = demo()
@@ -198,12 +192,12 @@ test.describe.serial('files in the chat', () => {
     await expect(box).toBeVisible()
 
     // Chosen with the paperclip: it uploads at once, as a chip with its name and size.
-    await attachWithPaperclip(page, panel, [PDF])
-    const chip = panel.locator('.chat-chip').filter({ hasText: PDF.name })
+    await attachWithPaperclip(page, panel, [NOTES])
+    const chip = panel.locator('.chat-chip').filter({ hasText: NOTES.name })
     await expect(chip).toBeVisible()
-    await expect(chip).toContainText(`${PDF.buffer.length} B`)
+    await expect(chip).toContainText(`${NOTES.buffer.length} B`)
     await expect(chip).toHaveClass(/is-done/)
-    await expect(chip.getByRole('button', { name: `Remove “${PDF.name}”` })).toBeVisible()
+    await expect(chip.getByRole('button', { name: `Remove “${NOTES.name}”` })).toBeVisible()
     // With nothing written, the box asks what to do with it, and sending asks for a line rather than refusing.
     await expect(box).toHaveAttribute('placeholder', `What would you like ${TUTOR} to do with this file?`)
     await box.focus()
@@ -222,27 +216,21 @@ test.describe.serial('files in the chat', () => {
     const mine = panel.locator('.chat-msg').filter({ hasText: QUESTION })
     await expect(mine).toBeVisible()
     // Her message shows its file: an icon by type, its name, what it is and its size; the box is empty again.
-    const file = mine.locator('.msg-file').filter({ hasText: PDF.name })
-    await expect(file).toContainText(`PDF · ${PDF.buffer.length} B`)
-    await expect(file.locator('.msg-file__icon.is-pdf')).toBeVisible()
+    const file = mine.locator('.msg-file').filter({ hasText: NOTES.name })
+    await expect(file).toContainText(`Text · ${NOTES.buffer.length} B`)
+    await expect(file.locator('.msg-file__icon.is-text')).toBeVisible()
     await expect(panel.locator('.chat-chip')).toHaveCount(0)
 
     // The agent's runtime, as the respondent: the question lists the file, and Core serves it.
     await tutorAnswers(ANSWER)
     const question = (await tutorReads()).find((m) => m.body?.includes(QUESTION))
-    expect(question?.attachments?.map((a) => [a.filename, a.content_type, a.byte_size])).toEqual([
-      [PDF.name, 'application/pdf', PDF.buffer.length],
+    expect(question?.attachments?.map((a) => [a.filename, a.media_type, a.size])).toEqual([
+      [NOTES.name, 'text/markdown', NOTES.buffer.length],
     ])
     const attachmentId = question!.attachments![0]!.id
-    const got = done(
-      await call(w.tutorToken, 'GET', `/v1/courses/${d.course.id}/conversation-attachments/${attachmentId}`),
-      'conversation.attachment',
-    )
-    expect(got.filename).toBe(PDF.name)
-    // The URL is the credential: no Authorization header.
-    const bytes = await fetch(got.download_url)
+    const bytes = await arAttachment(d.actors.yuki, d.course.id, attachmentId)
     expect(bytes.status).toBe(200)
-    expect(Buffer.from(await bytes.arrayBuffer()).equals(PDF.buffer)).toBe(true)
+    expect(Buffer.from(await bytes.arrayBuffer()).equals(NOTES.buffer)).toBe(true)
 
     await expect(panel.locator('.chat-msg').filter({ hasText: 'the recursive step needs' })).toBeVisible({
       timeout: 20_000,
@@ -252,10 +240,10 @@ test.describe.serial('files in the chat', () => {
 
     // She downloads it: saved under its name, as it was sent.
     const download = page.waitForEvent('download')
-    await file.getByRole('button', { name: `Download “${PDF.name}”` }).click()
+    await file.getByRole('button', { name: `Download “${NOTES.name}”` }).click()
     const saved = await download
-    expect(saved.suggestedFilename()).toBe(PDF.name)
-    expect((await readFile((await saved.path())!)).equals(PDF.buffer)).toBe(true)
+    expect(saved.suggestedFilename()).toBe(NOTES.name)
+    expect((await readFile((await saved.path())!)).equals(NOTES.buffer)).toBe(true)
     await yukiHasReadIt()
   })
 
@@ -286,76 +274,73 @@ test.describe.serial('files in the chat', () => {
     await yukiHasReadIt()
   })
 
-  test('withdrawing a message hides its files, from her and from the agent', async ({ page }) => {
+  test('withdrawing a pending AR question hides its file and aborts generation', async ({ page }) => {
     const d = demo()
+    modelRules([
+      { match: QUESTION, answer: ANSWER },
+      { match: PICTURE_QUESTION, answer: PICTURE_ANSWER },
+      { match: WITHDRAW_QUESTION, answer: 'must not be published', delayMs: 60_000 },
+    ])
     await signIn(page, d.actors.yuki)
     const panel = await openConversation(page)
-    const before = (await tutorReads()).find((m) => m.body?.includes(QUESTION))!
-    const attachmentId = before.attachments![0]!.id
-
-    const mine = panel.locator('.chat-msg').filter({ hasText: QUESTION })
+    await attachWithPaperclip(page, panel, [WITHDRAW_NOTES])
+    const box = panel.locator('textarea')
+    await box.fill(WITHDRAW_QUESTION)
+    await box.press('Enter')
+    const pending = (await tutorReads()).filter((m) => m.role === 'user').at(-1)!
+    expect(pending.body).toBe(WITHDRAW_QUESTION)
+    const attachmentId = pending.attachments![0]!.id
+    const mine = panel.locator('.chat-msg').filter({ hasText: WITHDRAW_QUESTION })
     await expect(mine.locator('.msg-file')).toHaveCount(1)
-    await mine.hover()
-    await mine.getByRole('button', { name: 'Withdraw' }).click()
-    const confirm = page.getByRole('dialog', { name: 'Withdraw this message?' })
-    await confirm.getByRole('button', { name: 'Withdraw' }).click()
-    const withdrawn = panel.locator('.chat-msg.is-retracted').filter({ hasText: 'You withdrew this message.' })
+
+    await panel.getByRole('button', { name: 'Stop', exact: true }).click()
+    const withdrawn = panel.locator('.chat-msg.is-retracted')
     await expect(withdrawn).toBeVisible()
     await expect(withdrawn.locator('.msg-file')).toHaveCount(0)
-    await expect(panel.locator('.msg-file').filter({ hasText: PDF.name })).toHaveCount(0)
-    // Read again, the same.
+    await expect(panel.locator('.msg-file').filter({ hasText: WITHDRAW_NOTES.name })).toHaveCount(0)
+    await expect(box).toHaveValue(WITHDRAW_QUESTION)
+
+    const after = (await tutorReads()).find((m) => m.id === pending.id)!
+    expect(after.status).toBe('retracted')
+    expect(after.attachments).toBeUndefined()
+    expect((await tutorReads()).some((m) => m.body === 'must not be published')).toBe(false)
+    const refused = await arAttachment(d.actors.yuki, d.course.id, attachmentId)
+    expect(refused.status).toBe(404)
+
     await page.reload()
     await expect(panel).toBeVisible()
     await showConversation(panel)
     await expect(panel.locator('.chat-msg.is-retracted')).toHaveCount(1)
-    await expect(panel.locator('.msg-file').filter({ hasText: PDF.name })).toHaveCount(0)
+    await expect(panel.locator('.msg-file').filter({ hasText: WITHDRAW_NOTES.name })).toHaveCount(0)
     await expect(panel.locator('.msg-file').filter({ hasText: 'image.png' })).toHaveCount(1)
-
-    // The agent no longer sees it listed, nor may fetch it.
-    const after = (await tutorReads()).find((m) => m.id === before.id)!
-    expect(after.retracted).toBeTruthy()
-    expect(after.attachments).toBeUndefined()
-    const refused = await call(
-      w.tutorToken,
-      'GET',
-      `/v1/courses/${d.course.id}/conversation-attachments/${attachmentId}`,
-    )
-    expect(refused.status).toBe(404)
-    expect(refused.body.error?.details?.reason).toBe('retracted')
   })
 
   test('a file over the limit is refused before it is sent, and nothing is sent while a file uploads', async ({
     page,
   }) => {
     await signIn(page, demo().actors.yuki)
-    // Core as one that takes files of 64 bytes at most.
-    await page.route(/\/v1\/courses\/[^/]+\/conversations\/upload-url\?/, async (route) => {
-      const res = await route.fetch()
-      const body = await res.json()
-      body.result.max_bytes = 64
-      await route.fulfill({ response: res, json: body })
-    })
-    // One upload is held on its way until the test lets it go.
+    // AR's fixed text ceiling is 32 KiB; no server response is needed to refuse more.
+    // One small upload is held on its way until the test lets it go.
     let release: (() => void) | null = null
-    await page.route('**/v1/blobs/**', async (route) => {
-      if (route.request().method() === 'PUT' && route.request().headers()['content-type'] === 'text/csv') {
+    await page.route(/\/runtime\/api\/v1\/courses\/[^/]+\/attachments\?/, async (route) => {
+      if (route.request().method() === 'POST' && route.request().headers()['content-type'] === 'text/csv') {
         await new Promise<void>((r) => (release = r))
       }
       return route.continue()
     })
-    const puts = blobPuts(page)
+    const posts = attachmentPosts(page)
     const panel = await openConversation(page)
     const box = panel.locator('textarea')
     const send = panel.getByRole('button', { name: 'Send' })
 
     // Dropped on the chat panel: attached to what she is writing, and refused at once, before anything is sent.
     await dropFiles(panel.locator('.chat-pane__messages'), [
-      { name: 'huge.txt', mimeType: 'text/plain', buffer: Buffer.from('x'.repeat(200)) },
+      { name: 'huge.txt', mimeType: 'text/plain', buffer: Buffer.from('x'.repeat(32 * 1024 + 1)) },
     ])
     const huge = panel.locator('.chat-chip').filter({ hasText: 'huge.txt' })
     await expect(huge).toHaveClass(/is-failed/)
     await expect(panel.locator('.chat-chips__error')).toHaveText(
-      '“huge.txt” was not uploaded: Too large to upload: it is 200 B, and a file can be at most 64 B.',
+      'A file is larger than a message may carry (32 KB): remove it, or attach a smaller one.',
     )
     await expect(huge.getByRole('button', { name: 'Upload “huge.txt” again' })).toHaveCount(0)
     await box.fill(`Here is a big file (${STAMP})`)
@@ -365,7 +350,7 @@ test.describe.serial('files in the chat', () => {
     )
     await page.mouse.move(0, 400)
     await photograph(page, 'chat-attach-too-large')
-    expect(puts).toEqual([])
+    expect(posts).toEqual([])
     await huge.getByRole('button', { name: 'Remove “huge.txt”' }).click()
     await expect(panel.locator('.chat-chip')).toHaveCount(0)
     await expect(send).toBeEnabled()
@@ -382,7 +367,7 @@ test.describe.serial('files in the chat', () => {
     ;(release as (() => void) | null)?.()
     await expect(small).toHaveClass(/is-done/)
     await expect(send).toBeEnabled()
-    expect(puts).toHaveLength(1)
+    expect(posts).toHaveLength(1)
   })
 
   test('on a phone, the paperclip is there and the chips stay within the screen', async ({ page }) => {

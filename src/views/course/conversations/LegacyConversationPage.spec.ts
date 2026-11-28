@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import ElementPlus from 'element-plus'
+import * as icons from '@element-plus/icons-vue'
 
 const transport = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn() }))
 vi.mock('@/api/http', async (orig) => {
@@ -33,7 +35,8 @@ function mountPage() {
   return mount(LegacyConversationPage, {
     props: { courseId: 'course-1', conversationId: 'core-bookmark-1' },
     global: {
-      plugins: [i18n],
+      plugins: [i18n, ElementPlus],
+      components: icons,
       stubs: {
         PageHeader: { template: '<header><h1>Legacy conversations (read-only)</h1></header>' },
         MarkdownView: { props: ['source'], template: '<div class="legacy-markdown">{{ source }}</div>' },
@@ -48,6 +51,7 @@ beforeEach(() => {
   transport.read.mockReset()
   transport.write.mockReset()
   transport.read.mockImplementation(async (tool: string) => {
+    if (tool === 'conversation.get') return { ...conversation, visible_to: ['participants'], draft: null }
     if (tool !== 'conversation.messages') throw new Error(`unexpected read: ${tool}`)
     return {
       conversation,
@@ -71,7 +75,7 @@ describe('LegacyConversationPage deep link', () => {
     const w = mountPage()
     await flushPromises()
 
-    expect(transport.read).toHaveBeenCalledTimes(1)
+    expect(transport.read).toHaveBeenCalledTimes(2)
     expect(transport.read).toHaveBeenCalledWith(
       'conversation.messages',
       {
@@ -82,8 +86,14 @@ describe('LegacyConversationPage deep link', () => {
       },
       { signal: expect.any(AbortSignal) },
     )
+    expect(transport.read).toHaveBeenCalledWith(
+      'conversation.get',
+      { course_id: 'course-1', conversation_id: 'core-bookmark-1' },
+      { signal: expect.any(AbortSignal) },
+    )
     expect(w.text()).toContain('A conversation outside the reader’s own list')
     expect(w.text()).toContain('A historical question')
+    expect(w.find('.chat-msg .chat-msg__body').exists()).toBe(true)
     expect(w.text()).not.toContain('not part of the historical page')
     expect(w.find('textarea').exists()).toBe(false)
     expect(transport.write).not.toHaveBeenCalled()
@@ -96,7 +106,7 @@ describe('LegacyConversationPage deep link', () => {
     const w = mountPage()
     await flushPromises()
 
-    expect(transport.read).toHaveBeenCalledTimes(1)
+    expect(transport.read).toHaveBeenCalledTimes(2)
     expect(w.find('[role="alert"]').text()).toContain('Legacy conversations could not be read. Please try again.')
     expect(w.text()).not.toContain('sensitive overseer scope details')
     expect(transport.write).not.toHaveBeenCalled()

@@ -362,7 +362,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
     await expect(made.locator('dd')).toHaveText(HELPER)
   })
 
-  test('a chat’s news says it is about a conversation, in words, and opens it', async ({ page }) => {
+  test('legacy chat news says it is a conversation, and opens its read-only Core archive', async ({ page }) => {
     await signIn(page, ben)
     await inTraditionalChinese(page)
     await page.goto(coursePath('activity'))
@@ -381,12 +381,14 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       .filter({ has: page.locator('.event-item__title', { hasText: '新訊息' }) })
       .first()
     await expect(recent.locator('.event-item__subject')).toHaveText('對話')
-    // It opens the chat on that conversation, beside the page.
+    // This event was written by Core v0.2.1. Its id opens the separate legacy
+    // reader, never a new AR conversation pretending to share that id.
     await recent.locator('.event-item__subject').click()
-    const panel = page.locator('#chat-panel')
-    await expect(panel).toBeVisible()
-    await expect(panel).toContainText(LOOPS_ASKED)
-    await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
+    const archive = page.locator('.legacy-chat__detail')
+    await expect(archive).toBeVisible()
+    await expect(archive).toContainText(LOOPS_ASKED)
+    await expect(page).toHaveURL(new RegExp(`${coursePath('legacy-conversations/[^/]+')}$`))
+    await expect(page.locator('#chat-panel')).toHaveCount(0)
   })
 
   test('the chat calls an agent the course seated itself a course agent, which answers others too', async ({

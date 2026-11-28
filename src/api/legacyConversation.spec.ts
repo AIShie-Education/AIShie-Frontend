@@ -55,6 +55,30 @@ describe('legacyConversation Core read boundary', () => {
     expect(transport.write).not.toHaveBeenCalled()
   })
 
+  it('reads Core visible_to for the privacy dialog while stripping its live draft', async () => {
+    transport.read.mockResolvedValue({
+      id: 'old-1',
+      state: 'answered',
+      visible_to: ['participants', 'overseers', 'audit_export'],
+      draft: { text: 'live data that is not reader metadata' },
+    })
+
+    const out = await legacyConversation.get('course-1', 'old-1')
+
+    expect(transport.read).toHaveBeenCalledWith(
+      'conversation.get',
+      { course_id: 'course-1', conversation_id: 'old-1' },
+      { signal: undefined },
+    )
+    expect(out).toEqual({
+      conversation: { id: 'old-1', state: 'answered' },
+      visibleTo: ['participants', 'overseers', 'audit_export'],
+    })
+    expect(out.conversation).not.toHaveProperty('draft')
+    expect(out.conversation).not.toHaveProperty('visible_to')
+    expect(transport.write).not.toHaveBeenCalled()
+  })
+
   it('reads a finite older page without long-poll arguments or exposing a live draft', async () => {
     transport.read.mockResolvedValue({
       conversation: { id: 'old-1', state: 'awaiting_answer' },

@@ -17,6 +17,7 @@ here=$(cd "$(dirname "$0")/.." && pwd)
 CORE_DIR=${CORE_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aishie-ci-core}
 DIR=${RUNTIME_DIR:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/aishie-ci-runtime}
 PORT=${RUNTIME_API_PORT:-9091}
+MODEL_PORT=${E2E_MODEL_PORT:-9092}
 CONTAINER=${RUNTIME_CONTAINER:-aishie-ci-runtime}
 IMAGE=${RUNTIME_IMAGE:-$(grep -v -e '^#' -e '^[[:space:]]*$' "$here/.github/runtime-image" | tail -n 1)}
 DATABASE_URL=${RUNTIME_DATABASE_URL:-postgres://postgres:postgres@127.0.0.1:5432/aishie_runtime_e2e?sslmode=disable}
@@ -56,9 +57,31 @@ start() {
   [ "$rc" = 7 ] || fail "something already listens on 127.0.0.1:$PORT"
   mkdir -p "$DIR/secrets/kek"
   : > "$DIR/runtime.log"
-  # No static agents: the Playwright setup hosts one through the API instead.
-  printf 'runtime: {}\n' > "$DIR/runtime.yaml"
+  # No static agents: tests host them through the API. One operator-owned,
+  # local OpenAI-compatible offer makes the real TS Runner deterministic.
+  mkdir -p "$DIR/secrets/school/keys"
+  (umask 077 && printf 'e2e-not-a-secret\n' > "$DIR/secrets/school/keys/e2e")
+  printf '[]\n' > "$DIR/model-rules.json"
+  cat > "$DIR/runtime.yaml" <<EOF
+runtime:
+  school:
+    offers:
+      - id: e2e
+        label: E2E deterministic model
+        adapter: openai_chat
+        provider: openai
+        model: e2e-model
+        base_url: http://127.0.0.1:$MODEL_PORT/v1
+        key_ref: secret://school/keys/e2e
+        capabilities: {file_input: true}
+EOF
   (umask 077 && openssl rand -base64 32 > "$DIR/secrets/kek/v1")
+  local model_rc=0
+  curl -s -o /dev/null --max-time 2 "http://127.0.0.1:$MODEL_PORT/v1/chat/completions" || model_rc=$?
+  [ "$model_rc" = 7 ] || fail "something already listens on 127.0.0.1:$MODEL_PORT"
+  E2E_MODEL_PORT=$MODEL_PORT E2E_MODEL_RULES="$DIR/model-rules.json" \
+    node "$here/scripts/ci-model-server.mjs" > "$DIR/model.log" 2>&1 &
+  echo "$!" > "$DIR/model.pid"
 
   local token
   token=$(credential) || fail "Core did not issue the runtime credential"
@@ -106,9 +129,12 @@ start() {
   done
   (
     umask 077
-    printf "export E2E_RUNTIME_URL='%s'\n" "http://127.0.0.1:$PORT" >> "$CORE_DIR/env"
+    printf "export E2E_RUNTIME_URL='%s'\nexport E2E_MODEL_RULES='%s'\n" "http://127.0.0.1:$PORT" "$DIR/model-rules.json" >> "$CORE_DIR/env"
   )
-  if in_actions; then printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT" >> "$GITHUB_ENV"; fi
+  if in_actions; then
+    printf 'E2E_RUNTIME_URL=%s\n' "http://127.0.0.1:$PORT" >> "$GITHUB_ENV"
+    printf 'E2E_MODEL_RULES=%s\n' "$DIR/model-rules.json" >> "$GITHUB_ENV"
+  fi
   echo "Runtime is up on http://127.0.0.1:$PORT; its scratch database is $dbname"
 }
 
@@ -123,6 +149,12 @@ stop() {
   if [ -f "$DIR/created-db" ]; then
     psql -X -q -d "$maint" -c "DROP DATABASE IF EXISTS \"$dbname\" WITH (FORCE)"
     rm -f "$DIR/created-db"
+  fi
+  if [ -f "$DIR/model.pid" ]; then
+    local model_pid
+    model_pid=$(cat "$DIR/model.pid")
+    kill "$model_pid" >/dev/null 2>&1 || true
+    rm -f "$DIR/model.pid"
   fi
   rm -f "$DIR/credential.json"
 }

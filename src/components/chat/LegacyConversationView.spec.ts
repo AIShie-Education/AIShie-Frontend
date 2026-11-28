@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
+import ElementPlus from 'element-plus'
+import * as icons from '@element-plus/icons-vue'
 import type { ConversationMessage, MyConversation } from '@/api/types'
 import type { LegacyMessagePage } from '@/api/legacyConversation'
 
@@ -88,6 +90,9 @@ function defaultRead(tool: string, args: Record<string, unknown>) {
       draft: { text: 'A live draft must never be rendered in this archive' },
     })
   }
+  if (tool === 'conversation.get') {
+    return Promise.resolve({ ...detail, visible_to: ['participants', 'overseers'], draft: null })
+  }
   if (tool === 'conversation.attachment') {
     return Promise.resolve({
       ...attachment,
@@ -107,7 +112,8 @@ function mountView(props: { courseId?: string | null; initiallyExpanded?: boolea
   return mount(LegacyConversationView, {
     props,
     global: {
-      plugins: [i18n],
+      plugins: [i18n, ElementPlus],
+      components: icons,
       stubs: {
         MarkdownView: { props: ['source'], template: '<div class="legacy-markdown">{{ source }}</div>' },
       },
@@ -185,6 +191,7 @@ describe('LegacyConversationView', () => {
     expect(transport.read.mock.calls.map(([tool]) => tool)).toEqual([
       'me.conversations',
       'conversation.messages',
+      'conversation.get',
       'conversation.attachment',
     ])
     expect(transport.write).not.toHaveBeenCalled()
