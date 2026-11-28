@@ -36,7 +36,9 @@ test('a tab an earlier version signed in with a pasted token is signed out, and 
   const sent: string[] = []
   page.on('request', (req) => {
     const auth = req.headers().authorization
-    if (auth) sent.push(`${req.method()} ${new URL(req.url()).pathname}`)
+    // A fresh Core assertion for AR is expected after a real sign-in. Only the
+    // pasted legacy token is forbidden here, not every Authorization header.
+    if (auth === `Bearer ${d.actors.grader.token}`) sent.push(`${req.method()} ${new URL(req.url()).pathname}`)
   })
   // What an earlier version kept in the tab after a token was pasted in: here, an agent's. Those
   // versions came before the name AIshie, and kept it under theirs; the app moves it at start.

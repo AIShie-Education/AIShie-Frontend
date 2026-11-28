@@ -5,6 +5,7 @@ import {
   courseTab,
   demo,
   expectCourseAgentRow,
+  hostARAgent,
   hostOnRuntime,
   inTraditionalChinese,
   openChat,
@@ -205,7 +206,7 @@ test.describe.serial('an agent is shown as one, and what it made says so', () =>
       }),
       'member.add (bot)',
     ).member_id
-    await hostOnRuntime(w.botId)
+    await hostARAgent({ token: root().token }, w.botId)
   })
 
   // A person may have five agents at once: this run's are suspended when they are done with, for the specs after it.

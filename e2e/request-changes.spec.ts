@@ -1,12 +1,15 @@
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import {
+  arCall,
+  arMessages,
   call,
   coursePath,
   courseTab,
   demo,
   expectToasted,
-  hostOnRuntime,
+  hostARAgent,
   keepToasts,
+  modelRules,
   openCourseTab,
   registerPerson,
   signIn,
@@ -382,31 +385,60 @@ test.describe.serial('the owner of the agent that revises, who decides nothing e
   })
 })
 
-test.describe('a course agent’s answer in a conversation, sent back for changes as any proposal is', () => {
-  const w = { tutorId: '', tutorToken: '', answerId: '', revisionId: '' }
+test.describe('an AR pending answer sent back for changes', () => {
+  test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
+
+  const w = { tutorId: '', conversationId: '', answerId: '', revisionId: '', beforeRevision: 0 }
+
+  async function settle(id: string) {
+    if (!id) return
+    const d = demo()
+    const got = await arCall<{ approval: { state: string } }>(d.actors.instructor, 'GET', `/chat/approvals/${id}`)
+    if (got.status === 200 && got.body.approval.state === 'pending') {
+      const rejected = await arCall(d.actors.instructor, 'POST', `/chat/approvals/${id}/decision`, {
+        decision: 'reject',
+        reason: 'request-changes test complete',
+        idempotency_key: `request-changes-cleanup-${STAMP}-${id}`,
+      })
+      expect(rejected.status).toBe(200)
+    }
+  }
+
+  /** Finds an AR pending answer by its real message body, never by a Core action id. */
+  async function waitForAnswer(body: string, except = '') {
+    const d = demo()
+    let found = ''
+    await expect
+      .poll(async () => {
+        const out = await arCall<{
+          approvals: { id: string; conversation_id: string; message_id: string }[]
+        }>(d.actors.instructor, 'GET', `/chat/approvals?course_id=${d.course.id}&state=pending&limit=100`)
+        expect(out.status).toBe(200)
+        for (const approval of out.body.approvals) {
+          if (approval.conversation_id !== w.conversationId || approval.id === except) continue
+          const detail = await arCall(d.actors.instructor, 'GET', `/chat/approvals/${approval.id}`)
+          const message = detail.body.snapshot?.messages?.find((m: { id: string }) => m.id === approval.message_id)
+          if (message?.body === body) {
+            found = approval.id
+            break
+          }
+        }
+        return found || null
+      }, { timeout: 30_000 })
+      .not.toBeNull()
+    return found
+  }
 
   test.afterAll(async () => {
-    const d = demo()
-    const I = d.actors.instructor.token
-    // What still waits (the answer, if a test failed before it was sent back,
-    // or its revision) is taken back by the agent; the agent is suspended, as
-    // a person may have five agents at once, for the specs after it.
-    if (w.tutorToken) {
-      await withdrawIfWaiting(I, w.tutorToken, w.answerId)
-      await withdrawIfWaiting(I, w.tutorToken, w.revisionId)
-    }
-    if (w.tutorId) await call(I, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
+    await settle(w.answerId)
+    await settle(w.revisionId)
+    if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
-  test('is sent back with a note, its conversation waits for an answer again, and the answer that revises it says so', async ({
-    page,
-  }) => {
-    await keepToasts(page)
+  test('keeps the reviewer’s reason in AR and schedules a revised pending answer', async ({ page }) => {
     const d = demo()
     const c = d.course.id
     const I = d.actors.instructor.token
-    // The instructor's course agent, hosted on the site's runtime (the test
-    // plays it), whose answers wait for someone's confirmation.
     w.tutorId = done(
       await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
       'agent.create',
@@ -425,58 +457,65 @@ test.describe('a course agent’s answer in a conversation, sent back for change
       }),
       'member.update_perms',
     )
-    w.tutorToken = await hostOnRuntime(w.tutorId)
+    await hostARAgent(d.actors.instructor, w.tutorId)
 
-    // Yuki asks it, and its answer waits for approval.
-    const conv = done(
-      await call(d.actors.yuki.token, 'POST', `/v1/courses/${c}/conversations`, {
-        respondent_member_id: seatId,
-        body: QUESTION,
-      }),
-      'conversation.open',
-    )
-    const answer = await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${conv.conversation_id}/answer`, {
-      in_reply_to_message_id: conv.message_id,
-      body: ANSWER,
+    // The first prompt has only the question. A revised generation also carries
+    // the reviewer's note, so the first matching rule proves that AR used it.
+    modelRules([
+      { match: ANSWER_NOTE, answer: ANSWER_REVISED },
+      { match: QUESTION, answer: ANSWER },
+    ])
+    const created = await arCall(d.actors.yuki, 'POST', `/courses/${c}/conversations`, {
+      agent_id: w.tutorId,
+      body: QUESTION,
+      idempotency_key: `answer-changes-${STAMP}`,
     })
-    expect(answer.body.status, JSON.stringify(answer.body)).toBe('proposed')
-    w.answerId = answer.body.action_id!
+    expect(created.status, JSON.stringify(created.body)).toBe(200)
+    w.conversationId = created.body.conversation.id
+    w.answerId = await waitForAnswer(ANSWER)
+    const pending = await arMessages(d.actors.yuki, c, w.conversationId)
+    expect(pending.conversation.state).toBe('reply_pending_approval')
+    expect(pending.messages.some((m) => m.body === ANSWER && m.status === 'pending')).toBe(true)
+    w.beforeRevision = pending.conversation.revision
 
     await signIn(page, d.actors.instructor)
     await page.goto(coursePath())
     await courseTab(page, 'Approvals').click()
-    const card = page.locator('.action-card').filter({ hasText: ANSWER })
-    await expect(card).toHaveCount(1)
-    await expect(card).toContainText(TUTOR)
-    await expect(card.locator('.decide-panel__buttons button')).toHaveText(['Approve', 'Request changes', 'Reject'])
+    const card = page.locator(`.ar-approval-card[data-approval-id="${w.answerId}"]`)
+    await expect(card).toBeVisible()
+    await expect(card).toContainText(ANSWER)
+    await expect(card.locator('[data-action="approve"], [data-action="changes_requested"], [data-action="reject"]')).toHaveText([
+      'Approve',
+      'Request changes',
+      'Reject',
+    ])
     await card.getByRole('button', { name: 'Request changes' }).click()
     await card.getByRole('textbox', { name: 'What to change' }).fill(ANSWER_NOTE)
     await card.getByRole('button', { name: 'Send back for changes' }).click()
-    await expectToasted(page, /^Sent back for changes/)
+    await expect(page.locator('.ar-approvals__notice')).toContainText('Changes requested. Nothing was posted.')
     await expect(card).toHaveCount(0)
 
-    // The answer ends there, with the note; nothing was posted, and the
-    // conversation waits for an answer again, in the agent's inbox.
-    const got = await call(I, 'GET', `/v1/courses/${c}/actions/${w.answerId}`)
-    expect(got.body.result?.status, JSON.stringify(got.body)).toBe('changes_requested')
-    expect(got.body.result?.result?.decision?.reason).toBe(ANSWER_NOTE)
-    const after = await call(d.actors.yuki.token, 'GET', `/v1/courses/${c}/conversations/${conv.conversation_id}`)
-    expect(after.body.result?.state, JSON.stringify(after.body)).toBe('awaiting_answer')
-    const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
-    expect((inbox.body.result?.conversations ?? []).map((x: { id: string }) => x.id)).toContain(conv.conversation_id)
-
-    // The agent answers again, naming the answer it revises, as the runtime does.
-    const again = await proposeRevising(
-      w.tutorToken,
-      `/v1/courses/${c}/conversations/${conv.conversation_id}/answer`,
-      { in_reply_to_message_id: conv.message_id, body: ANSWER_REVISED },
-      w.answerId,
+    const decided = await arCall<{ approval: { state: string; reason?: string } }>(
+      d.actors.instructor,
+      'GET',
+      `/chat/approvals/${w.answerId}`,
     )
-    expect(again.body.status, JSON.stringify(again.body)).toBe('proposed')
-    w.revisionId = again.body.action_id!
+    expect(decided.status).toBe(200)
+    expect(decided.body.approval.state).toBe('changes_requested')
+    expect(decided.body.approval.reason).toBe(ANSWER_NOTE)
+
+    // AR schedules a fresh generation and a fresh pending approval. No Core
+    // conversation.answer, inbox, proposal or Revises header is involved.
+    w.revisionId = await waitForAnswer(ANSWER_REVISED, w.answerId)
+    expect(w.revisionId).not.toBe(w.answerId)
+    const revised = await arMessages(d.actors.yuki, c, w.conversationId)
+    expect(revised.conversation.revision).toBeGreaterThan(w.beforeRevision)
+    expect(revised.messages.some((m) => m.body === ANSWER_REVISED && m.status === 'pending')).toBe(true)
+
     await page.reload()
-    const revision = page.locator('.action-card').filter({ hasText: ANSWER_REVISED })
-    await expect(revision).toHaveCount(1)
-    await expect(revision.getByRole('link', { name: 'Revises an earlier proposal that was sent back' })).toBeVisible()
+    const revision = page.locator(`.ar-approval-card[data-approval-id="${w.revisionId}"]`)
+    await expect(revision).toBeVisible()
+    await expect(revision).toContainText(ANSWER_REVISED)
+    await expect(revision.getByRole('link', { name: 'Revises an earlier proposal that was sent back' })).toHaveCount(0)
   })
 })

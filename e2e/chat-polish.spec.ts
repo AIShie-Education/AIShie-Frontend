@@ -4,12 +4,17 @@ import {
   call,
   coursePath,
   demo,
-  hostOnRuntime,
+  hostARAgent,
+  arList,
+  arMessages,
+  modelRules,
   inTraditionalChinese,
   photograph,
   signIn,
   type CoreReply,
 } from './support'
+
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
 
 // The chat as an agent chat is worked: a new conversation offers a few ways
 // to begin; the agent's answer is set across the width as Markdown, its code
@@ -49,31 +54,25 @@ const ANSWER = [
   `1. 寫出 \`c_to_f\`\n2. 用表中的值測試\n3. 交上程式碼與說明 (${STAMP})`,
 ].join('\n')
 
-const w = { tutorToken: '', tutorId: '' }
+const w = { tutorId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
   return r.body.result
 }
 
-/** The course agent's runtime: the latest question waiting for it, answered. */
+/** Waits for the real AR Runner's stored answer; nothing is written through Core. */
 async function tutorAnswers(body: string) {
-  const c = demo().course.id
-  let conv: { id: string; latest_opener_message_id?: string } | undefined
+  const d = demo()
+  const conv = (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === TITLE)
+  expect(conv, `AR conversation ${TITLE}`).toBeTruthy()
   await expect
-    .poll(async () => {
-      const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/inbox`)
-      conv = (inbox.body.result?.conversations ?? [])[0]
-      return conv?.latest_opener_message_id ?? null
-    })
-    .not.toBeNull()
-  done(
-    await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${conv!.id}/answer`, {
-      in_reply_to_message_id: conv!.latest_opener_message_id,
-      body,
-    }),
-    'conversation.answer',
-  )
+    .poll(async () =>
+      (await arMessages(d.actors.yuki, d.course.id, conv!.id)).messages.some(
+        (m) => m.role === 'assistant' && m.body === body,
+      ),
+    )
+    .toBe(true)
 }
 
 const panelOf = (page: Page) => page.locator('#chat-panel')
@@ -114,8 +113,10 @@ test.describe.serial('the chat, as an agent chat', () => {
       }),
       'member.add_delegate',
     )
-    // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
-    w.tutorToken = await hostOnRuntime(tutor)
+    await hostARAgent(d.actors.instructor, tutor)
+    // The first test holds the provider long enough to exercise Stop. A later
+    // test replaces this with the immediate Markdown answer.
+    modelRules([{ match: QUESTION, answer: 'not published while withdrawn', delayMs: 60_000 }])
   })
 
   // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
@@ -147,7 +148,7 @@ test.describe.serial('the chat, as an agent chat', () => {
 
     // The working line: the glyph, 思考中…, and the seconds since the question.
     const line = panel.locator('.chat-pane__typing .chat-status')
-    await expect(line.locator('.chat-status__label')).toHaveText('思考中…')
+    await expect(line.locator('.chat-status__label')).toHaveText(`正在等待${TUTOR}…`)
     await expect(line.locator('.chat-status__time')).toHaveText(/^\d+s$/)
     await page.waitForTimeout(2200)
     await expect(line.locator('.chat-status__time')).not.toHaveText('0s')
@@ -162,9 +163,11 @@ test.describe.serial('the chat, as an agent chat', () => {
     await expect(panel.locator('.chat-msg.is-retracted')).toContainText('你已撤回這則訊息')
     await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
     await expect(panel.locator('.chat-pane__notice')).toHaveText(`你撤回了問題，${TUTOR}不會回答它。`)
-    // The agent's inbox leaves it out.
-    const inbox = await call(w.tutorToken, 'GET', `/v1/courses/${demo().course.id}/conversations/inbox`)
-    expect(inbox.body.result?.conversations ?? []).toEqual([])
+    // AR kept the withdrawn question retracted and scheduled no answer for it.
+    const d = demo()
+    const conv = (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === TITLE)!
+    const stored = await arMessages(d.actors.yuki, d.course.id, conv.id)
+    expect(stored.messages.filter((m) => m.role === 'user').at(-1)?.status).toBe('retracted')
     // Sent again, it is asked again.
     await composer.press('Enter')
     await expect(panel.locator('.chat-pane__typing .chat-status')).toBeVisible()
@@ -173,13 +176,20 @@ test.describe.serial('the chat, as an agent chat', () => {
     await expect(panel.getByRole('button', { name: '停止', exact: true })).toHaveCount(0)
     await expect(panel.getByRole('button', { name: '傳送', exact: true })).toBeEnabled()
     await composer.fill('')
+    // Stop the replay too, leaving no delayed generation running into the next test.
+    await panel.getByRole('button', { name: '停止', exact: true }).click()
+    await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
   })
 
   test('the answer is set as Markdown across the width, its code and each message copied with a button', async ({
     page,
   }) => {
-    await tutorAnswers(ANSWER)
+    modelRules([{ match: QUESTION, answer: ANSWER }])
     const panel = await openConversation(page)
+    const composer = panel.locator('textarea')
+    await composer.fill(QUESTION)
+    await composer.press('Enter')
+    await tutorAnswers(ANSWER)
     const answer = panel.locator('.chat-msg.is-agent').filter({ hasText: 'HW1 的要求' })
     await expect(answer).toBeVisible()
     await expect(answer.locator('.chat-prose h2')).toHaveText('HW1 的要求')
@@ -219,7 +229,7 @@ test.describe.serial('the chat, as an agent chat', () => {
     expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(ANSWER)
     await mine.hover()
     await mine.getByRole('button', { name: '複製訊息', exact: true }).click()
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(`${TITLE}\n${QUESTION}`)
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(QUESTION)
   })
 
   test('a slash opens the commands, and an @ the course’s assignments and materials', async ({ page }) => {
@@ -273,7 +283,7 @@ test.describe.serial('the chat, as an agent chat', () => {
     await expect(composer).not.toBeFocused()
     await composer.fill('')
     await composer.press('ArrowUp')
-    await expect(composer).toHaveValue(`${TITLE}\n${QUESTION}`)
+    await expect(composer).toHaveValue(QUESTION)
     await composer.fill('')
   })
 

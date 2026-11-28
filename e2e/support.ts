@@ -472,7 +472,11 @@ let runtimeService: Promise<string> | undefined
 function runtimeCredential(): Promise<string> {
   runtimeService ??= call(root().token, 'POST', '/v1/services/agent_runtime/credentials', {
     label: `e2e runtime ${demo().tag}`,
-    replace: true,
+    // A live AR already holds a service credential from ci-runtime.sh. The
+    // legacy helper may not replace and revoke it mid-run; its separate test
+    // credential coexists with AR's. Only an isolated legacy run replaces one
+    // left by a previous run.
+    replace: !process.env.E2E_RUNTIME_URL,
   }).then((r) => {
     const token = r.body.result?.token
     if (r.body.status !== 'executed' || typeof token !== 'string')

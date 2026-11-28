@@ -1,11 +1,13 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import {
+  arCall,
   asAgentRuntime,
   call,
   chatButton,
   coursePath,
   demo,
   expectToasted,
+  hostARAgent,
   hostOnRuntime,
   inTraditionalChinese,
   keepToasts,
@@ -27,10 +29,10 @@ import {
 // creates one of each; neither can be made the other; she issues and revokes
 // the MCP one's tokens, which nobody is offered to ask or to host; the
 // hosted one has no token anywhere for her, and once she hosts it, by its id,
-// people can ask it until its hosting is paused. The runs have no runtime:
-// where the page talks to it, it is played in the browser from its contract,
-// and it calls the real Core as the runtime does (Core's API for the runtime,
-// with its own credential). Last, an administrator registers one of each.
+// people can ask it until its hosting is paused. The browser hosting control
+// plane is played from its contract; actual chat availability is checked with
+// the real AR, never inferred from Core's legacy conversation respondents.
+// Last, an administrator registers one of each.
 
 const STAMP = Date.now().toString(36)
 const MCP_AGENT = `Hana's tools ${STAMP}`
@@ -55,10 +57,14 @@ function refusal(r: { status: number; body: CoreReply }) {
   return { status: r.status, reason: r.body.error?.details?.reason }
 }
 
-async function respondentNames(token: string): Promise<string[]> {
-  const r = await call(token, 'GET', `/v1/courses/${demo().course.id}/conversations/respondents`)
+async function respondentNames(who: Pick<DemoActor, 'token'>): Promise<string[]> {
+  const r = await arCall<{ agents: { display_name: string }[] }>(
+    who,
+    'GET',
+    `/courses/${demo().course.id}/chat/agents`,
+  )
   expect(r.status, JSON.stringify(r.body)).toBe(200)
-  return (r.body.result.respondents ?? []).map((x: { display_name: string }) => x.display_name)
+  return r.body.agents.map((x) => x.display_name)
 }
 
 /** Hana brings an agent of hers into the course, and the instructor approves it: its seat. */
@@ -155,6 +161,12 @@ function playRuntime(page: Page, owner: () => DemoActor) {
           limits: { per_owner_day: 100, per_asker_day: 20 },
         },
       })
+    // Chat availability is AR-owned, not part of the hosting mock. Answer the
+    // browser from the real AR as Hana rather than inventing Core respondents.
+    if (method === 'GET' && /^\/courses\/[^/]+\/chat\/agents$/.test(path)) {
+      const out = await arCall(owner(), 'GET', path)
+      return answer(route, out.status, out.body)
+    }
     if (path === '/agents' && method === 'GET') return answer(route, 200, { agents: [...rows.values()] })
     if ((path === '/agents/inspect' || path === '/agents') && method === 'POST') {
       // Whether she owns it, and whether it may be hosted, as Core tells the runtime.
@@ -391,14 +403,15 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
 
   test('an agent with MCP access is never offered to ask, its owner included, nor to host', async ({ page }) => {
     const d = demo()
-    const member = await seat(w.mcpId)
+    await seat(w.mcpId)
     // Not even its owner, whom it answers alone.
-    expect(await respondentNames(hana().token)).not.toContain(MCP_AGENT)
-    const opened = await call(hana().token, 'POST', `/v1/courses/${d.course.id}/conversations`, {
-      respondent_member_id: member,
+    expect(await respondentNames(hana())).not.toContain(MCP_AGENT)
+    const opened = await arCall(hana(), 'POST', `/courses/${d.course.id}/conversations`, {
+      agent_id: w.mcpId,
       body: `Hello? (${STAMP})`,
+      idempotency_key: `hosting-mcp-${STAMP}`,
     })
-    expect(refusal(opened)).toEqual({ status: 422, reason: 'mcp_agent' })
+    expect(opened.status, JSON.stringify(opened.body)).toBe(404)
     // Nor is the runtime issued a token for it.
     expect(refusal(await asAgentRuntime('POST', `/agents/${w.mcpId}/token`, {}))).toEqual({
       status: 422,
@@ -440,9 +453,18 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
       done(await call(H, 'GET', `/v1/me/agents/${w.rtId}/credentials`), 'agent.list_credentials').credentials,
     ).toEqual([])
 
+    // This case must remain "no service" even when CI has a real AR running:
+    // explicitly make its browser endpoint unreachable, without removing any
+    // token/credential safety assertion below.
+    let unavailable = 0
+    await page.route('**/runtime/api/v1/**', (route) => {
+      unavailable++
+      return route.abort('connectionrefused')
+    })
     await signIn(page, hana())
     await page.goto(`/account/agents/${w.rtId}`)
     await expect(page.locator('.hosting-offer')).toContainText('AIshie’s agent service is not available on this server')
+    expect(unavailable).toBeGreaterThan(0)
     await expect(page.locator('.site-chat .el-tag')).toHaveText('Not running')
     await expect(page.getByRole('button', { name: 'New token' })).toHaveCount(0)
     await expect(page.locator('.tokens-card')).toHaveCount(0)
@@ -456,7 +478,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
   }) => {
     // Seated as her own assistant, answering her alone: she is offered it once it runs.
     await seat(w.rtId)
-    expect(await respondentNames(hana().token)).not.toContain(RT_AGENT)
+    expect(await respondentNames(hana())).not.toContain(RT_AGENT)
 
     const runtime = playRuntime(page, hana)
     await runtime.install()
@@ -502,11 +524,16 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await page.mouse.move(0, 0)
     await expect(page.locator('.el-message')).toHaveCount(0)
     await photograph(page, 'hosting-runtime-running')
+    // The browser's hosting UI is mocked above; actual askability is not.
+    // Host through the real AR before asserting against its chat agents list.
+    await hostARAgent(hana(), w.rtId)
     expect(done(await call(hana().token, 'GET', `/v1/me/agents/${w.rtId}`), 'agent.get').site_chat).toBe(true)
-    expect(await respondentNames(hana().token)).toContain(RT_AGENT)
-    // Core lists the runtime's token, issued to it: still none for her to issue or to see whole.
+    expect(await respondentNames(hana())).toContain(RT_AGENT)
+    // Core's history may include the replaced mock token and AR's current one;
+    // every runtime-agent credential is issued to the service, never Hana.
     const creds = done(await call(hana().token, 'GET', `/v1/me/agents/${w.rtId}/credentials`), 'agent.list_credentials')
-    expect(creds.credentials.map((c: { issued_to?: string }) => c.issued_to)).toEqual(['agent_runtime'])
+    expect(creds.credentials.length).toBeGreaterThan(0)
+    expect(creds.credentials.every((c: { issued_to?: string }) => c.issued_to === 'agent_runtime')).toBe(true)
     await expect(page.locator('.tokens-card')).toHaveCount(0)
 
     // Paused: the runtime's token is revoked in Core, and nobody can ask it.
@@ -514,7 +541,7 @@ test.describe.serial('how an agent runs, chosen once when it is created', () => 
     await expect(page.locator('.hosted-card__tag')).toHaveText('Paused')
     await expect(page.locator('.site-chat .el-tag')).toHaveText('Not running')
     expect(done(await call(hana().token, 'GET', `/v1/me/agents/${w.rtId}`), 'agent.get').site_chat).toBe(false)
-    expect(await respondentNames(hana().token)).not.toContain(RT_AGENT)
+    expect(await respondentNames(hana())).not.toContain(RT_AGENT)
     expect((await call(runtime.token(), 'GET', '/v1/me')).status).toBe(401)
   })
 

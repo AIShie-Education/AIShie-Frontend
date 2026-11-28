@@ -1,39 +1,40 @@
 /// <reference lib="dom" />
 import { expect, test, type Page } from '@playwright/test'
 import {
+  arCall,
+  arList,
+  arMessages,
   call,
   coursePath,
   demo,
-  hostOnRuntime,
+  hostARAgent,
   inTraditionalChinese,
+  modelRules,
   photograph,
   signIn,
   type CoreReply,
 } from './support'
 
-// While a course agent writes its answer, the one who asked watches it come:
-// its runtime writes a draft (conversation.draft) as it works, and the open
-// conversation, waiting on Core with the draft's version, shows it at once:
-// the steps, done and running, then the text so far with a caret, the steps
-// done summed up above it. The posted answer takes its place. Where the
-// agent's answers wait for someone's confirmation, the asker sees the steps
-// alone, and that the answer shows once confirmed. This test plays the
-// runtime, through Core's API, as the agent. Against a Core without drafts
-// (its catalogue has no conversation.draft), there is nothing to watch.
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
+
+// A real AR generation writes the draft shown over SSE. The deterministic
+// provider is delayed only to let the browser observe that working state; no
+// Core conversation.answer, inbox, draft or agent-token write is involved.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Draft tutor ${STAMP}`
 const QUESTION = `攝氏怎樣換成華氏？ (${STAMP})`
 const HIDDEN_QUESTION = `幫我檢查我的思路 (${STAMP})`
+const HIDDEN_ANSWER = 'This text is not for the asker to see yet.'
 
-const w = { tutorToken: '', tutorId: '', seatId: '', drafts: false }
+const w = { tutorId: '', seatId: '', pending: new Set<string>() }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
   return r.body.result
 }
 
-/** A course agent of the instructor's, seated to answer the course, with a runtime that takes conversations here. */
+/** A course agent seated in Core, hosted and given the deterministic model in AR. */
 async function seatTutor(name: string) {
   const d = demo()
   const I = d.actors.instructor.token
@@ -49,11 +50,10 @@ async function seatTutor(name: string) {
     }),
     'member.add_delegate',
   ).member_id as string
-  // Hosted as the site's runtime hosts it: issued its one token, which answers as the agent.
-  w.tutorToken = await hostOnRuntime(w.tutorId)
+  await hostARAgent(d.actors.instructor, w.tutorId)
 }
 
-/** How the agent's answers are posted: at once (autonomous), or once someone confirms them. */
+/** Core still owns the seat's answer level; AR owns the answer and its approval. */
 async function answersAt(level: 'autonomous' | 'confirm_required') {
   const d = demo()
   done(
@@ -64,28 +64,48 @@ async function answersAt(level: 'autonomous' | 'confirm_required') {
   )
 }
 
-/** The conversation waiting in an agent's inbox, and the question it waits on. */
-async function waitingFor(token: string) {
-  const c = demo().course.id
-  let conv: { id: string; latest_opener_message_id: string } | undefined
+async function conversationTitled(title: string) {
+  const d = demo()
+  let id: string | undefined
   await expect
     .poll(async () => {
-      const inbox = await call(token, 'GET', `/v1/courses/${c}/conversations/inbox`)
-      conv = (inbox.body.result?.conversations ?? [])[0]
-      return conv?.latest_opener_message_id ?? null
+      id = (await arList(d.actors.yuki, d.course.id)).find((c) => c.title === title)?.id
+      return id ?? null
     })
     .not.toBeNull()
-  return conv!
+  return id!
 }
 
-/** Writes the agent's draft of its answer, as its runtime does (an ephemeral write: no idempotency key needed). */
-async function writeDraft(token: string, conversationId: string, draft: Record<string, unknown>) {
-  const r = await call(token, 'POST', `/v1/courses/${demo().course.id}/conversations/${conversationId}/draft`, {
-    attempt: `attempt-${STAMP}`,
-    ...draft,
-  })
-  expect(r.status, JSON.stringify(r.body)).toBe(200)
-  if (!draft.done) expect(r.body.result?.stored, JSON.stringify(r.body)).toBe(true)
+async function pendingApproval(conversationId: string) {
+  const d = demo()
+  let id: string | undefined
+  await expect
+    .poll(async () => {
+      const out = await arCall<{ approvals: { id: string; conversation_id: string }[] }>(
+        d.actors.instructor,
+        'GET',
+        `/chat/approvals?course_id=${d.course.id}&state=pending&limit=100`,
+      )
+      id = out.body.approvals.find((a) => a.conversation_id === conversationId)?.id
+      return id ?? null
+    })
+    .not.toBeNull()
+  w.pending.add(id!)
+  return id!
+}
+
+async function rejectIfPending(id: string) {
+  const d = demo()
+  const got = await arCall<{ approval: { state: string } }>(d.actors.instructor, 'GET', `/chat/approvals/${id}`)
+  if (got.status === 200 && got.body.approval.state === 'pending') {
+    const rejected = await arCall(d.actors.instructor, 'POST', `/chat/approvals/${id}/decision`, {
+      decision: 'reject',
+      reason: 'draft test complete',
+      idempotency_key: `draft-cleanup-${STAMP}-${id}`,
+    })
+    expect(rejected.status).toBe(200)
+  }
+  w.pending.delete(id)
 }
 
 async function ask(page: Page, agent: string, question: string) {
@@ -102,116 +122,76 @@ async function ask(page: Page, agent: string, question: string) {
   return panel
 }
 
-test.describe.serial('an answer in the making', () => {
+test.describe.serial('an AR answer in the making', () => {
   test.use({ viewport: { width: 1440, height: 900 } })
 
   test.beforeAll(async () => {
-    const tools = await fetch(`${demo().core}/v1/tools`).then((r) => r.json())
-    w.drafts = (tools.tools ?? []).some((t: { name: string }) => t.name === 'conversation.draft')
-    if (!w.drafts) return
     await seatTutor(TUTOR)
   })
 
-  // A person may have five agents at once: this run's is suspended when it is done with, for the specs after it.
   test.afterAll(async () => {
+    for (const id of [...w.pending]) await rejectIfPending(id)
+    if (w.seatId) await answersAt('autonomous')
     if (w.tutorId) await call(demo().actors.instructor.token, 'POST', `/v1/me/agents/${w.tutorId}/suspend`, {})
   })
 
   test.beforeEach(async ({ page }) => {
-    test.skip(!w.drafts, 'this Core keeps no drafts (no conversation.draft in its catalogue)')
     await signIn(page, demo().actors.yuki)
     await inTraditionalChinese(page)
   })
 
-  test('shows the agent’s steps as it works, then its text with a caret, until the answer takes its place', async ({
-    page,
-  }) => {
+  test('shows the real runner’s working steps before the deterministic answer takes their place', async ({ page }) => {
+    const text =
+      '華氏等於攝氏乘以 9/5，再加 32：\n\n```python\ndef c_to_f(c):\n    return c * 9 / 5 + 32\n```\n\n所以 **100°C** 就是'
+    modelRules([{ match: QUESTION, answer: `${text} 212°F。`, delayMs: 1_200 }])
     const panel = await ask(page, TUTOR, QUESTION)
-    const conv = await waitingFor(w.tutorToken)
     const draft = panel.locator('.chat-pane__draft .chat-draft')
 
-    await writeDraft(w.tutorToken, conv.id, {
-      version: 1,
-      steps: [
-        { kind: 'thinking', state: 'done' },
-        { kind: 'reading_assignment', target: 'HW1 — Temperature converter', state: 'done' },
-        { kind: 'reading_document', target: 'Week 1 — Welcome and setup', state: 'done' },
-        { kind: 'searching_memory', state: 'running' },
-      ],
-    })
-    await expect(draft.locator('.chat-steps__text')).toHaveText([
-      '已思考',
-      '已閱讀作業《HW1 — Temperature converter》',
-      '已閱讀《Week 1 — Welcome and setup》',
-      '正在搜尋記憶…',
-    ])
+    // The first delta has not arrived yet: this is AR's own working step.
+    await expect(draft).toBeVisible()
+    await expect(draft.locator('.chat-steps__text').first()).toHaveText('思考中…')
     await expect(draft.locator('.chat-steps__step.is-running .chat-spinner')).toBeVisible()
     await expect(panel.locator('.chat-pane__typing .chat-status')).toHaveCount(0)
     await page.mouse.move(900, 200)
-    await photograph(page, 'draft-steps')
+    await photograph(page, 'draft-ar-steps')
 
-    const steps = [
-      { kind: 'thinking', state: 'done' },
-      { kind: 'reading_assignment', target: 'HW1 — Temperature converter', state: 'done' },
-      { kind: 'reading_document', target: 'Week 1 — Welcome and setup', state: 'done' },
-      { kind: 'searching_memory', state: 'done' },
-      { kind: 'writing', state: 'running' },
-    ]
-    await writeDraft(w.tutorToken, conv.id, { version: 2, steps, text: '華氏等於攝氏乘以 9/5' })
-    await expect(draft.locator('.is-streaming')).toContainText('華氏等於攝氏乘以 9/5')
-    const text =
-      '華氏等於攝氏乘以 9/5，再加 32：\n\n```python\ndef c_to_f(c):\n    return c * 9 / 5 + 32\n```\n\n所以 **100°C** 就是'
-    await writeDraft(w.tutorToken, conv.id, { version: 3, text })
-    await expect(draft.locator('.is-streaming strong')).toHaveText('100°C')
-    await expect(draft.locator('.md-code__lang')).toHaveText('python')
-    // The steps done, in one line, which opens to list them.
-    const summary = draft.getByRole('button', { name: '已查閱3項' })
-    await expect(summary).toHaveAttribute('aria-expanded', 'false')
-    await page.mouse.move(900, 200)
-    await photograph(page, 'draft-streaming')
-    await summary.click()
-    await expect(draft.locator('.chat-steps__text')).toHaveCount(5)
-
-    // Posted: the answer takes the draft's place.
-    done(
-      await call(w.tutorToken, 'POST', `/v1/courses/${demo().course.id}/conversations/${conv.id}/answer`, {
-        in_reply_to_message_id: conv.latest_opener_message_id,
-        body: `${text} 212°F。`,
-      }),
-      'conversation.answer',
-    )
-    await expect(panel.locator('.chat-msg.is-agent').filter({ hasText: '212°F' })).toBeVisible()
+    // The real provider's posted answer replaces the draft; its Markdown is intact.
+    const answer = panel.locator('.chat-msg.is-agent').filter({ hasText: '212°F' })
+    await expect(answer).toBeVisible({ timeout: 20_000 })
+    await expect(answer.locator('.md-code__lang')).toHaveText('python')
+    await expect(answer.locator('strong')).toHaveText('100°C')
     await expect(panel.locator('.chat-draft')).toHaveCount(0)
     await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
+
+    const id = await conversationTitled(QUESTION)
+    const stored = await arMessages(demo().actors.yuki, demo().course.id, id)
+    expect(stored.messages.some((m) => m.role === 'assistant' && m.status === 'posted' && m.body?.endsWith('212°F。'))).toBe(true)
   })
 
-  test('shows only the steps where the answer waits for confirmation, and says it shows once confirmed', async ({
-    page,
-  }) => {
-    // Its answers now wait for someone's confirmation.
+  test('shows only AR steps while its answer awaits confirmation, then an AR pending answer', async ({ page }) => {
     await answersAt('confirm_required')
+    modelRules([{ match: HIDDEN_QUESTION, answer: HIDDEN_ANSWER, delayMs: 1_200 }])
     const panel = await ask(page, TUTOR, HIDDEN_QUESTION)
-    const conv = await waitingFor(w.tutorToken)
-    await writeDraft(w.tutorToken, conv.id, {
-      version: 1,
-      steps: [
-        { kind: 'reading_submission', target: 'HW1 — Temperature converter', state: 'done' },
-        { kind: 'writing', state: 'running' },
-      ],
-      text: 'This text is not for the asker to see yet.',
-    })
     const draft = panel.locator('.chat-pane__draft .chat-draft')
+
     await expect(draft.locator('.chat-draft__hidden')).toHaveText('答案需經確認後才會顯示。')
-    await expect(draft.locator('.chat-steps__text')).toHaveText([
-      '已查看提交《HW1 — Temperature converter》',
-      '正在撰寫回答…',
-    ])
+    await expect(draft.locator('.chat-steps__text').first()).toHaveText('思考中…')
     await expect(panel).not.toContainText('not for the asker')
     await page.mouse.move(900, 200)
-    await photograph(page, 'draft-hidden')
-    // Given up: the draft goes, and the working line is back.
-    await writeDraft(w.tutorToken, conv.id, { version: 2, done: true })
+    await photograph(page, 'draft-ar-hidden')
+
+    // Generation has finished into AR's own pending approval. Its text stays hidden.
+    await expect(panel.locator('.chat-msg__lifecycle').filter({ hasText: '正在等待批准。' })).toBeVisible({
+      timeout: 20_000,
+    })
     await expect(panel.locator('.chat-draft')).toHaveCount(0)
-    await expect(panel.locator('.chat-pane__typing .chat-status')).toBeVisible()
+    await expect(panel.locator('.chat-pane__typing')).toHaveCount(0)
+    await expect(panel).not.toContainText('not for the asker')
+
+    const id = await conversationTitled(HIDDEN_QUESTION)
+    const stored = await arMessages(demo().actors.yuki, demo().course.id, id)
+    expect(stored.conversation.state).toBe('reply_pending_approval')
+    const approval = await pendingApproval(id)
+    await rejectIfPending(approval)
   })
 })

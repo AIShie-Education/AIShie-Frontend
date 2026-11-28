@@ -206,6 +206,11 @@ test('a proposal’s decisions: Approve the one solid button, Request changes an
 })
 
 test('a page with nothing to show says so at its left, with no picture', async ({ page }) => {
+  // The main browser suite now starts AR for the real chat tests. This layout
+  // case deliberately exercises the unavailable-service branch instead.
+  await page.route('**/runtime/api/v1/info', (route) =>
+    route.fulfill({ status: 503, contentType: 'application/json', body: '{"error":{"code":"unavailable"}}' }),
+  )
   await signInAsRoot(page)
   await page.goto('/admin/runtime')
   const empty = page.locator('.app-empty--page')

@@ -1,29 +1,26 @@
 import { expect, test, type Page } from '@playwright/test'
 import {
+  arCall,
+  arMessages,
   call,
   chatButton,
   coursePath,
   demo,
   expectCourseAgentRow,
-  hostOnRuntime,
+  hostARAgent,
+  modelRules,
   photograph,
   signIn,
-  stopHosting,
   type CoreReply,
 } from './support'
 
-// People in the site ask an agent only while AIshie's runtime hosts it: one
-// created as hosted on AIshie, while the runtime holds its one token. One
-// with MCP access, used from its owner's own tools, is never asked here.
-// Nothing is declared, and its owner switches nothing: its page says which it
-// is. Told through two agents made for this run: the instructor's course
-// agent, hosted on AIshie, and Ken's own assistant, with MCP access. Neither
-// is offered at first, and Core refuses each, saying why. Once the runtime
-// hosts the course agent, Ken opens a conversation with it, and it answers.
-// When the runtime stops hosting it, the conversation stays readable, and says
-// why in place of its composer; and a question sent just as it stops is
-// refused, in the words the page has for it. (The runs have no runtime: the
-// test plays it, through Core's API for the runtime.)
+test.skip(!process.env.E2E_RUNTIME_URL, 'AR chat requires scripts/ci-runtime.sh start')
+
+// People in the site ask an agent only while AR hosts it. This suite uses the
+// real AR API, SSE and deterministic local model: no Core conversation writes.
+// One agent has MCP access and is never offered; the instructor's course agent
+// is hosted, paused and resumed through AR. Its AR history remains readable
+// while hosting is paused, and a question raced with pausing is not published.
 
 const STAMP = Date.now().toString(36)
 const TUTOR = `Lab tutor ${STAMP}`
@@ -31,14 +28,12 @@ const HELPER = `Ken's notes ${STAMP}`
 const QUESTION = `Does the lab start at nine? (${STAMP})`
 const ANSWER = `It does, in room 2 (${STAMP}).`
 const LATE = `And where do we meet? (${STAMP})`
-/** Core refused a question: the runtime does not run it now (agent_not_hosted). */
-const NOT_RUNNING = 'This agent isn’t running right now, so it can’t be asked here.'
 /** Opened afresh, with no refusal to say why. */
 const NOT_NOW = 'This agent can’t be asked here just now.'
 const MCP_NOTE =
   'Nobody can ask it on the site: it has MCP access, and is used from your own tools. An agent people ask here is one created as hosted on AIshie.'
 
-const w = { tutorId: '', tutorMember: '', tutorToken: '', helperId: '', helperMember: '', conversationId: '' }
+const w = { tutorId: '', hostedId: '', helperId: '', conversationId: '' }
 
 function done(r: { status: number; body: CoreReply }, what: string) {
   expect(r.body.status, `${what}: ${JSON.stringify(r.body)}`).toBe('executed')
@@ -46,19 +41,24 @@ function done(r: { status: number; body: CoreReply }, what: string) {
 }
 
 async function respondentNames(token: string): Promise<string[]> {
-  const r = await call(token, 'GET', `/v1/courses/${demo().course.id}/conversations/respondents`)
+  const r = await arCall<{ agents: { display_name: string }[] }>(
+    { token },
+    'GET',
+    `/courses/${demo().course.id}/chat/agents`,
+  )
   expect(r.status, JSON.stringify(r.body)).toBe(200)
-  return (r.body.result.respondents ?? []).map((x: { display_name: string }) => x.display_name)
+  return r.body.agents.map((x) => x.display_name)
 }
 
-/** Why Core refuses Ken a conversation with an agent seated in the course: its reason. */
-async function openRefused(memberId: string): Promise<unknown> {
-  const r = await call(demo().actors.ken.token, 'POST', `/v1/courses/${demo().course.id}/conversations`, {
-    respondent_member_id: memberId,
+/** AR makes an unknown agent and one Ken may not ask indistinguishable. */
+async function openRefused(agentId: string): Promise<void> {
+  const r = await arCall(demo().actors.ken, 'POST', `/courses/${demo().course.id}/conversations`, {
+    agent_id: agentId,
     body: `Anyone there? (${STAMP})`,
+    idempotency_key: `site-chat-refused-${STAMP}-${agentId}`,
   })
-  expect(r.status, JSON.stringify(r.body)).toBe(422)
-  return r.body.error?.details?.reason
+  expect(r.status, JSON.stringify(r.body)).toBe(404)
+  expect(r.body.error?.code).toBe('not_found')
 }
 
 /** The card on an agent's page that says whether people can ask it on the site. */
@@ -75,16 +75,46 @@ async function openChat(page: Page) {
   return panel
 }
 
-/** The conversation Ken started with the course agent, as Core lists his. */
+/** Ken's own AR conversation, never a Core conversation with the same agent. */
 async function kensConversation(): Promise<string> {
   const d = demo()
-  const r = await call(d.actors.ken.token, 'GET', `/v1/courses/${d.course.id}/conversations?as=opener&limit=200`)
-  expect(r.status, JSON.stringify(r.body)).toBe(200)
-  const c = (r.body.result.conversations ?? []).find(
-    (x: { respondent: { display_name: string } }) => x.respondent.display_name === TUTOR,
+  const r = await arCall<{ conversations: { id: string; agent_id: string; title: string }[] }>(
+    d.actors.ken,
+    'GET',
+    `/courses/${d.course.id}/conversations?limit=100`,
   )
-  expect(c, 'Ken’s conversation with the course agent').toBeTruthy()
-  return c.id as string
+  expect(r.status, JSON.stringify(r.body)).toBe(200)
+  const c = r.body.conversations.find((x) => x.agent_id === w.tutorId && x.title === QUESTION)
+  expect(c, 'Ken’s AR conversation with the course agent').toBeTruthy()
+  return c!.id
+}
+
+/** Opens this run's AR conversation through its history, not a legacy Core URL. */
+async function openStoredConversation(page: Page) {
+  await page.goto(coursePath())
+  const panel = page.locator('#chat-panel')
+  if (!(await panel.isVisible())) await chatButton(page).click()
+  const history = panel.getByRole('button', { name: 'History', exact: true })
+  const row = panel.locator('.hist-row').filter({ hasText: QUESTION })
+  await expect(async () => {
+    if ((await history.getAttribute('aria-pressed')) !== 'true') await history.click()
+    await expect(row).toBeVisible({ timeout: 5_000 })
+  }).toPass({ timeout: 30_000 })
+  await row.click()
+  await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
+  return panel
+}
+
+async function tutorPaused(paused: boolean) {
+  const r = await arCall<{ paused: boolean; revocation?: { outcome: string } }>(
+    demo().actors.instructor,
+    'POST',
+    `/agents/${w.hostedId}/${paused ? 'pause' : 'resume'}`,
+    {},
+  )
+  expect(r.status, JSON.stringify(r.body)).toBe(200)
+  expect(r.body.paused).toBe(paused)
+  return r.body
 }
 
 test.describe.serial('site chat: an agent is asked here only while AIshie’s runtime hosts it', () => {
@@ -98,14 +128,14 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
       await call(I, 'POST', '/v1/me/agents', { display_name: TUTOR, hosting: 'runtime' }),
       'agent.create',
     ).actor_id
-    w.tutorMember = done(
+    done(
       await call(I, 'POST', `/v1/courses/${c}/delegates`, {
         actor_id: w.tutorId,
         preset: 'course_tutor',
         answers_course: true,
       }),
       'member.add_delegate',
-    ).member_id
+    )
     // Ken's own assistant, with MCP access, brought in with the instructor's approval.
     w.helperId = done(
       await call(K, 'POST', '/v1/me/agents', { display_name: HELPER, hosting: 'mcp' }),
@@ -121,8 +151,6 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
       await call(I, 'POST', `/v1/courses/${c}/actions/${asked.body.action_id}/decide`, { decision: 'approve' }),
       'action.decide',
     )
-    const helper = await call(K, 'GET', `/v1/me/agents/${w.helperId}`)
-    w.helperMember = helper.body.result.seats[0].member_id
     const token = done(
       await call(K, 'POST', `/v1/me/agents/${w.helperId}/tokens`, { label: `claude ${STAMP}` }),
       'agent.issue_token',
@@ -142,12 +170,12 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     page,
   }) => {
     const d = demo()
-    // Core offers neither, and refuses each, saying why.
+    // AR offers neither and makes both denied creates indistinguishable.
     const names = await respondentNames(d.actors.ken.token)
     expect(names).not.toContain(TUTOR)
     expect(names).not.toContain(HELPER)
-    expect(await openRefused(w.helperMember)).toBe('mcp_agent')
-    expect(await openRefused(w.tutorMember)).toBe('agent_not_hosted')
+    await openRefused(w.helperId)
+    await openRefused(w.tutorId)
     const agent = done(await call(d.actors.ken.token, 'GET', `/v1/me/agents/${w.helperId}`), 'agent.get')
     expect(agent.hosting).toBe('mcp')
     expect(agent.site_chat).toBe(false)
@@ -206,7 +234,9 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     browser,
   }) => {
     const d = demo()
-    w.tutorToken = await hostOnRuntime(w.tutorId)
+    const hosted = await hostARAgent(d.actors.instructor, w.tutorId)
+    w.hostedId = hosted.id
+    modelRules([{ match: QUESTION, answer: ANSWER, delayMs: 1_500 }])
     expect(await respondentNames(d.actors.ken.token)).toContain(TUTOR)
 
     await signIn(page, d.actors.ken)
@@ -230,18 +260,15 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(page).toHaveURL(new RegExp(`${coursePath()}$`))
     w.conversationId = await kensConversation()
 
-    // It answers, as the runtime would, with the token the runtime holds.
-    const c = d.course.id
-    const got = await call(w.tutorToken, 'GET', `/v1/courses/${c}/conversations/${w.conversationId}`)
-    expect(got.status, JSON.stringify(got.body)).toBe(200)
-    done(
-      await call(w.tutorToken, 'POST', `/v1/courses/${c}/conversations/${w.conversationId}/answer`, {
-        in_reply_to_message_id: got.body.result.latest_opener_message_id,
-        body: ANSWER,
-      }),
-      'conversation.answer',
-    )
+    // The real AR Runner and deterministic model publish the answer over AR SSE.
     await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible({ timeout: 20_000 })
+    await expect
+      .poll(async () =>
+        (await arMessages(d.actors.ken, d.course.id, w.conversationId)).messages.some(
+          (m) => m.role === 'assistant' && m.status === 'posted' && m.body === ANSWER,
+        ),
+      )
+      .toBe(true)
 
     // Its owner's page says people can ask it now, and offers no switch: pausing its hosting stops them.
     const owner = await browser.newPage()
@@ -259,24 +286,21 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     browser,
   }) => {
     const d = demo()
-    const stopped = await stopHosting(w.tutorId)
-    expect(stopped.revoked).toHaveLength(1)
+    const stopped = await tutorPaused(true)
+    expect(stopped.revocation?.outcome).toBe('revoked')
     const agent = done(await call(d.actors.instructor.token, 'GET', `/v1/me/agents/${w.tutorId}`), 'agent.get')
     expect(agent.site_chat).toBe(false)
     expect(await respondentNames(d.actors.ken.token)).not.toContain(TUTOR)
-    // The token the runtime held is refused from then on.
-    expect((await call(w.tutorToken, 'GET', '/v1/me')).status).toBe(401)
 
     await signIn(page, d.actors.instructor)
     await page.goto(`/account/agents/${w.tutorId}`)
     await expect(siteChatCard(page).locator('.el-tag')).toHaveText('Not running')
 
-    // A link to it (a notification, a bookmark) opens it in the panel, beside the course.
+    // Open the AR history in the panel; old Core conversation URLs are not AR links.
     const student = await browser.newPage()
     await signIn(student, d.actors.ken)
-    await student.goto(coursePath(`conversations/${w.conversationId}`))
+    const panel = await openStoredConversation(student)
     await expect(student).toHaveURL(new RegExp(`${coursePath()}$`))
-    const panel = student.locator('#chat-panel')
     await expect(panel.locator('.chat-msg').filter({ hasText: QUESTION })).toBeVisible()
     await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
     await expect(panel.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOT_NOW)
@@ -289,38 +313,44 @@ test.describe.serial('site chat: an agent is asked here only while AIshie’s ru
     await expect(student.getByRole('menuitem', { name: 'Close conversation' })).toHaveCount(0)
     await student.keyboard.press('Escape')
     await panel.getByRole('button', { name: 'History', exact: true }).click()
-    await expect(panel.locator('.hist-row').filter({ hasText: TUTOR })).toContainText('CS101')
+    await expect(panel.locator('.hist-row').filter({ hasText: QUESTION })).toContainText('CS101')
 
-    // Core refuses a question to it, and says why.
-    const refused = await call(
-      d.actors.ken.token,
+    // AR refuses another question without publishing it while hosting is paused.
+    const refused = await arCall(
+      d.actors.ken,
       'POST',
-      `/v1/courses/${d.course.id}/conversations/${w.conversationId}/ask`,
-      { body: 'Anyone there?' },
+      `/courses/${d.course.id}/conversations/${w.conversationId}/messages`,
+      { body: 'Anyone there?', idempotency_key: `site-chat-paused-${STAMP}` },
     )
-    expect(refused.status).toBe(422)
-    expect(refused.body.error?.details?.reason).toBe('agent_not_hosted')
+    expect(refused.status).toBe(404)
     await student.close()
   })
 
   test('a question sent just as the runtime stops is refused, in the words the page has for it', async ({ page }) => {
     const d = demo()
-    // The runtime hosts it again: the student may ask it once more.
-    w.tutorToken = await hostOnRuntime(w.tutorId)
+    // Resume the same AR-hosted row; no Core hosting/token helper is involved.
+    await tutorPaused(false)
     await signIn(page, d.actors.ken)
-    await page.goto(coursePath(`conversations/${w.conversationId}`))
-    const composer = page.locator('#chat-panel .chat-pane textarea')
+    const panel = await openStoredConversation(page)
+    const composer = panel.locator('.chat-pane textarea')
     await expect(composer).toBeEnabled()
+    await composer.fill(LATE)
 
     // It stops while the page is open, before the page has looked again.
-    await stopHosting(w.tutorId)
-    await composer.fill(LATE)
+    await tutorPaused(true)
     await composer.press('Enter')
-    await expect(page.locator('.el-notification').filter({ hasText: NOT_RUNNING })).toBeVisible()
-    await expect(page.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOT_RUNNING)
-    await expect(page.locator('.chat-pane textarea')).toHaveCount(0)
+    await expect(page.locator('.el-message').filter({ hasText: 'no such agent or conversation' })).toBeVisible()
+    await expect(panel.locator('.chat-msg').filter({ hasText: LATE })).toHaveCount(0)
+    await expect(panel.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
+
+    // A fresh agents read says only that it cannot be asked now; AR's 404 does
+    // not disclose whether it is unknown, MCP-only or simply not hosted.
+    await page.reload()
+    const reopened = await openStoredConversation(page)
+    await expect(reopened.locator('.chat-pane__notice.is-elsewhere')).toHaveText(NOT_NOW)
+    await expect(reopened.locator('.chat-pane textarea')).toHaveCount(0)
     await photograph(page, 'hosting-not-running')
-    await expect(page.locator('.chat-msg').filter({ hasText: LATE })).toHaveCount(0)
-    await expect(page.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
+    await expect(reopened.locator('.chat-msg').filter({ hasText: LATE })).toHaveCount(0)
+    await expect(reopened.locator('.chat-msg').filter({ hasText: ANSWER })).toBeVisible()
   })
 })
